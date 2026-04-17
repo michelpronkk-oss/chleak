@@ -102,7 +102,7 @@ export default function ProductPage() {
             href="/api/app/access?next=/app/billing&intent=choose-plan&source=product_page"
             className="marketing-primary-cta inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
           >
-            Start plan setup
+            Start monitoring
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
           <Link

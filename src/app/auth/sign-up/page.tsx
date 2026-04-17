@@ -1,5 +1,3 @@
-import Link from "next/link"
-
 import { AccessPanel } from "@/components/auth/access-panel"
 import { sanitizeNextPath } from "@/lib/auth/navigation"
 
@@ -42,8 +40,6 @@ export default async function SignUpPage({
   return (
     <AccessPanel
       mode="sign-up"
-      title="Create workspace access"
-      description="Register your work identity to initialize organization context, billing state, and source onboarding."
       next={next}
       infoMessage={planMessage}
       errorMessage={errorText}
@@ -53,8 +49,8 @@ export default async function SignUpPage({
     >
       <form method="POST" action="/api/auth/sign-up" className="space-y-4">
         <input type="hidden" name="next" value={next} />
-        <div className="space-y-2.5">
-          <label htmlFor="fullName" className="text-xs text-muted-foreground">
+        <div className="space-y-2">
+          <label htmlFor="fullName" className="block text-xs text-muted-foreground">
             Full name
           </label>
           <input
@@ -62,12 +58,12 @@ export default async function SignUpPage({
             name="fullName"
             type="text"
             autoComplete="name"
-            className="w-full rounded-lg border border-border/70 bg-background/50 px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-primary/45"
-            placeholder="Operator name"
+            className="w-full rounded-lg border border-border/60 bg-background/40 px-3.5 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground/45 focus:border-primary/50"
+            placeholder="Your name"
           />
         </div>
-        <div className="space-y-2.5">
-          <label htmlFor="email" className="text-xs text-muted-foreground">
+        <div className="space-y-2">
+          <label htmlFor="email" className="block text-xs text-muted-foreground">
             Work email
           </label>
           <input
@@ -77,12 +73,12 @@ export default async function SignUpPage({
             defaultValue={emailRaw ?? ""}
             required
             autoComplete="email"
-            className="w-full rounded-lg border border-border/70 bg-background/50 px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-primary/45"
+            className="w-full rounded-lg border border-border/60 bg-background/40 px-3.5 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground/45 focus:border-primary/50"
             placeholder="you@brand.com"
           />
         </div>
-        <div className="space-y-2.5">
-          <label htmlFor="password" className="text-xs text-muted-foreground">
+        <div className="space-y-2">
+          <label htmlFor="password" className="block text-xs text-muted-foreground">
             Password
           </label>
           <input
@@ -92,27 +88,17 @@ export default async function SignUpPage({
             required
             minLength={8}
             autoComplete="new-password"
-            className="w-full rounded-lg border border-border/70 bg-background/50 px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-primary/45"
+            className="w-full rounded-lg border border-border/60 bg-background/40 px-3.5 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground/45 focus:border-primary/50"
             placeholder="At least 8 characters"
           />
-          <p className="text-xs text-muted-foreground">
-            Your credentials are handled by Supabase Auth session controls.
-          </p>
         </div>
         <button
           type="submit"
-          className="marketing-primary-cta inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
+          className="marketing-primary-cta mt-1 inline-flex w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold transition-transform hover:-translate-y-px"
         >
-          Create workspace access
+          Create account
         </button>
       </form>
-
-      <Link
-        href="/"
-        className="inline-flex text-xs text-muted-foreground transition-colors hover:text-foreground"
-      >
-        Return to marketing site
-      </Link>
     </AccessPanel>
   )
 }

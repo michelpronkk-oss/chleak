@@ -1,5 +1,3 @@
-import Link from "next/link"
-
 import { AccessPanel } from "@/components/auth/access-panel"
 import { sanitizeNextPath } from "@/lib/auth/navigation"
 
@@ -34,19 +32,17 @@ export default async function SignInPage({
   return (
     <AccessPanel
       mode="sign-in"
-      title="Access your operator workspace"
-      description="Sign in with your work identity to continue plan setup, source monitoring, and ranked recovery execution."
       next={next}
       infoMessage={stateText}
       errorMessage={errorText}
-      secondaryPrefix="New to CheckoutLeak?"
-      secondaryLabel="Create account"
+      secondaryPrefix="No account?"
+      secondaryLabel="Create one"
       secondaryHref={`/auth/sign-up?next=${encodeURIComponent(next)}`}
     >
       <form method="POST" action="/api/auth/sign-in" className="space-y-4">
         <input type="hidden" name="next" value={next} />
-        <div className="space-y-2.5">
-          <label htmlFor="email" className="text-xs text-muted-foreground">
+        <div className="space-y-2">
+          <label htmlFor="email" className="block text-xs text-muted-foreground">
             Work email
           </label>
           <input
@@ -56,12 +52,12 @@ export default async function SignInPage({
             defaultValue={emailRaw ?? ""}
             required
             autoComplete="email"
-            className="w-full rounded-lg border border-border/70 bg-background/50 px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-primary/45"
+            className="w-full rounded-lg border border-border/60 bg-background/40 px-3.5 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground/45 focus:border-primary/50"
             placeholder="you@brand.com"
           />
         </div>
-        <div className="space-y-2.5">
-          <label htmlFor="password" className="text-xs text-muted-foreground">
+        <div className="space-y-2">
+          <label htmlFor="password" className="block text-xs text-muted-foreground">
             Password
           </label>
           <input
@@ -71,27 +67,17 @@ export default async function SignInPage({
             required
             minLength={8}
             autoComplete="current-password"
-            className="w-full rounded-lg border border-border/70 bg-background/50 px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-primary/45"
-            placeholder="Enter your password"
+            className="w-full rounded-lg border border-border/60 bg-background/40 px-3.5 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground/45 focus:border-primary/50"
+            placeholder="Your password"
           />
-          <p className="text-xs text-muted-foreground">
-            Session access is scoped to your workspace membership.
-          </p>
         </div>
         <button
           type="submit"
-          className="marketing-primary-cta inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
+          className="marketing-primary-cta mt-1 inline-flex w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold transition-transform hover:-translate-y-px"
         >
           Enter workspace
         </button>
       </form>
-
-      <Link
-        href="/"
-        className="inline-flex text-xs text-muted-foreground transition-colors hover:text-foreground"
-      >
-        Return to marketing site
-      </Link>
     </AccessPanel>
   )
 }

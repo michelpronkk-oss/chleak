@@ -29,23 +29,23 @@ export default async function DashboardOverviewPage() {
     return (
       <div className="space-y-5 pb-24 lg:pb-4">
         <section className="space-y-2">
-          <p className="data-mono text-primary">Connection Setup</p>
+          <p className="data-mono text-primary">Source Connection</p>
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
-            {journey.sourceLabel} connection is being prepared
+            {journey.sourceLabel} authorization in progress
           </h1>
-          <p className="text-sm text-muted-foreground sm:text-base">
-            Confirm data access scope and start the first scan when ready.
+          <p className="max-w-xl text-sm text-muted-foreground sm:text-base">
+            Complete the connection setup to authorize data access and activate your first scan.
           </p>
         </section>
-        <section className="surface-card p-5 sm:p-6 lg:p-7">
-          <p className="text-sm text-muted-foreground">
-            Continue to integration setup to complete source authorization and initialize first scan coverage.
+        <section className="surface-card p-5 sm:p-6">
+          <p className="text-sm leading-[1.72] text-muted-foreground">
+            Open the connection flow to finish authorization and verify data access scope. CheckoutLeak will begin scanning immediately after confirmation.
           </p>
           <Link
             href="/app/connect"
-            className="marketing-primary-cta mt-5 inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
+            className="marketing-primary-cta mt-5 inline-flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-transform hover:-translate-y-px"
           >
-            Continue setup
+            Complete connection setup
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </section>
@@ -83,38 +83,43 @@ export default async function DashboardOverviewPage() {
     return (
       <div className="space-y-5 pb-24 lg:pb-4">
         <section className="space-y-2">
-          <p className="data-mono text-primary">First Scan Running</p>
+          <div className="flex items-center gap-2">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+            <p className="data-mono text-primary">Scanning</p>
+          </div>
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
-            {journey.sourceLabel} source connected. Initial scan in progress.
+            {journey.sourceLabel} source connected. First scan running.
           </h1>
-          <p className="text-sm text-muted-foreground sm:text-base">
-            CheckoutLeak is processing your first pass and will land you in actionable issue intelligence after completion.
+          <p className="max-w-xl text-sm text-muted-foreground sm:text-base">
+            CheckoutLeak is processing your checkout and billing data. First findings will be available shortly, ranked by revenue impact.
           </p>
         </section>
 
-        <section className="surface-card-strong p-5 sm:p-6 lg:p-7">
-          <ul className="space-y-3 text-sm text-muted-foreground">
+        <section className="surface-card-strong p-5 sm:p-6">
+          <p className="data-mono mb-4 text-muted-foreground">Scan coverage</p>
+          <ul className="space-y-2.5">
             {journey.checks.map((check) => (
               <li
                 key={check}
-                className="rounded-lg border border-border/70 bg-background/35 px-4 py-3"
+                className="flex items-center gap-3 rounded-lg border border-border/70 bg-background/35 px-4 py-3 text-sm text-muted-foreground"
               >
+                <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-primary/60" />
                 {check}
               </li>
             ))}
           </ul>
 
           <div className="mt-5 flex flex-wrap gap-3">
-          <Link
+            <Link
               href={`/api/mock/onboarding?state=first_results_${journey.sourceLabel.toLowerCase()}&next=/app`}
-              className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
+              className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-transform hover:-translate-y-px"
             >
               View first results
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
             <Link
               href="/app/stores"
-              className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded-lg border border-border/70 px-4 py-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               Open stores
             </Link>

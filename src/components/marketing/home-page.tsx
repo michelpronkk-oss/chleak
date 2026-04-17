@@ -70,8 +70,8 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 
 function SectionRule() {
   return (
-    <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-      <div className="h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
+    <div className="mx-auto max-w-6xl px-5 sm:px-8">
+      <div className="h-px bg-gradient-to-r from-transparent via-border/45 to-transparent" />
     </div>
   )
 }
@@ -89,15 +89,16 @@ export default function MarketingHomePage() {
         }}
       />
 
-      <section className="relative mx-auto w-full max-w-6xl px-4 pb-16 pt-10 sm:px-6 sm:pb-20 sm:pt-14 md:pt-18 lg:px-8 lg:pb-24 lg:pt-24">
-        <div className="grid gap-10 lg:grid-cols-[1fr_390px] lg:items-start lg:gap-10">
+      {/* Hero */}
+      <section className="relative mx-auto w-full max-w-6xl px-5 pb-14 pt-10 sm:px-8 sm:pb-20 sm:pt-14 lg:pb-24 lg:pt-24">
+        <div className="grid gap-10 lg:grid-cols-[1fr_390px] lg:items-start lg:gap-12">
           <div>
             <FadeIn delay={0.04}>
               <Eyebrow>Revenue intelligence | Shopify and Stripe</Eyebrow>
             </FadeIn>
 
             <FadeIn delay={0.08}>
-              <h1 className="max-w-[560px] text-[2.2rem] font-semibold leading-[1.04] tracking-[-0.04em] text-foreground sm:text-5xl lg:text-[4.25rem]">
+              <h1 className="max-w-[560px] text-[2.4rem] font-semibold leading-[1.04] tracking-[-0.04em] text-foreground sm:text-5xl lg:text-[4.25rem]">
                 Stop losing revenue
                 <br />
                 at checkout.
@@ -105,18 +106,18 @@ export default function MarketingHomePage() {
             </FadeIn>
 
             <FadeIn delay={0.12}>
-              <p className="mt-5 max-w-[34ch] text-[1rem] leading-[1.75] text-muted-foreground sm:text-[1.05rem] sm:leading-[1.85]">
+              <p className="mt-5 max-w-[34ch] text-[1rem] leading-[1.78] text-muted-foreground sm:text-[1.05rem] sm:leading-[1.85]">
                 CheckoutLeak detects leakage across payment flow, method coverage, and dunning. Fixes are ranked by commercial impact.
               </p>
             </FadeIn>
 
             <FadeIn delay={0.16}>
-              <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:items-center">
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Link
                   href="/api/app/access?next=/app/billing&intent=choose-plan&source=hero_primary"
-                  className="marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-lg px-6 py-2.5 text-sm font-semibold transition-all hover:-translate-y-px hover:opacity-90 sm:w-auto"
+                  className="marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold transition-all hover:-translate-y-px hover:opacity-90 sm:w-auto"
                 >
-                  Start plan setup
+                  Start monitoring
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
                 <Link
@@ -130,18 +131,19 @@ export default function MarketingHomePage() {
             </FadeIn>
           </div>
 
+          {/* Live Leak Console */}
           <FadeIn delay={0.18} className="relative w-full lg:pt-2">
             <div
               aria-hidden
               className="pointer-events-none absolute -inset-8 -z-10 blur-3xl"
               style={{
                 background:
-                  "radial-gradient(ellipse at 50% 40%, rgba(70,225,215,0.17), transparent 65%)",
+                  "radial-gradient(ellipse at 50% 40%, rgba(70,225,215,0.15), transparent 65%)",
               }}
             />
 
             <div className="rounded-xl border border-border/70 bg-card/45 p-4 sm:p-5">
-              <div className="mb-3 flex items-center justify-between">
+              <div className="mb-4 flex items-center justify-between">
                 <span className="font-mono text-[0.68rem] tracking-[0.1em] uppercase text-primary/60">
                   Live Leak Console
                 </span>
@@ -151,13 +153,13 @@ export default function MarketingHomePage() {
                 </span>
               </div>
 
-              <div className="h-px bg-gradient-to-r from-primary/45 via-border/35 to-transparent" />
+              <div className="h-px bg-gradient-to-r from-primary/40 via-border/30 to-transparent" />
 
               <div>
                 {signals.map((signal, index) => (
                   <div key={signal.label}>
                     <div
-                      className="py-3.5 pl-3.5 transition-colors hover:bg-primary/[0.03] sm:py-4 sm:pl-4"
+                      className="py-4 pl-4 transition-colors hover:bg-primary/[0.03]"
                       style={{
                         borderLeft: `2px solid ${
                           index === 0
@@ -169,17 +171,21 @@ export default function MarketingHomePage() {
                       <p className="font-mono text-[0.67rem] tracking-[0.09em] uppercase text-muted-foreground/50">
                         {signal.label}
                       </p>
-                      <p className="mt-1.5 text-sm font-medium text-foreground/90">{signal.finding}</p>
+                      <p className="mt-1.5 text-sm font-medium text-foreground/90">
+                        {signal.finding}
+                      </p>
                       <p className="mt-1.5 font-mono text-[0.79rem] tracking-[0.04em] text-primary">
                         {signal.impact}
                       </p>
                     </div>
-                    {index < signals.length - 1 && <div className="ml-4 h-px bg-border/30" />}
+                    {index < signals.length - 1 && (
+                      <div className="ml-4 h-px bg-border/25" />
+                    )}
                   </div>
                 ))}
               </div>
 
-              <div className="mt-4 h-px bg-gradient-to-r from-border/30 via-border/15 to-transparent" />
+              <div className="mt-4 h-px bg-gradient-to-r from-border/25 via-border/10 to-transparent" />
             </div>
           </FadeIn>
         </div>
@@ -187,12 +193,13 @@ export default function MarketingHomePage() {
 
       <SectionRule />
 
-      <section className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 sm:py-18 lg:px-8 lg:py-22">
+      {/* How it works */}
+      <section className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8 sm:py-20 lg:py-24">
         <FadeIn delay={0.06}>
           <div className="grid gap-10 lg:grid-cols-2 lg:items-start lg:gap-20">
             <div>
               <Eyebrow>How it works</Eyebrow>
-              <h2 className="text-[1.65rem] font-semibold leading-[1.15] tracking-[-0.03em] sm:text-[2.05rem] lg:text-[2.35rem]">
+              <h2 className="text-[1.65rem] font-semibold leading-[1.13] tracking-[-0.03em] sm:text-[2.05rem] lg:text-[2.35rem]">
                 Built for decision speed,
                 <br />
                 not dashboard browsing.
@@ -202,9 +209,9 @@ export default function MarketingHomePage() {
               </p>
             </div>
 
-            <div className="space-y-5 lg:pt-10">
+            <div className="space-y-6 lg:pt-10">
               {howItWorks.map((item) => (
-                <div key={item.title} className="border-l border-border/55 pl-4">
+                <div key={item.title} className="border-l border-border/50 pl-5">
                   <p className="text-[0.93rem] font-medium text-foreground">{item.title}</p>
                   <p className="mt-1.5 text-sm leading-[1.75] text-muted-foreground">{item.body}</p>
                 </div>
@@ -216,11 +223,12 @@ export default function MarketingHomePage() {
 
       <SectionRule />
 
-      <section className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 sm:py-18 lg:px-8 lg:py-22">
+      {/* Issue intelligence */}
+      <section className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8 sm:py-20 lg:py-24">
         <FadeIn delay={0.06}>
           <div className="mb-10 sm:mb-12">
             <Eyebrow>Issue intelligence</Eyebrow>
-            <h2 className="max-w-lg text-[1.65rem] font-semibold leading-[1.15] tracking-[-0.03em] sm:text-[2.05rem] lg:text-[2.35rem]">
+            <h2 className="max-w-lg text-[1.65rem] font-semibold leading-[1.13] tracking-[-0.03em] sm:text-[2.05rem] lg:text-[2.35rem]">
               What gets surfaced in every leak.
             </h2>
             <p className="mt-4 max-w-[40ch] text-[0.94rem] leading-[1.8] text-muted-foreground sm:text-[0.97rem] sm:leading-[1.85]">
@@ -228,15 +236,20 @@ export default function MarketingHomePage() {
             </p>
           </div>
 
-          <div className="grid gap-0 border-y border-border/50 sm:grid-cols-2">
+          <div className="grid border-y border-border/50 sm:grid-cols-2">
             {leakTypes.map((item, index) => (
               <article
                 key={item.index}
-                className={`py-6 sm:py-7 lg:py-8 ${
-                  index < 2 ? "border-b border-border/50" : ""
-                } ${index % 2 === 0 ? "sm:border-r sm:border-border/50 sm:pr-7" : "sm:pl-7"}`}
+                className={[
+                  "py-7 sm:py-8 lg:py-9",
+                  index < leakTypes.length - 1 ? "border-b border-border/50" : "",
+                  index >= 2 ? "sm:border-b-0" : "",
+                  index % 2 === 0
+                    ? "sm:border-r sm:border-border/50 sm:pr-8"
+                    : "sm:pl-8",
+                ].join(" ")}
               >
-                <p className="mb-2.5 font-mono text-[0.68rem] tracking-[0.1em] text-muted-foreground/45">
+                <p className="mb-3 font-mono text-[0.68rem] tracking-[0.1em] text-muted-foreground/40">
                   {item.index}
                 </p>
                 <p className="text-[0.95rem] font-medium text-foreground">{item.title}</p>
@@ -249,12 +262,16 @@ export default function MarketingHomePage() {
 
       <SectionRule />
 
-      <section id="pricing" className="mx-auto w-full max-w-6xl scroll-mt-24 px-4 py-14 sm:px-6 sm:py-18 lg:px-8 lg:py-22">
+      {/* Pricing */}
+      <section
+        id="pricing"
+        className="mx-auto w-full max-w-6xl scroll-mt-20 px-5 py-14 sm:px-8 sm:py-20 lg:py-24"
+      >
         <FadeIn delay={0.06}>
           <div className="mb-10 flex flex-col gap-4 sm:mb-12 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <Eyebrow>Pricing</Eyebrow>
-              <h2 className="text-[1.65rem] font-semibold leading-[1.15] tracking-[-0.03em] sm:text-[2.05rem] lg:text-[2.35rem]">
+              <h2 className="text-[1.65rem] font-semibold leading-[1.13] tracking-[-0.03em] sm:text-[2.05rem] lg:text-[2.35rem]">
                 Plans aligned to
                 <br className="hidden sm:block" />
                 operating maturity.
@@ -267,11 +284,11 @@ export default function MarketingHomePage() {
               href="/api/app/access?next=/app/billing&intent=choose-plan&source=pricing_section"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-opacity hover:opacity-70"
             >
-              Start plan setup <ArrowRight className="h-3.5 w-3.5" />
+              Start monitoring <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-3 lg:gap-4">
+          <div className="grid gap-3.5 lg:grid-cols-3 lg:gap-4">
             {pricingPlans.map((plan) => (
               <div
                 key={plan.id}
@@ -322,7 +339,9 @@ export default function MarketingHomePage() {
                   <span className="ml-1.5 text-sm text-muted-foreground">/mo</span>
                 </div>
 
-                <p className="mt-2.5 text-sm leading-[1.68] text-muted-foreground">{plan.summary}</p>
+                <p className="mt-2.5 text-sm leading-[1.68] text-muted-foreground">
+                  {plan.summary}
+                </p>
 
                 <div
                   className="my-4 h-px"
@@ -343,8 +362,8 @@ export default function MarketingHomePage() {
                     href={`/api/app/access?next=/app/billing&intent=choose-plan&plan=${plan.id}&source=pricing_${plan.id}`}
                     className={
                       plan.recommended
-                        ? "marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all hover:-translate-y-px hover:opacity-90"
-                        : "inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border/60 px-5 py-2.5 text-sm font-medium text-foreground/85 transition-colors hover:text-foreground"
+                        ? "marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold transition-all hover:-translate-y-px hover:opacity-90"
+                        : "inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border/60 px-5 py-3 text-sm font-medium text-foreground/80 transition-colors hover:border-border hover:text-foreground"
                     }
                   >
                     {plan.callToAction}
@@ -357,10 +376,11 @@ export default function MarketingHomePage() {
         </FadeIn>
       </section>
 
-      <section className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8 lg:pb-24">
+      {/* Closing CTA */}
+      <section className="mx-auto w-full max-w-6xl px-5 pb-16 sm:px-8 sm:pb-20 lg:pb-24">
         <FadeIn delay={0.06}>
           <div
-            className="relative overflow-hidden rounded-xl px-5 py-10 text-center sm:px-10 sm:py-12 lg:px-12 lg:py-14"
+            className="relative overflow-hidden rounded-xl px-5 py-10 text-center sm:px-10 sm:py-14 lg:px-14 lg:py-16"
             style={{ border: "1px solid oklch(0.3776 0.0204 254.66 / 0.4)" }}
           >
             <div
@@ -376,23 +396,23 @@ export default function MarketingHomePage() {
               className="pointer-events-none absolute inset-0 -z-10"
               style={{
                 background:
-                  "radial-gradient(ellipse at 50% 100%, rgba(56,113,190,0.06), transparent 70%)",
+                  "radial-gradient(ellipse at 50% 100%, rgba(56,113,190,0.05), transparent 70%)",
               }}
             />
 
             <Eyebrow>Get started</Eyebrow>
-            <h2 className="mx-auto max-w-md text-[1.65rem] font-semibold leading-[1.15] tracking-[-0.03em] sm:text-[2.05rem] lg:text-[2.35rem]">
+            <h2 className="mx-auto max-w-md text-[1.65rem] font-semibold leading-[1.13] tracking-[-0.03em] sm:text-[2.05rem] lg:text-[2.35rem]">
               See where your revenue is leaking.
             </h2>
-            <p className="mx-auto mt-4 max-w-[36ch] text-[0.94rem] leading-[1.8] text-muted-foreground sm:text-[0.97rem] sm:leading-[1.85]">
+            <p className="mx-auto mt-4 max-w-[34ch] text-[0.94rem] leading-[1.8] text-muted-foreground sm:text-[0.97rem] sm:leading-[1.85]">
               Connect your Shopify or Stripe account and get your first leak report in minutes.
             </p>
             <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <Link
                 href="/api/app/access?next=/app/billing&intent=choose-plan&source=closing_primary"
-                className="marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-lg px-7 py-2.5 text-sm font-semibold transition-all hover:-translate-y-px hover:opacity-90 sm:w-auto"
+                className="marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-lg px-7 py-3 text-sm font-semibold transition-all hover:-translate-y-px hover:opacity-90 sm:w-auto"
               >
-                Start plan setup
+                Start monitoring
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
               <Link

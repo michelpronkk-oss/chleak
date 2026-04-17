@@ -18,7 +18,7 @@ export default async function HomePage({
         {showAccessNotice ? (
           <div className="mx-auto mt-5 w-full max-w-6xl px-5 sm:px-8">
             <div className="rounded-lg border border-border/70 bg-card/60 px-4 py-3 text-sm text-muted-foreground">
-              Start plan setup to open your workspace. After plan activation, connect Shopify or Stripe to unlock monitoring.
+              Select a plan to activate monitoring. After activation, connect Shopify or Stripe to start your first scan.
             </div>
           </div>
         ) : null}
