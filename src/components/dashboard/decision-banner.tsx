@@ -19,17 +19,17 @@ export function DecisionBanner({
   fixPlanHref: string
 }) {
   return (
-    <section className="surface-card-strong overflow-hidden p-6 sm:p-7">
-      <div className="grid gap-6 lg:grid-cols-[1.7fr_1fr] lg:items-end">
-        <div className="space-y-3">
+    <section className="surface-card-strong overflow-hidden p-4 sm:p-6 lg:p-7">
+      <div className="grid gap-4 lg:grid-cols-[1.65fr_1fr] lg:items-end">
+        <div className="space-y-2.5">
           <p className="data-mono text-primary">Primary Leak Decision</p>
-          <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
+          <h2 className="text-lg font-semibold tracking-tight sm:text-xl lg:text-2xl">
             {issue.title}
           </h2>
-          <p className="max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
+          <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[0.95rem] sm:leading-7">
             {issue.whyItMatters}
           </p>
-          <div className="flex flex-wrap items-center gap-3 text-xs">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
             <span className="rounded-md border border-primary/35 bg-primary/10 px-2 py-1 text-primary">
               {confidenceBySeverity[issue.severity]}
             </span>
@@ -42,7 +42,7 @@ export function DecisionBanner({
           </div>
         </div>
 
-        <div className="space-y-4 rounded-xl border border-border/70 bg-background/35 p-4 sm:p-5">
+        <div className="space-y-3 rounded-xl border border-border/70 bg-background/35 p-4 sm:p-5">
           <p className="data-mono text-muted-foreground">At Risk Monthly</p>
           <p className="text-2xl font-semibold tracking-tight text-primary sm:text-3xl">
             {formatCompactCurrency(issue.estimatedMonthlyRevenueImpact)}

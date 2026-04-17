@@ -136,29 +136,39 @@
 
 @layer utilities {
   .surface-card {
-    @apply rounded-2xl border border-border/80 bg-card/80 backdrop-blur;
+    @apply rounded-xl border border-border/75 bg-card/78 backdrop-blur-sm sm:rounded-2xl;
   }
 
   .surface-card-strong {
-    @apply rounded-2xl border border-primary/25 bg-card/90 shadow-[0_0_0_1px_rgba(70,225,215,0.08),0_30px_70px_rgba(2,14,22,0.5)];
+    @apply rounded-xl border border-primary/25 bg-card/88 shadow-[0_0_0_1px_rgba(70,225,215,0.08),0_24px_60px_rgba(2,14,22,0.45)] sm:rounded-2xl;
   }
 
   .dashboard-grid {
     background-image:
       linear-gradient(to right, rgba(133, 156, 183, 0.08) 1px, transparent 1px),
       linear-gradient(to bottom, rgba(133, 156, 183, 0.08) 1px, transparent 1px);
-    background-size: 30px 30px;
+    background-size: 26px 26px;
+  }
+
+  @media (min-width: 640px) {
+    .dashboard-grid {
+      background-size: 30px 30px;
+    }
   }
 
   .data-mono {
-    @apply font-mono text-[0.8125rem] tracking-[0.06em] uppercase;
+    @apply font-mono text-[0.74rem] tracking-[0.08em] uppercase;
   }
 
   .marketing-primary-cta {
-    @apply bg-primary text-white focus-visible:ring-2 focus-visible:ring-primary/35;
+    @apply border border-primary/50 bg-primary text-white shadow-[0_0_24px_rgba(70,225,215,0.18)] focus-visible:ring-2 focus-visible:ring-primary/35;
   }
 
   .marketing-primary-cta:hover {
-    filter: brightness(0.97);
+    filter: brightness(0.96);
+  }
+
+  .marketing-primary-cta:active {
+    transform: translateY(1px);
   }
 }

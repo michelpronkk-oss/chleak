@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { ArrowRight, CircleDot } from "lucide-react"
 
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
@@ -7,21 +8,29 @@ import { getStoresIndexData } from "@/server/services/app-service"
 export default async function StoresPage() {
   const data = await getStoresIndexData()
 
+  if (!data.hasPlan) {
+    redirect("/app/billing?intent=plan_required")
+  }
+
+  if (data.onboardingState === "empty") {
+    redirect("/app/connect")
+  }
+
   return (
-    <div className="space-y-6 pb-20 lg:pb-4">
+    <div className="space-y-5 pb-24 lg:pb-4">
       <section className="space-y-2">
         <p className="data-mono text-primary">Stores</p>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
           Connected Revenue Sources
         </h1>
-        <p className="text-sm text-muted-foreground sm:text-base">
-          Every store is tracked as a monitored asset with scan status, active issues, and leakage exposure.
+        <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
+          Every source is tracked as a monitored asset with scan status, active issues, and leakage exposure.
         </p>
       </section>
 
-      <section className="surface-card p-5 sm:p-6">
+      <section className="surface-card p-4 sm:p-5 lg:p-6">
         {data.stagingSource ? (
-          <article className="rounded-xl border border-border/70 bg-background/35 p-5">
+          <article className="rounded-xl border border-border/70 bg-background/35 p-4 sm:p-5">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-base font-semibold tracking-tight sm:text-lg">
                 {data.stagingSource.label} source
@@ -41,7 +50,10 @@ export default async function StoresPage() {
         ) : data.stores.length ? (
           <div className="divide-y divide-border/60">
             {data.stores.map((store) => (
-              <article key={store.id} className="grid gap-4 py-5 sm:grid-cols-[1.3fr_1fr_auto] sm:items-center">
+              <article
+                key={store.id}
+                className="grid gap-3 py-4 sm:gap-4 sm:py-5 sm:grid-cols-[1.3fr_1fr_auto] sm:items-center"
+              >
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-base font-semibold tracking-tight sm:text-lg">{store.name}</h2>
@@ -51,7 +63,7 @@ export default async function StoresPage() {
                     <span className={`text-xs ${store.statusTone}`}>{store.statusLabel}</span>
                   </div>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    {store.domain ?? "Internal billing source"} · {store.activeIssueCount} active issues
+                    {store.domain ?? "Internal billing source"} | {store.activeIssueCount} active issues
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {store.topIssueTitle ? `Top issue: ${store.topIssueTitle}` : "No critical issue detected."}
@@ -83,20 +95,20 @@ export default async function StoresPage() {
         )}
       </section>
 
-      <section className="surface-card p-5 sm:p-6">
+      <section className="surface-card p-4 sm:p-5 lg:p-6">
         <p className="data-mono text-primary">Coverage Snapshot</p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          <div className="rounded-xl border border-border/70 bg-background/35 p-4">
+        <div className="mt-4 grid gap-3 sm:grid-cols-3 sm:gap-4">
+          <div className="rounded-xl border border-border/70 bg-background/35 p-3.5 sm:p-4">
             <p className="text-sm text-muted-foreground">Connected stores</p>
             <p className="mt-1 text-2xl font-semibold tracking-tight">{data.stores.length}</p>
           </div>
-          <div className="rounded-xl border border-border/70 bg-background/35 p-4">
+          <div className="rounded-xl border border-border/70 bg-background/35 p-3.5 sm:p-4">
             <p className="text-sm text-muted-foreground">Total active issues</p>
             <p className="mt-1 text-2xl font-semibold tracking-tight">
               {data.stores.reduce((count, store) => count + store.activeIssueCount, 0)}
             </p>
           </div>
-          <div className="rounded-xl border border-border/70 bg-background/35 p-4">
+          <div className="rounded-xl border border-border/70 bg-background/35 p-3.5 sm:p-4">
             <p className="text-sm text-muted-foreground">Combined leakage estimate</p>
             <p className="mt-1 text-2xl font-semibold tracking-tight text-primary">
               {formatCompactCurrency(

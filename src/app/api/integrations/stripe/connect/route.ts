@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 
+import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { ensureWorkspaceForUser } from "@/server/services/account-bootstrap-service"
 import { ONBOARDING_STATE_COOKIE } from "@/server/services/onboarding-state-service"
 import {
   STRIPE_OAUTH_STATE_COOKIE,
@@ -14,16 +16,41 @@ import {
 
 export async function GET(request: Request) {
   const url = new URL(request.url)
-  const organizationId =
-    url.searchParams.get("orgId") ??
-    process.env.CHECKOUTLEAK_DEFAULT_ORGANIZATION_ID ??
-    "org_luma-health"
+
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    const signInUrl = new URL("/auth/sign-in", url.origin)
+    signInUrl.searchParams.set("next", "/app/connect?provider=stripe")
+    return NextResponse.redirect(signInUrl)
+  }
+
+  const metadata = user.user_metadata as Record<string, unknown> | null
+  const fullName =
+    typeof metadata?.full_name === "string" && metadata.full_name.trim().length > 0
+      ? metadata.full_name.trim()
+      : null
+
+  const membership = await ensureWorkspaceForUser({
+    userId: user.id,
+    email: user.email ?? null,
+    fullName,
+  })
+  const organizationId = membership.organizationId
 
   const setup = getStripeSetupState()
   if (!setup.configured) {
-    return NextResponse.redirect(
-      new URL("/app/connect?provider=stripe&status=setup_required", url.origin)
+    const redirectUrl = new URL(
+      "/app/connect?provider=stripe&status=setup_required",
+      url.origin
     )
+    if (setup.missing.length) {
+      redirectUrl.searchParams.set("missing", setup.missing.join(","))
+    }
+    return NextResponse.redirect(redirectUrl)
   }
 
   try {

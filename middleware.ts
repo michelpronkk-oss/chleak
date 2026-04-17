@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
@@ -25,7 +26,15 @@ export async function middleware(request: NextRequest) {
     },
   })
 
-  await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    const redirectUrl = new URL("/auth/sign-in", request.url)
+    redirectUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`)
+    return NextResponse.redirect(redirectUrl)
+  }
 
   return response
 }

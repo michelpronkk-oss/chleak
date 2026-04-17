@@ -1,4 +1,4 @@
-import Link from "next/link"
+﻿import Link from "next/link"
 
 import { CheckoutLeakLogo } from "@/components/brand/logo"
 
@@ -7,7 +7,10 @@ const footerGroups = [
     title: "Product",
     links: [
       { label: "Pricing", href: "/#pricing" },
-      { label: "Dashboard", href: "/app" },
+      {
+        label: "Dashboard",
+        href: "/api/app/access?next=/app&source=footer_dashboard",
+      },
       { label: "Product", href: "/product" },
     ],
   },
@@ -29,12 +32,12 @@ const footerGroups = [
 
 export function MarketingFooter() {
   return (
-    <footer className="border-t border-border/60 py-12">
-      <div className="mx-auto w-full max-w-6xl px-5 sm:px-8">
-        <div className="grid gap-12 lg:grid-cols-[1.2fr_1.8fr]">
+    <footer className="border-t border-border/60 py-10 sm:py-12">
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="grid gap-10 sm:gap-12 lg:grid-cols-[1.2fr_1.8fr]">
           <div className="max-w-sm space-y-4">
             <CheckoutLeakLogo />
-            <p className="text-sm leading-7 text-muted-foreground sm:text-base">
+            <p className="text-sm leading-6 text-muted-foreground sm:text-base sm:leading-7">
               Find lost revenue across checkout, payments, and billing.
             </p>
             <a
@@ -45,7 +48,7 @@ export function MarketingFooter() {
             </a>
           </div>
 
-          <div className="grid gap-8 sm:grid-cols-3">
+          <div className="grid gap-7 sm:grid-cols-3 sm:gap-8">
             {footerGroups.map((group) => (
               <div key={group.title}>
                 <h3 className="font-mono text-[0.7rem] tracking-[0.12em] uppercase text-primary/70">
@@ -68,7 +71,7 @@ export function MarketingFooter() {
           </div>
         </div>
 
-        <div className="mt-10 border-t border-border/60 pt-5">
+        <div className="mt-9 border-t border-border/60 pt-5">
           <p className="text-xs text-muted-foreground">
             © 2026 CheckoutLeak. All rights reserved.
           </p>
@@ -77,3 +80,5 @@ export function MarketingFooter() {
     </footer>
   )
 }
+
+

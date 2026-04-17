@@ -31,7 +31,7 @@ export function FixPlanControls({
   }, [status])
 
   return (
-    <section className="surface-card p-5 sm:p-6">
+    <section className="surface-card p-4 sm:p-5 lg:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="data-mono text-primary">Action Controls</p>
@@ -67,3 +67,4 @@ export function FixPlanControls({
     </section>
   )
 }
+

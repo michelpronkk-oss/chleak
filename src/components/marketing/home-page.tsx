@@ -62,7 +62,7 @@ const howItWorks = [
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-5 font-mono text-[0.72rem] tracking-[0.12em] uppercase text-primary/70">
+    <p className="mb-4 font-mono text-[0.72rem] tracking-[0.12em] uppercase text-primary/70 sm:mb-5">
       {children}
     </p>
   )
@@ -70,7 +70,7 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 
 function SectionRule() {
   return (
-    <div className="mx-auto max-w-6xl px-5 sm:px-8">
+    <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
       <div className="h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
     </div>
   )
@@ -79,14 +79,6 @@ function SectionRule() {
 export default function MarketingHomePage() {
   return (
     <div className="relative" style={{ overflowX: "clip" }}>
-
-      {/*
-        Hero ambient glow - lives outside the max-w section so it is never
-        clipped. Center is pushed ~30% above and right of the wrapper;
-        only the soft gradient tail is visible in the hero.
-        overflow-x:clip avoids creating a BFC scroll container that would
-        clip this element on the y axis.
-      */}
       <div
         aria-hidden
         className="pointer-events-none absolute right-0 top-0 -z-10 h-[900px] w-[900px]"
@@ -97,19 +89,15 @@ export default function MarketingHomePage() {
         }}
       />
 
-      {/* ── Hero ─────────────────────────────────────────────────── */}
-      <section className="relative mx-auto w-full max-w-6xl px-5 pb-24 pt-16 sm:px-8 md:pt-24 lg:pb-28">
-
-        <div className="grid gap-16 lg:grid-cols-[1fr_400px] lg:items-start lg:gap-12">
-
-          {/* - Left: headline + cta - */}
+      <section className="relative mx-auto w-full max-w-6xl px-4 pb-16 pt-10 sm:px-6 sm:pb-20 sm:pt-14 md:pt-18 lg:px-8 lg:pb-24 lg:pt-24">
+        <div className="grid gap-10 lg:grid-cols-[1fr_390px] lg:items-start lg:gap-10">
           <div>
             <FadeIn delay={0.04}>
-              <Eyebrow>Revenue intelligence · Shopify &amp; Stripe</Eyebrow>
+              <Eyebrow>Revenue intelligence | Shopify and Stripe</Eyebrow>
             </FadeIn>
 
             <FadeIn delay={0.08}>
-              <h1 className="max-w-[560px] text-[2.65rem] font-semibold leading-[1.06] tracking-[-0.038em] text-foreground sm:text-5xl lg:text-[4.375rem] lg:leading-[1.04]">
+              <h1 className="max-w-[560px] text-[2.2rem] font-semibold leading-[1.04] tracking-[-0.04em] text-foreground sm:text-5xl lg:text-[4.25rem]">
                 Stop losing revenue
                 <br />
                 at checkout.
@@ -117,18 +105,18 @@ export default function MarketingHomePage() {
             </FadeIn>
 
             <FadeIn delay={0.12}>
-              <p className="mt-6 max-w-[36ch] text-[1.0625rem] leading-[1.85] text-muted-foreground">
+              <p className="mt-5 max-w-[34ch] text-[1rem] leading-[1.75] text-muted-foreground sm:text-[1.05rem] sm:leading-[1.85]">
                 CheckoutLeak detects leakage across payment flow, method coverage, and dunning. Fixes are ranked by commercial impact.
               </p>
             </FadeIn>
 
             <FadeIn delay={0.16}>
-              <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:items-center">
                 <Link
-                  href="/app"
-                  className="marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold shadow-[0_0_22px_rgba(70,225,215,0.22)] transition-all hover:-translate-y-px hover:opacity-90 sm:w-auto"
+                  href="/api/app/access?next=/app/billing&intent=choose-plan&source=hero_primary"
+                  className="marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-lg px-6 py-2.5 text-sm font-semibold transition-all hover:-translate-y-px hover:opacity-90 sm:w-auto"
                 >
-                  Open live product
+                  Start plan setup
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
                 <Link
@@ -142,10 +130,7 @@ export default function MarketingHomePage() {
             </FadeIn>
           </div>
 
-          {/* - Right: intelligence terminal - */}
           <FadeIn delay={0.18} className="relative w-full lg:pt-2">
-
-            {/* ambient glow behind terminal */}
             <div
               aria-hidden
               className="pointer-events-none absolute -inset-8 -z-10 blur-3xl"
@@ -155,207 +140,153 @@ export default function MarketingHomePage() {
               }}
             />
 
-            <div>
-              {/* terminal header */}
-              <div className="mb-4 flex items-center justify-between">
-                <span className="font-mono text-[0.7rem] tracking-[0.1em] uppercase text-primary/60">
+            <div className="rounded-xl border border-border/70 bg-card/45 p-4 sm:p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="font-mono text-[0.68rem] tracking-[0.1em] uppercase text-primary/60">
                   Live Leak Console
                 </span>
-                <span className="flex items-center gap-1.5 font-mono text-[0.68rem] text-muted-foreground/50">
+                <span className="flex items-center gap-1.5 font-mono text-[0.67rem] text-muted-foreground/55">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary/60" />
                   scanning
                 </span>
               </div>
 
-              {/* gradient top rule */}
               <div className="h-px bg-gradient-to-r from-primary/45 via-border/35 to-transparent" />
 
-              {/* signal rows */}
               <div>
-                {signals.map((s, i) => (
-                  <div key={s.label}>
+                {signals.map((signal, index) => (
+                  <div key={signal.label}>
                     <div
-                      className="py-4 pl-4 transition-colors hover:bg-primary/[0.03]"
+                      className="py-3.5 pl-3.5 transition-colors hover:bg-primary/[0.03] sm:py-4 sm:pl-4"
                       style={{
                         borderLeft: `2px solid ${
-                          i === 0
+                          index === 0
                             ? "oklch(0.7899 0.1378 186.74 / 0.5)"
                             : "oklch(0.3776 0.0204 254.66 / 0.5)"
                         }`,
                       }}
                     >
                       <p className="font-mono text-[0.67rem] tracking-[0.09em] uppercase text-muted-foreground/50">
-                        {s.label}
+                        {signal.label}
                       </p>
-                      <p className="mt-1.5 text-sm font-medium text-foreground/90">{s.finding}</p>
-                      <p className="mt-1.5 font-mono text-[0.8rem] tracking-[0.04em] text-primary">
-                        {s.impact}
+                      <p className="mt-1.5 text-sm font-medium text-foreground/90">{signal.finding}</p>
+                      <p className="mt-1.5 font-mono text-[0.79rem] tracking-[0.04em] text-primary">
+                        {signal.impact}
                       </p>
                     </div>
-                    {i < signals.length - 1 && (
-                      <div className="ml-4 h-px bg-border/30" />
-                    )}
+                    {index < signals.length - 1 && <div className="ml-4 h-px bg-border/30" />}
                   </div>
                 ))}
               </div>
 
-              {/* gradient bottom rule */}
               <div className="mt-4 h-px bg-gradient-to-r from-border/30 via-border/15 to-transparent" />
             </div>
           </FadeIn>
-
         </div>
       </section>
 
       <SectionRule />
 
-      {/* ── How it works ───────────────────────────────────────── */}
-      <section
-        id="pricing"
-        className="mx-auto w-full max-w-6xl scroll-mt-24 px-5 py-20 sm:px-8 md:py-24"
-      >
+      <section className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 sm:py-18 lg:px-8 lg:py-22">
         <FadeIn delay={0.06}>
-          <div className="grid gap-12 lg:grid-cols-2 lg:items-start lg:gap-24">
-
+          <div className="grid gap-10 lg:grid-cols-2 lg:items-start lg:gap-20">
             <div>
               <Eyebrow>How it works</Eyebrow>
-              <h2 className="text-[1.875rem] font-semibold leading-[1.2] tracking-[-0.03em] sm:text-[2.375rem]">
+              <h2 className="text-[1.65rem] font-semibold leading-[1.15] tracking-[-0.03em] sm:text-[2.05rem] lg:text-[2.35rem]">
                 Built for decision speed,
                 <br />
                 not dashboard browsing.
               </h2>
-              <p className="mt-5 max-w-[36ch] text-[0.9375rem] leading-[1.85] text-muted-foreground">
+              <p className="mt-4 max-w-[36ch] text-[0.94rem] leading-[1.78] text-muted-foreground sm:text-[0.97rem] sm:leading-[1.85]">
                 We ingest payment and billing events, score leakage patterns, and surface a ranked action queue your team can execute in sequence.
               </p>
             </div>
 
-            <div className="space-y-6 lg:pt-14">
+            <div className="space-y-5 lg:pt-10">
               {howItWorks.map((item) => (
-                <div key={item.title}>
-                  <p className="text-[0.9375rem] font-medium text-foreground">{item.title}</p>
+                <div key={item.title} className="border-l border-border/55 pl-4">
+                  <p className="text-[0.93rem] font-medium text-foreground">{item.title}</p>
                   <p className="mt-1.5 text-sm leading-[1.75] text-muted-foreground">{item.body}</p>
                 </div>
               ))}
             </div>
-
           </div>
         </FadeIn>
       </section>
 
       <SectionRule />
 
-      {/* ── Issue intelligence ─────────────────────────────────── */}
-      <section className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 md:py-24">
+      <section className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 sm:py-18 lg:px-8 lg:py-22">
         <FadeIn delay={0.06}>
-
-          <div className="mb-14">
+          <div className="mb-10 sm:mb-12">
             <Eyebrow>Issue intelligence</Eyebrow>
-            <h2 className="max-w-lg text-[1.875rem] font-semibold leading-[1.2] tracking-[-0.03em] sm:text-[2.375rem]">
+            <h2 className="max-w-lg text-[1.65rem] font-semibold leading-[1.15] tracking-[-0.03em] sm:text-[2.05rem] lg:text-[2.35rem]">
               What gets surfaced in every leak.
             </h2>
-            <p className="mt-5 max-w-[40ch] text-[0.9375rem] leading-[1.85] text-muted-foreground">
-              Each issue comes with a root cause, a financial impact estimate, and a specific next action.
+            <p className="mt-4 max-w-[40ch] text-[0.94rem] leading-[1.8] text-muted-foreground sm:text-[0.97rem] sm:leading-[1.85]">
+              Each issue comes with root cause, financial impact estimate, and a specific next action.
             </p>
           </div>
 
-          {/* 2x2 grid with ruled dividers */}
-          <div>
-            <div
-              className="grid gap-0 sm:grid-cols-2"
-              style={{ borderTop: "1px solid oklch(0.3776 0.0204 254.66 / 0.5)" }}
-            >
-              {leakTypes.slice(0, 2).map((item, i) => (
-                <div
-                  key={item.index}
-                  className="py-8"
-                  style={{
-                    borderBottom: "1px solid oklch(0.3776 0.0204 254.66 / 0.5)",
-                    ...(i === 0
-                      ? {
-                          paddingRight: "3rem",
-                          borderRight: "1px solid oklch(0.3776 0.0204 254.66 / 0.5)",
-                        }
-                      : { paddingLeft: "3rem" }),
-                  }}
-                >
-                  <p className="mb-3 font-mono text-[0.68rem] tracking-[0.1em] text-muted-foreground/45">
-                    {item.index}
-                  </p>
-                  <p className="text-[0.9375rem] font-medium text-foreground">{item.title}</p>
-                  <p className="mt-2 text-sm leading-[1.7] text-muted-foreground">{item.body}</p>
-                </div>
-              ))}
-            </div>
-            <div className="grid gap-0 sm:grid-cols-2">
-              {leakTypes.slice(2, 4).map((item, i) => (
-                <div
-                  key={item.index}
-                  className="py-8"
-                  style={
-                    i === 0
-                      ? {
-                          paddingRight: "3rem",
-                          borderRight: "1px solid oklch(0.3776 0.0204 254.66 / 0.5)",
-                        }
-                      : { paddingLeft: "3rem" }
-                  }
-                >
-                  <p className="mb-3 font-mono text-[0.68rem] tracking-[0.1em] text-muted-foreground/45">
-                    {item.index}
-                  </p>
-                  <p className="text-[0.9375rem] font-medium text-foreground">{item.title}</p>
-                  <p className="mt-2 text-sm leading-[1.7] text-muted-foreground">{item.body}</p>
-                </div>
-              ))}
-            </div>
+          <div className="grid gap-0 border-y border-border/50 sm:grid-cols-2">
+            {leakTypes.map((item, index) => (
+              <article
+                key={item.index}
+                className={`py-6 sm:py-7 lg:py-8 ${
+                  index < 2 ? "border-b border-border/50" : ""
+                } ${index % 2 === 0 ? "sm:border-r sm:border-border/50 sm:pr-7" : "sm:pl-7"}`}
+              >
+                <p className="mb-2.5 font-mono text-[0.68rem] tracking-[0.1em] text-muted-foreground/45">
+                  {item.index}
+                </p>
+                <p className="text-[0.95rem] font-medium text-foreground">{item.title}</p>
+                <p className="mt-2 text-sm leading-[1.72] text-muted-foreground">{item.body}</p>
+              </article>
+            ))}
           </div>
-
         </FadeIn>
       </section>
 
       <SectionRule />
 
-      {/* ── Pricing ────────────────────────────────────────────── */}
-      <section className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 md:py-24">
+      <section id="pricing" className="mx-auto w-full max-w-6xl scroll-mt-24 px-4 py-14 sm:px-6 sm:py-18 lg:px-8 lg:py-22">
         <FadeIn delay={0.06}>
-
-          <div className="mb-12 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="mb-10 flex flex-col gap-4 sm:mb-12 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <Eyebrow>Pricing</Eyebrow>
-              <h2 className="text-[1.875rem] font-semibold leading-[1.2] tracking-[-0.03em] sm:text-[2.375rem]">
+              <h2 className="text-[1.65rem] font-semibold leading-[1.15] tracking-[-0.03em] sm:text-[2.05rem] lg:text-[2.35rem]">
                 Plans aligned to
                 <br className="hidden sm:block" />
                 operating maturity.
               </h2>
-              <p className="mt-4 max-w-[38ch] text-[0.9375rem] leading-[1.85] text-muted-foreground">
+              <p className="mt-4 max-w-[38ch] text-[0.94rem] leading-[1.8] text-muted-foreground sm:text-[0.97rem] sm:leading-[1.85]">
                 Start lean. Scale coverage as your store count and billing complexity grow.
               </p>
             </div>
             <Link
-              href="/#pricing"
-              className="shrink-0 inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-opacity hover:opacity-70"
+              href="/api/app/access?next=/app/billing&intent=choose-plan&source=pricing_section"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-opacity hover:opacity-70"
             >
-              Full plan details <ArrowRight className="h-3.5 w-3.5" />
+              Start plan setup <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-3 lg:grid-cols-3 lg:gap-4">
             {pricingPlans.map((plan) => (
               <div
                 key={plan.id}
-                className="relative flex flex-col rounded-xl px-6 py-7"
+                className="relative flex flex-col rounded-xl px-5 py-6"
                 style={{
                   border: plan.recommended
                     ? "1px solid oklch(0.7899 0.1378 186.74 / 0.28)"
                     : "1px solid oklch(0.3776 0.0204 254.66 / 0.35)",
                   background: plan.recommended
                     ? "oklch(0.2329 0.0161 259.92 / 0.65)"
-                    : "oklch(0.2329 0.0161 259.92 / 0.3)",
+                    : "oklch(0.2329 0.0161 259.92 / 0.28)",
                 }}
               >
                 {plan.recommended && (
                   <>
-                    {/* top accent line */}
                     <div
                       aria-hidden
                       className="absolute inset-x-0 top-0 h-px rounded-t-xl"
@@ -364,7 +295,6 @@ export default function MarketingHomePage() {
                           "linear-gradient(to right, transparent, oklch(0.7899 0.1378 186.74 / 0.55), transparent)",
                       }}
                     />
-                    {/* ambient glow */}
                     <div
                       aria-hidden
                       className="pointer-events-none absolute inset-0 -z-10 rounded-xl"
@@ -376,7 +306,6 @@ export default function MarketingHomePage() {
                   </>
                 )}
 
-                {/* Plan name + badge */}
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-foreground">{plan.name}</p>
                   {plan.recommended && (
@@ -386,24 +315,20 @@ export default function MarketingHomePage() {
                   )}
                 </div>
 
-                {/* Price */}
-                <div className="mt-4">
-                  <span className="font-mono text-[2rem] font-semibold leading-none tracking-[-0.02em] text-foreground">
+                <div className="mt-3.5">
+                  <span className="font-mono text-[1.9rem] font-semibold leading-none tracking-[-0.02em] text-foreground">
                     ${plan.monthlyPrice}
                   </span>
                   <span className="ml-1.5 text-sm text-muted-foreground">/mo</span>
                 </div>
 
-                {/* Summary */}
-                <p className="mt-3 text-sm leading-[1.65] text-muted-foreground">{plan.summary}</p>
+                <p className="mt-2.5 text-sm leading-[1.68] text-muted-foreground">{plan.summary}</p>
 
-                {/* Divider */}
                 <div
-                  className="my-5 h-px"
+                  className="my-4 h-px"
                   style={{ background: "oklch(0.3776 0.0204 254.66 / 0.35)" }}
                 />
 
-                {/* Features */}
                 <ul className="flex-1 space-y-2.5">
                   {plan.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-2.5">
@@ -413,19 +338,13 @@ export default function MarketingHomePage() {
                   ))}
                 </ul>
 
-                {/* CTA */}
-                <div className="mt-8">
+                <div className="mt-6">
                   <Link
-                    href="/app"
+                    href={`/api/app/access?next=/app/billing&intent=choose-plan&plan=${plan.id}&source=pricing_${plan.id}`}
                     className={
                       plan.recommended
-                        ? "marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold shadow-[0_0_18px_rgba(70,225,215,0.18)] transition-all hover:-translate-y-px hover:opacity-90"
-                        : "inline-flex w-full items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
-                    }
-                    style={
-                      !plan.recommended
-                        ? { border: "1px solid oklch(0.3776 0.0204 254.66 / 0.5)" }
-                        : undefined
+                        ? "marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all hover:-translate-y-px hover:opacity-90"
+                        : "inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border/60 px-5 py-2.5 text-sm font-medium text-foreground/85 transition-colors hover:text-foreground"
                     }
                   >
                     {plan.callToAction}
@@ -435,15 +354,13 @@ export default function MarketingHomePage() {
               </div>
             ))}
           </div>
-
         </FadeIn>
       </section>
 
-      {/* ── Closing CTA ────────────────────────────────────────── */}
-      <section className="mx-auto w-full max-w-6xl px-5 pb-28 sm:px-8">
+      <section className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8 lg:pb-24">
         <FadeIn delay={0.06}>
           <div
-            className="relative overflow-hidden rounded-2xl px-8 py-14 text-center sm:px-12 sm:py-16"
+            className="relative overflow-hidden rounded-xl px-5 py-10 text-center sm:px-10 sm:py-12 lg:px-12 lg:py-14"
             style={{ border: "1px solid oklch(0.3776 0.0204 254.66 / 0.4)" }}
           >
             <div
@@ -464,18 +381,18 @@ export default function MarketingHomePage() {
             />
 
             <Eyebrow>Get started</Eyebrow>
-            <h2 className="mx-auto max-w-md text-[1.875rem] font-semibold leading-[1.2] tracking-[-0.03em] sm:text-[2.375rem]">
+            <h2 className="mx-auto max-w-md text-[1.65rem] font-semibold leading-[1.15] tracking-[-0.03em] sm:text-[2.05rem] lg:text-[2.35rem]">
               See where your revenue is leaking.
             </h2>
-            <p className="mx-auto mt-5 max-w-[36ch] text-[0.9375rem] leading-[1.85] text-muted-foreground">
+            <p className="mx-auto mt-4 max-w-[36ch] text-[0.94rem] leading-[1.8] text-muted-foreground sm:text-[0.97rem] sm:leading-[1.85]">
               Connect your Shopify or Stripe account and get your first leak report in minutes.
             </p>
-            <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <Link
-                href="/app"
-                className="marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-lg px-7 py-3 text-sm font-semibold shadow-[0_0_24px_rgba(70,225,215,0.2)] transition-all hover:-translate-y-px hover:opacity-90 sm:w-auto"
+                href="/api/app/access?next=/app/billing&intent=choose-plan&source=closing_primary"
+                className="marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-lg px-7 py-2.5 text-sm font-semibold transition-all hover:-translate-y-px hover:opacity-90 sm:w-auto"
               >
-                Open live product
+                Start plan setup
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
               <Link
@@ -489,8 +406,6 @@ export default function MarketingHomePage() {
           </div>
         </FadeIn>
       </section>
-
     </div>
   )
 }
-

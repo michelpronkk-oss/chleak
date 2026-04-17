@@ -9,11 +9,19 @@ export interface MockOperatorUser {
 
 export interface MockSubscriptionState {
   plan: "starter" | "growth" | "pro"
-  status: "trialing" | "active" | "past_due"
+  status: "trialing" | "active" | "past_due" | "canceled" | "incomplete"
   billingCycle: "monthly"
   seats: number
   nextInvoiceDate: string
   amount: number
+}
+
+export interface MockPlanCatalogItem {
+  id: "starter" | "growth" | "pro"
+  name: string
+  monthlyPrice: number
+  summary: string
+  highlight: string
 }
 
 export interface MockNotificationPreferences {
@@ -67,3 +75,30 @@ export const mockStoreContexts: MockStoreContext[] = [
     primaryObjective: "Reduce failed renewal churn",
   },
 ]
+
+export const mockPlanCatalog: Record<
+  MockPlanCatalogItem["id"],
+  MockPlanCatalogItem
+> = {
+  starter: {
+    id: "starter",
+    name: "Starter",
+    monthlyPrice: 149,
+    summary: "Coverage for a single monitored source with weekly scan cadence.",
+    highlight: "1 monitored source",
+  },
+  growth: {
+    id: "growth",
+    name: "Growth",
+    monthlyPrice: 399,
+    summary: "Daily scan cadence and prioritized actions for scaling operators.",
+    highlight: "Up to 3 monitored sources",
+  },
+  pro: {
+    id: "pro",
+    name: "Pro",
+    monthlyPrice: 899,
+    summary: "Near real-time monitoring with expanded source coverage and support.",
+    highlight: "Unlimited monitored sources",
+  },
+}

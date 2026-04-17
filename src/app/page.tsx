@@ -2,11 +2,26 @@ import { MarketingFooter } from "@/components/layout/marketing-footer"
 import { MarketingHeader } from "@/components/layout/marketing-header"
 import MarketingHomePage from "@/components/marketing/home-page"
 
-export default function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const params = await searchParams
+  const intent = Array.isArray(params.intent) ? params.intent[0] : params.intent
+  const showAccessNotice = intent === "app"
+
   return (
     <div className="relative min-h-screen">
       <MarketingHeader />
       <main>
+        {showAccessNotice ? (
+          <div className="mx-auto mt-5 w-full max-w-6xl px-5 sm:px-8">
+            <div className="rounded-lg border border-border/70 bg-card/60 px-4 py-3 text-sm text-muted-foreground">
+              Start plan setup to open your workspace. After plan activation, connect Shopify or Stripe to unlock monitoring.
+            </div>
+          </div>
+        ) : null}
         <MarketingHomePage />
       </main>
       <MarketingFooter />

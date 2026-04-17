@@ -12,17 +12,17 @@ export function MarketingPageLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="mx-auto w-full max-w-5xl px-5 pb-20 pt-14 sm:px-8 md:pb-24 md:pt-20">
-      <header className="max-w-3xl space-y-5">
+    <div className="mx-auto w-full max-w-5xl px-4 pb-14 pt-10 sm:px-6 sm:pb-20 sm:pt-14 lg:px-8 lg:pb-24 lg:pt-18">
+      <header className="max-w-3xl space-y-4 sm:space-y-5">
         <p className="font-mono text-[0.72rem] tracking-[0.12em] uppercase text-primary/70">
           {eyebrow}
         </p>
-        <h1 className="text-balance text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">
+        <h1 className="text-balance text-[1.9rem] font-semibold tracking-[-0.03em] sm:text-4xl lg:text-5xl">
           {title}
         </h1>
-        <p className="text-base leading-8 text-muted-foreground">{description}</p>
+        <p className="text-sm leading-7 text-muted-foreground sm:text-base sm:leading-8">{description}</p>
       </header>
-      <div className="mt-14 space-y-12">{children}</div>
+      <div className="mt-10 space-y-9 sm:mt-12 sm:space-y-11 lg:mt-14 lg:space-y-12">{children}</div>
     </div>
   )
 }
@@ -39,9 +39,9 @@ export function PageSection({
   id?: string
 }) {
   return (
-    <section id={id} className={cn("border-t border-border/60 pt-7", className)}>
-      <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">{title}</h2>
-      <div className="mt-4 space-y-4 text-sm leading-7 text-muted-foreground sm:text-base">
+    <section id={id} className={cn("border-t border-border/60 pt-6 sm:pt-7", className)}>
+      <h2 className="text-lg font-semibold tracking-tight sm:text-xl lg:text-2xl">{title}</h2>
+      <div className="mt-3.5 space-y-3.5 text-sm leading-6 text-muted-foreground sm:mt-4 sm:space-y-4 sm:text-base sm:leading-7">
         {children}
       </div>
     </section>

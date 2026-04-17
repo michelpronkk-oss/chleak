@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { ArrowRight } from "lucide-react"
 
 import { DecisionBanner } from "@/components/dashboard/decision-banner"
@@ -16,82 +17,27 @@ import {
 export default async function DashboardOverviewPage() {
   const journey = await getDashboardJourneyData()
 
+  if (journey.mode === "plan_required") {
+    redirect("/app/billing?intent=plan_required")
+  }
+
   if (journey.mode === "empty") {
-    return (
-      <div className="space-y-6 pb-20 lg:pb-4">
-        <section className="space-y-2">
-          <p className="data-mono text-primary">Revenue Intelligence</p>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Connect your first revenue source
-          </h1>
-          <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-            CheckoutLeak needs one source to begin leak detection. After connection, the first scan maps checkout friction, payment coverage gaps, and billing recovery leakage.
-          </p>
-        </section>
-
-        <section className="surface-card-strong p-6 sm:p-7">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Link
-              href="/app/connect?provider=shopify"
-              className="rounded-xl border border-border/70 bg-background/35 p-5 transition-colors hover:border-primary/40"
-            >
-              <p className="data-mono text-primary">Connect</p>
-              <h2 className="mt-2 text-lg font-semibold tracking-tight">Shopify</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Import checkout and payment flow events for conversion leakage detection.
-              </p>
-              <p className="mt-4 inline-flex items-center gap-1 text-sm text-foreground">
-                Start connection <ArrowRight className="h-3.5 w-3.5" />
-              </p>
-            </Link>
-
-            <Link
-              href="/app/connect?provider=stripe"
-              className="rounded-xl border border-border/70 bg-background/35 p-5 transition-colors hover:border-primary/40"
-            >
-              <p className="data-mono text-primary">Connect</p>
-              <h2 className="mt-2 text-lg font-semibold tracking-tight">Stripe</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Import subscription billing and recovery signals to quantify retained MRR opportunity.
-              </p>
-              <p className="mt-4 inline-flex items-center gap-1 text-sm text-foreground">
-                Start connection <ArrowRight className="h-3.5 w-3.5" />
-              </p>
-            </Link>
-          </div>
-
-          <div className="mt-5 flex flex-wrap gap-3 text-sm">
-            <Link
-              href="/api/mock/onboarding?state=demo&next=/app"
-              className="rounded-lg border border-border/70 px-4 py-2 text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Continue with demo data
-            </Link>
-            <Link
-              href="/contact#demo"
-              className="rounded-lg border border-border/70 px-4 py-2 text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Request guided setup
-            </Link>
-          </div>
-        </section>
-      </div>
-    )
+    redirect("/app/connect")
   }
 
   if (journey.mode === "connecting") {
     return (
-      <div className="space-y-6 pb-20 lg:pb-4">
+      <div className="space-y-5 pb-24 lg:pb-4">
         <section className="space-y-2">
           <p className="data-mono text-primary">Connection Setup</p>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
             {journey.sourceLabel} connection is being prepared
           </h1>
           <p className="text-sm text-muted-foreground sm:text-base">
             Confirm data access scope and start the first scan when ready.
           </p>
         </section>
-        <section className="surface-card p-6 sm:p-7">
+        <section className="surface-card p-5 sm:p-6 lg:p-7">
           <p className="text-sm text-muted-foreground">
             Continue to integration setup to complete source authorization and initialize first scan coverage.
           </p>
@@ -109,15 +55,15 @@ export default async function DashboardOverviewPage() {
 
   if (journey.mode === "integration_error") {
     return (
-      <div className="space-y-6 pb-20 lg:pb-4">
+      <div className="space-y-5 pb-24 lg:pb-4">
         <section className="space-y-2">
           <p className="data-mono text-primary">Integration Status</p>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
             Connection needs attention
           </h1>
           <p className="text-sm text-muted-foreground sm:text-base">{journey.message}</p>
         </section>
-        <section className="surface-card p-6 sm:p-7">
+        <section className="surface-card p-5 sm:p-6 lg:p-7">
           <p className="text-sm text-muted-foreground">
             Review the connection flow and retry authorization from the connect page.
           </p>
@@ -135,10 +81,10 @@ export default async function DashboardOverviewPage() {
 
   if (journey.mode === "pending_scan") {
     return (
-      <div className="space-y-6 pb-20 lg:pb-4">
+      <div className="space-y-5 pb-24 lg:pb-4">
         <section className="space-y-2">
           <p className="data-mono text-primary">First Scan Running</p>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
             {journey.sourceLabel} source connected. Initial scan in progress.
           </h1>
           <p className="text-sm text-muted-foreground sm:text-base">
@@ -146,7 +92,7 @@ export default async function DashboardOverviewPage() {
           </p>
         </section>
 
-        <section className="surface-card-strong p-6 sm:p-7">
+        <section className="surface-card-strong p-5 sm:p-6 lg:p-7">
           <ul className="space-y-3 text-sm text-muted-foreground">
             {journey.checks.map((check) => (
               <li
@@ -185,10 +131,10 @@ export default async function DashboardOverviewPage() {
       getFixPlanHrefForIssue(primaryIssue.id) ?? getFallbackFixPlanHref()
 
     return (
-      <div className="space-y-6 pb-20 lg:pb-4">
+      <div className="space-y-5 pb-24 lg:pb-4">
         <section className="space-y-2">
           <p className="data-mono text-primary">First Findings</p>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
             {journey.sourceLabel} scan completed. Initial leakage detected.
           </h1>
           <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
@@ -196,7 +142,7 @@ export default async function DashboardOverviewPage() {
           </p>
         </section>
 
-        <section className="surface-card-strong grid gap-5 p-6 sm:p-7 lg:grid-cols-[1.3fr_1fr]">
+        <section className="surface-card-strong grid gap-5 p-5 sm:p-6 lg:p-7 lg:grid-cols-[1.3fr_1fr]">
           <div>
             <p className="data-mono text-primary">Primary Leak</p>
             <h2 className="mt-2 text-xl font-semibold tracking-tight">{primaryIssue.title}</h2>
@@ -228,7 +174,7 @@ export default async function DashboardOverviewPage() {
           </div>
         </section>
 
-        <section className="surface-card p-5 sm:p-6">
+        <section className="surface-card p-4 sm:p-5 lg:p-6">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-base font-semibold">What To Do Next</h2>
             <p className="data-mono text-muted-foreground">Operator queue</p>
@@ -288,13 +234,13 @@ export default async function DashboardOverviewPage() {
   })
 
   return (
-    <div className="space-y-6 pb-20 lg:pb-2">
+    <div className="space-y-5 pb-24 lg:pb-2">
       <section className="space-y-2">
         <p className="data-mono text-primary">Revenue Intelligence</p>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
           {snapshot.organization.name}
         </h1>
-        <p className="text-sm text-muted-foreground sm:text-base">
+        <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
           Prioritized leak detection across checkout, payment setup, and billing recovery flows.
         </p>
       </section>
@@ -302,8 +248,8 @@ export default async function DashboardOverviewPage() {
       <DecisionBanner issue={primaryIssue} fixPlanHref={primaryFixPlanHref} />
 
       <section className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
-        <article className="surface-card p-5 sm:p-6">
-          <p className="data-mono text-muted-foreground">Leakage Command View</p>
+        <article className="surface-card p-4 sm:p-5 lg:p-6">
+          <p className="data-mono text-muted-foreground">Command Summary</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <p className="text-sm text-muted-foreground">Estimated monthly leakage</p>
@@ -331,7 +277,7 @@ export default async function DashboardOverviewPage() {
           </div>
         </article>
 
-        <article className="surface-card p-5 sm:p-6">
+        <article className="surface-card p-4 sm:p-5 lg:p-6">
           <p className="data-mono text-primary">Next Operator Move</p>
           <h3 className="mt-2 text-lg font-semibold tracking-tight">
             {primaryIssue.title}
@@ -356,7 +302,7 @@ export default async function DashboardOverviewPage() {
         <div className="space-y-5">
           <SuggestedActions actions={actionQueue} />
 
-          <section className="surface-card space-y-4 p-5">
+          <section className="surface-card space-y-4 p-4 sm:p-5">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-semibold">Issue Feed</h2>
               <p className="data-mono text-muted-foreground">
@@ -389,3 +335,4 @@ export default async function DashboardOverviewPage() {
     </div>
   )
 }
+

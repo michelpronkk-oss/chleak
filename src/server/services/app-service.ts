@@ -1,11 +1,13 @@
 import { formatDistanceToNowStrict } from "date-fns"
+import { redirect } from "next/navigation"
 
 import {
   mockNotificationPreferences,
-  mockOperatorUser,
+  mockPlanCatalog,
   mockStoreContexts,
   mockSubscriptionState,
 } from "@/data/mock/app-state"
+import { getServerSession } from "@/lib/auth/session"
 import { getFixPlanHrefForIssue } from "@/server/services/fix-plan-service"
 import type { DashboardSnapshot, Store } from "@/types/domain"
 
@@ -19,14 +21,49 @@ import {
   type OnboardingState,
 } from "./onboarding-state-service"
 import {
+  getPlanStateForOrganization,
+  hasActivePlan,
+} from "./plan-state-service"
+import {
   getShopifySourceState,
   getStripeSourceState,
 } from "./source-connection-state-service"
 import { getShopifySetupState } from "./shopify-service"
 import { getStripeSetupState } from "./stripe-service"
 
-const organizationId =
-  process.env.CHECKOUTLEAK_DEFAULT_ORGANIZATION_ID ?? "org_luma-health"
+export type CommercialAccessState =
+  | "public_visitor"
+  | "authenticated_no_plan"
+  | "paid_not_onboarded"
+  | "paid_no_connected_source"
+  | "paid_connected"
+
+function deriveCommercialAccessState(input: {
+  hasIdentity: boolean
+  hasPlan: boolean
+  onboardingState: OnboardingState
+}) {
+  if (!input.hasIdentity) {
+    return "public_visitor" as const
+  }
+
+  if (!input.hasPlan) {
+    return "authenticated_no_plan" as const
+  }
+
+  if (input.onboardingState === "empty") {
+    return "paid_no_connected_source" as const
+  }
+
+  if (
+    isConnectingState(input.onboardingState) ||
+    isPendingScanState(input.onboardingState)
+  ) {
+    return "paid_not_onboarded" as const
+  }
+
+  return "paid_connected" as const
+}
 
 function getStoreStatus({
   issueCount,
@@ -63,6 +100,80 @@ function getSourceLabel(state: OnboardingState) {
   }
 
   return "Revenue source"
+}
+
+function toRoleLabel(role: "owner" | "admin" | "analyst" | "viewer") {
+  if (role === "owner") {
+    return "Workspace owner"
+  }
+
+  if (role === "admin") {
+    return "Workspace admin"
+  }
+
+  if (role === "analyst") {
+    return "Analyst"
+  }
+
+  return "Viewer"
+}
+
+function buildDisplayName(input: { email: string | null; fullName: string | null }) {
+  if (input.fullName && input.fullName.trim().length > 0) {
+    return input.fullName.trim()
+  }
+
+  if (!input.email) {
+    return "CheckoutLeak Operator"
+  }
+
+  const [localPart] = input.email.split("@")
+  if (!localPart) {
+    return "CheckoutLeak Operator"
+  }
+
+  const cleaned = localPart.replaceAll(/[._-]+/g, " ").trim()
+  if (!cleaned) {
+    return "CheckoutLeak Operator"
+  }
+
+  return cleaned
+    .split(" ")
+    .map((part) => `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}`)
+    .join(" ")
+}
+
+function toInitials(name: string) {
+  const segments = name
+    .split(" ")
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+
+  if (!segments.length) {
+    return "CL"
+  }
+
+  if (segments.length === 1) {
+    return segments[0].slice(0, 2).toUpperCase()
+  }
+
+  return `${segments[0][0] ?? ""}${segments[1][0] ?? ""}`.toUpperCase()
+}
+
+function normalizeSubscriptionStatusForUi(
+  status: "none" | "trialing" | "active" | "past_due" | "canceled" | "incomplete"
+) {
+  if (
+    status === "trialing" ||
+    status === "active" ||
+    status === "past_due" ||
+    status === "canceled" ||
+    status === "incomplete"
+  ) {
+    return status
+  }
+
+  return "incomplete" as const
 }
 
 function isFirstResultState(state: OnboardingState) {
@@ -312,9 +423,32 @@ function getPrimarySourceStatus(input: {
 
 async function getJourneyContext() {
   const state = await getOnboardingState()
+  const session = await getServerSession()
+
+  if (!session || !session.membership) {
+    redirect("/auth/sign-in?next=/app")
+  }
+
+  const organizationId = session.membership.organizationId
+  const planState = await getPlanStateForOrganization(organizationId)
+  const hasPlan = hasActivePlan(planState)
+  const commercialAccessState = deriveCommercialAccessState({
+    hasIdentity: true,
+    hasPlan,
+    onboardingState: state,
+  })
   const shopifySourceState = await getShopifySourceState()
   const stripeSourceState = await getStripeSourceState()
-  const baseSnapshot = await getDashboardSnapshotForOrganization(organizationId)
+  const rawSnapshot = await getDashboardSnapshotForOrganization(organizationId)
+  const baseSnapshot: DashboardSnapshot = {
+    ...rawSnapshot,
+    organization: {
+      ...rawSnapshot.organization,
+      id: session.membership.organizationId,
+      name: session.membership.organizationName,
+      slug: session.membership.organizationSlug,
+    },
+  }
   let filteredSnapshot = filterSnapshotForState(baseSnapshot, state)
   const connectedSource = getConnectedSourceFromState(state)
   const sourceStore =
@@ -352,14 +486,33 @@ async function getJourneyContext() {
     }
   }
 
+  const displayName = buildDisplayName({
+    email: session.user.email,
+    fullName: session.user.fullName,
+  })
+  const shellUser = {
+    id: session.user.id,
+    fullName: displayName,
+    email: session.user.email ?? "Unknown email",
+    roleLabel: toRoleLabel(session.membership.role),
+    initials: toInitials(displayName),
+    timezone: session.user.timezone ?? "UTC",
+  }
+
   return {
     state,
+    session,
+    organizationId,
+    planState,
+    hasPlan,
+    commercialAccessState,
     shopifySourceState,
     stripeSourceState,
     connectedSource,
     baseSnapshot,
     snapshot: filteredSnapshot,
     sourceStore,
+    shellUser,
   }
 }
 
@@ -422,13 +575,20 @@ export async function getAppShellData() {
     liveMonitors = buildReadyMonitors(journey.snapshot)
   }
 
+  if (!journey.hasPlan) {
+    liveMonitors = []
+  }
+
   return {
     onboardingState: journey.state,
+    commercialAccessState: journey.commercialAccessState,
+    hasPlan: journey.hasPlan,
+    planState: journey.planState,
     shopifySourceState: journey.shopifySourceState,
     stripeSourceState: journey.stripeSourceState,
     organization: journey.baseSnapshot.organization,
-    user: mockOperatorUser,
-    activeIssueCount: journey.snapshot.summary.activeIssues,
+    user: journey.shellUser,
+    activeIssueCount: journey.hasPlan ? journey.snapshot.summary.activeIssues : 0,
     liveMonitors,
   }
 }
@@ -449,6 +609,16 @@ export async function getDashboardJourneyData() {
       message:
         primarySourceStatus.state.message ??
         `${primarySourceStatus.provider === "shopify" ? "Shopify" : "Stripe"} connection encountered an error. Review connect status.`,
+    }
+  }
+
+  if (journey.commercialAccessState === "authenticated_no_plan") {
+    return {
+      mode: "plan_required" as const,
+      onboardingState: journey.state,
+      organization: journey.baseSnapshot.organization,
+      selectedPlan: journey.planState.plan,
+      plans: mockPlanCatalog,
     }
   }
 
@@ -530,10 +700,15 @@ export async function getConnectJourneyData() {
 
   return {
     onboardingState: journey.state,
+    commercialAccessState: journey.commercialAccessState,
+    hasPlan: journey.hasPlan,
+    selectedPlan: journey.planState.plan,
     shopifySourceState: journey.shopifySourceState,
     stripeSourceState: journey.stripeSourceState,
     shopifyConfigured: shopifySetup.configured,
     stripeConfigured: stripeSetup.configured,
+    stripeSetupMissing: stripeSetup.missing,
+    stripeWebhookConfigured: stripeSetup.webhookConfigured,
     organization: journey.baseSnapshot.organization,
   }
 }
@@ -549,6 +724,8 @@ export async function getStoresIndexData() {
   if (primarySourceStatus?.state.status === "connecting") {
     return {
       onboardingState: journey.state,
+      commercialAccessState: journey.commercialAccessState,
+      hasPlan: journey.hasPlan,
       shopifySourceState: journey.shopifySourceState,
       stripeSourceState: journey.stripeSourceState,
       organization: journey.baseSnapshot.organization,
@@ -565,6 +742,8 @@ export async function getStoresIndexData() {
   if (primarySourceStatus?.state.status === "syncing" && !journey.sourceStore) {
     return {
       onboardingState: journey.state,
+      commercialAccessState: journey.commercialAccessState,
+      hasPlan: journey.hasPlan,
       shopifySourceState: journey.shopifySourceState,
       stripeSourceState: journey.stripeSourceState,
       organization: journey.baseSnapshot.organization,
@@ -581,6 +760,8 @@ export async function getStoresIndexData() {
   if (isFirstResultState(journey.state)) {
     return {
       onboardingState: journey.state,
+      commercialAccessState: journey.commercialAccessState,
+      hasPlan: journey.hasPlan,
       shopifySourceState: journey.shopifySourceState,
       stripeSourceState: journey.stripeSourceState,
       organization: journey.baseSnapshot.organization,
@@ -609,6 +790,8 @@ export async function getStoresIndexData() {
   if (journey.state === "empty") {
     return {
       onboardingState: journey.state,
+      commercialAccessState: journey.commercialAccessState,
+      hasPlan: journey.hasPlan,
       shopifySourceState: journey.shopifySourceState,
       stripeSourceState: journey.stripeSourceState,
       organization: journey.baseSnapshot.organization,
@@ -620,6 +803,8 @@ export async function getStoresIndexData() {
   if (isConnectingState(journey.state)) {
     return {
       onboardingState: journey.state,
+      commercialAccessState: journey.commercialAccessState,
+      hasPlan: journey.hasPlan,
       shopifySourceState: journey.shopifySourceState,
       stripeSourceState: journey.stripeSourceState,
       organization: journey.baseSnapshot.organization,
@@ -636,6 +821,8 @@ export async function getStoresIndexData() {
   if (isPendingScanState(journey.state)) {
     return {
       onboardingState: journey.state,
+      commercialAccessState: journey.commercialAccessState,
+      hasPlan: journey.hasPlan,
       shopifySourceState: journey.shopifySourceState,
       stripeSourceState: journey.stripeSourceState,
       organization: journey.baseSnapshot.organization,
@@ -689,6 +876,8 @@ export async function getStoresIndexData() {
 
   return {
     onboardingState: journey.state,
+    commercialAccessState: journey.commercialAccessState,
+    hasPlan: journey.hasPlan,
     shopifySourceState: journey.shopifySourceState,
     stripeSourceState: journey.stripeSourceState,
     organization: journey.baseSnapshot.organization,
@@ -745,6 +934,8 @@ export async function getStoreDetailData(storeId: string) {
 
   return {
     onboardingState: journey.state,
+    commercialAccessState: journey.commercialAccessState,
+    hasPlan: journey.hasPlan,
     shopifySourceState: journey.shopifySourceState,
     stripeSourceState: journey.stripeSourceState,
     organization: journey.baseSnapshot.organization,
@@ -765,15 +956,30 @@ export async function getStoreDetailData(storeId: string) {
 export async function getSettingsData() {
   const journey = await getJourneyContext()
   const stores = await getStoresIndexData()
+  const fallbackPlan =
+    journey.planState.subscription?.plan ?? journey.planState.plan ?? "growth"
+  const planPricing = mockPlanCatalog[fallbackPlan]
+  const subscription = journey.planState.subscription
+    ? {
+        ...mockSubscriptionState,
+        plan: journey.planState.subscription.plan,
+        status: normalizeSubscriptionStatusForUi(journey.planState.subscription.status),
+        amount: planPricing.monthlyPrice,
+        seats: journey.planState.subscription.seats,
+        nextInvoiceDate: journey.planState.subscription.currentPeriodEnd,
+      }
+    : null
 
   return {
     onboardingState: journey.state,
+    commercialAccessState: journey.commercialAccessState,
+    hasPlan: journey.hasPlan,
     shopifySourceState: journey.shopifySourceState,
     stripeSourceState: journey.stripeSourceState,
-    user: mockOperatorUser,
+    user: journey.shellUser,
     organization: journey.baseSnapshot.organization,
     notificationPreferences: mockNotificationPreferences,
-    subscription: mockSubscriptionState,
+    subscription,
     connectedStores: stores.stores.map((store) => ({
       id: store.id,
       name: store.name,
@@ -785,15 +991,35 @@ export async function getSettingsData() {
 
 export async function getBillingData() {
   const journey = await getJourneyContext()
+  const fallbackPlan = journey.planState.subscription?.plan ?? journey.planState.plan ?? "growth"
+  const planPricing = mockPlanCatalog[fallbackPlan]
+  const subscription = journey.planState.subscription
+    ? {
+        ...mockSubscriptionState,
+        plan: journey.planState.subscription?.plan ?? fallbackPlan,
+        status: normalizeSubscriptionStatusForUi(journey.planState.subscription.status),
+        amount: planPricing.monthlyPrice,
+        seats: journey.planState.subscription?.seats ?? mockSubscriptionState.seats,
+        nextInvoiceDate:
+          journey.planState.subscription?.currentPeriodEnd ??
+          mockSubscriptionState.nextInvoiceDate,
+      }
+    : null
 
   return {
     onboardingState: journey.state,
+    commercialAccessState: journey.commercialAccessState,
+    hasPlan: journey.hasPlan,
+    selectedPlan: journey.planState.plan,
+    planCatalog: mockPlanCatalog,
     shopifySourceState: journey.shopifySourceState,
     stripeSourceState: journey.stripeSourceState,
     organization: journey.baseSnapshot.organization,
-    subscription: mockSubscriptionState,
-    activeIssueCount: journey.snapshot.summary.activeIssues,
-    estimatedLeakage: journey.snapshot.summary.estimatedMonthlyLeakage,
-    monitoredStores: journey.snapshot.summary.monitoredStores,
+    subscription,
+    billingStatus: journey.planState.status,
+    hasBillingProfile: Boolean(journey.planState.subscription),
+    activeIssueCount: journey.hasPlan ? journey.snapshot.summary.activeIssues : 0,
+    estimatedLeakage: journey.hasPlan ? journey.snapshot.summary.estimatedMonthlyLeakage : 0,
+    monitoredStores: journey.hasPlan ? journey.snapshot.summary.monitoredStores : 0,
   }
 }

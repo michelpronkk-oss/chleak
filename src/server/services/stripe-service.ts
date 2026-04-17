@@ -6,6 +6,9 @@ interface StripeConfig {
   clientId: string
   secretKey: string
   appUrl: string
+}
+
+interface StripeWebhookConfig {
   webhookSecret: string
 }
 
@@ -31,12 +34,11 @@ export class StripeConfigurationError extends Error {
 function getStripeConfig(): StripeConfig {
   const clientId = process.env.STRIPE_CLIENT_ID
   const secretKey = process.env.STRIPE_SECRET_KEY
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+  const appUrl = getStripeAppUrl()
 
-  if (!clientId || !secretKey || !appUrl || !webhookSecret) {
+  if (!clientId || !secretKey || !appUrl) {
     throw new StripeConfigurationError(
-      "Missing Stripe config. Required env vars: STRIPE_CLIENT_ID, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, NEXT_PUBLIC_APP_URL."
+      "Missing Stripe connect config. Required env vars: STRIPE_CLIENT_ID, STRIPE_SECRET_KEY, and app URL."
     )
   }
 
@@ -44,13 +46,60 @@ function getStripeConfig(): StripeConfig {
     clientId,
     secretKey,
     appUrl,
-    webhookSecret,
+  }
+}
+
+function getStripeWebhookConfig(): StripeWebhookConfig {
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+  if (!webhookSecret) {
+    throw new StripeConfigurationError(
+      "Missing Stripe webhook config. Required env var: STRIPE_WEBHOOK_SECRET."
+    )
+  }
+
+  return { webhookSecret }
+}
+
+function getStripeAppUrl() {
+  const explicit = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL
+  if (explicit) {
+    return explicit
+  }
+
+  const vercelUrl = process.env.VERCEL_URL
+  if (vercelUrl) {
+    return `https://${vercelUrl}`
+  }
+
+  return null
+}
+
+function getStripeConnectSetupState() {
+  const missing: string[] = []
+
+  if (!process.env.STRIPE_CLIENT_ID) {
+    missing.push("STRIPE_CLIENT_ID")
+  }
+  if (!process.env.STRIPE_SECRET_KEY) {
+    missing.push("STRIPE_SECRET_KEY")
+  }
+  if (!getStripeAppUrl()) {
+    missing.push("NEXT_PUBLIC_APP_URL or APP_URL")
+  }
+
+  return {
+    configured: missing.length === 0,
+    missing,
   }
 }
 
 export function isStripeConfigured() {
+  return getStripeConnectSetupState().configured
+}
+
+export function isStripeWebhookConfigured() {
   try {
-    getStripeConfig()
+    getStripeWebhookConfig()
     return true
   } catch {
     return false
@@ -207,7 +256,7 @@ export function verifyStripeWebhook(input: {
   signatureHeader: string | null
   toleranceSeconds?: number
 }) {
-  const config = getStripeConfig()
+  const webhookConfig = getStripeWebhookConfig()
   const toleranceSeconds = input.toleranceSeconds ?? 300
   const parsed = parseStripeSignatureHeader(input.signatureHeader)
 
@@ -227,7 +276,7 @@ export function verifyStripeWebhook(input: {
 
   const signedPayload = `${parsed.timestamp}.${input.rawBody}`
   const expected = crypto
-    .createHmac("sha256", config.webhookSecret)
+    .createHmac("sha256", webhookConfig.webhookSecret)
     .update(signedPayload)
     .digest("hex")
 
@@ -235,10 +284,16 @@ export function verifyStripeWebhook(input: {
 }
 
 export function getStripeSetupState() {
-  const configured = isStripeConfigured()
+  const connect = getStripeConnectSetupState()
+  const webhookConfigured = isStripeWebhookConfigured()
   const hasSupabase = Boolean(getOptionalSupabasePublicConfig())
 
-  return { configured, hasSupabase }
+  return {
+    configured: connect.configured,
+    missing: connect.missing,
+    webhookConfigured,
+    hasSupabase,
+  }
 }
 
 export function getRecommendedStripeWebhookEvents() {

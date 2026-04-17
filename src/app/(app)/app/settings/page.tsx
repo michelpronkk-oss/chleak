@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { ArrowRight } from "lucide-react"
 
 import { getSettingsData } from "@/server/services/app-service"
@@ -6,11 +7,15 @@ import { getSettingsData } from "@/server/services/app-service"
 export default async function SettingsPage() {
   const data = await getSettingsData()
 
+  if (!data.hasPlan) {
+    redirect("/app/billing?intent=plan_required")
+  }
+
   return (
-    <div className="space-y-6 pb-20 lg:pb-4">
+    <div className="space-y-5 pb-24 lg:pb-4">
       <section className="space-y-2">
         <p className="data-mono text-primary">Settings</p>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
           Account and Workspace Settings
         </h1>
         <p className="text-sm text-muted-foreground sm:text-base">
@@ -18,7 +23,7 @@ export default async function SettingsPage() {
         </p>
       </section>
 
-      <section id="profile" className="surface-card p-5 sm:p-6 scroll-mt-24">
+      <section id="profile" className="surface-card p-4 sm:p-5 lg:p-6 scroll-mt-24">
         <p className="data-mono text-primary">Profile</p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
@@ -41,7 +46,7 @@ export default async function SettingsPage() {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1.35fr_1fr]">
-        <article className="surface-card p-5 sm:p-6">
+        <article className="surface-card p-4 sm:p-5 lg:p-6">
           <p className="data-mono text-primary">Workspace Context</p>
           <div className="mt-4 space-y-3">
             <div>
@@ -73,7 +78,7 @@ export default async function SettingsPage() {
           </div>
         </article>
 
-        <article className="surface-card p-5 sm:p-6">
+        <article className="surface-card p-4 sm:p-5 lg:p-6">
           <p className="data-mono text-primary">Notifications</p>
           <dl className="mt-4 space-y-3 text-sm">
             <div className="flex items-center justify-between">
@@ -98,7 +103,7 @@ export default async function SettingsPage() {
         </article>
       </section>
 
-      <section className="surface-card p-5 sm:p-6">
+      <section className="surface-card p-4 sm:p-5 lg:p-6">
         <p className="data-mono text-primary">Account Controls</p>
         <div className="mt-4 flex flex-wrap gap-3">
           <button
@@ -107,14 +112,15 @@ export default async function SettingsPage() {
           >
             Export workspace settings
           </button>
-          <button
-            type="button"
+          <Link
+            href="/api/auth/sign-out?next=/"
             className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-2.5 text-sm text-destructive transition-opacity hover:opacity-85"
           >
             Sign out
-          </button>
+          </Link>
         </div>
       </section>
     </div>
   )
 }
+

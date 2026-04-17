@@ -19,12 +19,12 @@ export function RevenueOpportunityPanel({
   )
 
   return (
-    <section className="surface-card p-5">
+    <section className="surface-card p-4 sm:p-5">
       <div className="flex items-center justify-between">
         <h3 className="text-base font-semibold">Revenue Opportunity</h3>
         <BarChart3 className="h-4 w-4 text-primary" />
       </div>
-      <div className="mt-5 space-y-4">
+      <div className="mt-4 space-y-3.5 sm:mt-5 sm:space-y-4">
         {opportunities.map((opportunity) => {
           const width = Math.max(
             (opportunity.estimatedMonthlyRevenueImpact / maxImpact) * 100,
@@ -32,7 +32,7 @@ export function RevenueOpportunityPanel({
           )
 
           return (
-            <div key={opportunity.label} className="space-y-2">
+            <div key={opportunity.label} className="space-y-1.5 sm:space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span>{opportunity.label}</span>
                 <span className="font-semibold text-primary">

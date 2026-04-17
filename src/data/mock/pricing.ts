@@ -13,7 +13,7 @@ export const pricingPlans: PricingPlan[] = [
       "Issue feed with revenue impact estimates",
       "Weekly email digest",
     ],
-    callToAction: "Get started",
+    callToAction: "Choose Starter",
   },
   {
     id: "growth",
@@ -27,7 +27,7 @@ export const pricingPlans: PricingPlan[] = [
       "Failed billing recovery signals",
       "Ranked recovery actions by impact",
     ],
-    callToAction: "Start with Growth",
+    callToAction: "Choose Growth",
     recommended: true,
   },
   {
@@ -42,6 +42,6 @@ export const pricingPlans: PricingPlan[] = [
       "Webhook and Slack alert routing",
       "Dedicated success architect",
     ],
-    callToAction: "Start with Pro",
+    callToAction: "Choose Pro",
   },
 ]

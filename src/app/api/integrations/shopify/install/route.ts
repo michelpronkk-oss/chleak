@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 
+import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { ensureWorkspaceForUser } from "@/server/services/account-bootstrap-service"
 import {
   ONBOARDING_STATE_COOKIE,
 } from "@/server/services/onboarding-state-service"
@@ -18,8 +20,37 @@ import {
 export async function GET(request: Request) {
   const url = new URL(request.url)
   const shop = url.searchParams.get("shop")
-  const organizationId =
-    url.searchParams.get("orgId") ?? process.env.CHECKOUTLEAK_DEFAULT_ORGANIZATION_ID ?? "org_luma-health"
+
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    const signInUrl = new URL("/auth/sign-in", url.origin)
+    signInUrl.searchParams.set("next", "/app/connect?provider=shopify")
+    return NextResponse.redirect(signInUrl)
+  }
+
+  const metadata = user.user_metadata as Record<string, unknown> | null
+  const fullName =
+    typeof metadata?.full_name === "string" && metadata.full_name.trim().length > 0
+      ? metadata.full_name.trim()
+      : null
+
+  let membership: Awaited<ReturnType<typeof ensureWorkspaceForUser>>
+  try {
+    membership = await ensureWorkspaceForUser({
+      userId: user.id,
+      email: user.email ?? null,
+      fullName,
+    })
+  } catch {
+    return NextResponse.redirect(
+      new URL("/app/connect?provider=shopify&status=callback_failed", url.origin)
+    )
+  }
+  const organizationId = membership.organizationId
 
   const setup = getShopifySetupState()
   if (!setup.configured) {
@@ -82,8 +113,10 @@ export async function GET(request: Request) {
 
     return response
   } catch {
+    const fallback = new URL("/app/connect?provider=shopify&status=invalid_shop", url.origin)
+    fallback.searchParams.set("shop", shop)
     return NextResponse.redirect(
-      new URL("/app/connect?provider=shopify&status=invalid_shop", url.origin)
+      fallback
     )
   }
 }

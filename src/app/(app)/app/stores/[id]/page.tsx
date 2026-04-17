@@ -1,9 +1,9 @@
 import Link from "next/link"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
-import { getStoreDetailData } from "@/server/services/app-service"
+import { getStoreDetailData, getStoresIndexData } from "@/server/services/app-service"
 
 export default async function StoreDetailPage({
   params,
@@ -11,6 +11,16 @@ export default async function StoreDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  const storesData = await getStoresIndexData()
+
+  if (!storesData.hasPlan) {
+    redirect("/app/billing?intent=plan_required")
+  }
+
+  if (storesData.onboardingState === "empty") {
+    redirect("/app/connect")
+  }
+
   const data = await getStoreDetailData(id)
 
   if (!data) {
@@ -18,7 +28,7 @@ export default async function StoreDetailPage({
   }
 
   return (
-    <div className="space-y-6 pb-20 lg:pb-4">
+    <div className="space-y-5 pb-24 lg:pb-4">
       <section className="space-y-3">
         <Link
           href="/app/stores"
@@ -28,14 +38,14 @@ export default async function StoreDetailPage({
           Back to stores
         </Link>
         <p className="data-mono text-primary">Store Detail</p>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{data.store.name}</h1>
-        <p className="text-sm text-muted-foreground sm:text-base">
-          {data.context?.operationalArea ?? "Revenue monitoring source"} · {data.status.label}
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">{data.store.name}</h1>
+        <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
+          {data.context?.operationalArea ?? "Revenue monitoring source"} | {data.status.label}
         </p>
       </section>
 
       <section className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
-        <article className="surface-card-strong p-6">
+        <article className="surface-card-strong p-5 sm:p-6 lg:p-7">
           <p className="data-mono text-primary">Source Overview</p>
           <dl className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
@@ -67,7 +77,7 @@ export default async function StoreDetailPage({
           ) : null}
         </article>
 
-        <article className="surface-card p-6">
+        <article className="surface-card p-4 sm:p-5 lg:p-6">
           <p className="data-mono text-primary">Current Status</p>
           <p className="mt-3 text-sm text-muted-foreground">
             {data.issues.length} open issues linked to this source.
@@ -87,12 +97,12 @@ export default async function StoreDetailPage({
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1.6fr_1fr]">
-        <article className="surface-card p-5 sm:p-6">
+        <article className="surface-card p-4 sm:p-5 lg:p-6">
           <p className="data-mono text-primary">Open Issues</p>
           <div className="mt-4 space-y-3">
             {data.issues.length ? (
               data.issues.map((issue) => (
-                <div key={issue.id} className="rounded-xl border border-border/70 bg-background/35 p-4">
+                <div key={issue.id} className="rounded-xl border border-border/70 bg-background/35 p-3.5 sm:p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-sm font-semibold sm:text-base">{issue.title}</p>
                     <p className="text-xs text-primary">
@@ -109,15 +119,15 @@ export default async function StoreDetailPage({
         </article>
 
         <div className="space-y-5">
-          <article className="surface-card p-5 sm:p-6">
+          <article className="surface-card p-4 sm:p-5 lg:p-6">
             <p className="data-mono text-primary">Recent Activity</p>
             {data.scans.length ? (
               <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
                 {data.scans.slice(0, 4).map((scan) => (
                   <li key={scan.id} className="rounded-lg border border-border/70 bg-background/35 p-3">
-                    <p>Scan {scan.id.slice(-4)} · {scan.status}</p>
+                    <p>Scan {scan.id.slice(-4)} | {scan.status}</p>
                     <p className="mt-1 text-xs">
-                      {formatRelativeTimestamp(scan.scannedAt)} · {scan.detectedIssuesCount} issues
+                      {formatRelativeTimestamp(scan.scannedAt)} | {scan.detectedIssuesCount} issues
                     </p>
                   </li>
                 ))}
@@ -129,7 +139,7 @@ export default async function StoreDetailPage({
             )}
           </article>
 
-          <article className="surface-card p-5 sm:p-6">
+          <article className="surface-card p-4 sm:p-5 lg:p-6">
             <p className="data-mono text-primary">Detected Opportunities</p>
             <ul className="mt-4 space-y-3">
               {data.fixPlanLinks.length ? (

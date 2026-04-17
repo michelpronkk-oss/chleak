@@ -1,11 +1,12 @@
 import Link from "next/link"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { ArrowLeft, ArrowRight, CircleDot } from "lucide-react"
 
 import { FixPlanControls } from "@/components/fix-plans/fix-plan-controls"
 import { Badge } from "@/components/ui/badge"
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
 import { getFixPlanById } from "@/server/services/fix-plan-service"
+import { getBillingData } from "@/server/services/app-service"
 import { cn } from "@/lib/utils"
 import type { FixPlan } from "@/types/domain"
 
@@ -43,6 +44,16 @@ export default async function FixPlanPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  const billing = await getBillingData()
+
+  if (!billing.hasPlan) {
+    redirect("/app/billing?intent=plan_required")
+  }
+
+  if (billing.onboardingState === "empty") {
+    redirect("/app/connect")
+  }
+
   const fixPlan = await getFixPlanById(id)
 
   if (!fixPlan) {
@@ -50,7 +61,7 @@ export default async function FixPlanPage({
   }
 
   return (
-    <div className="space-y-6 pb-20 lg:pb-4">
+    <div className="space-y-5 pb-24 lg:pb-4">
       <section className="space-y-3">
         <Link
           href="/app"
@@ -60,15 +71,15 @@ export default async function FixPlanPage({
           Back to dashboard
         </Link>
         <p className="data-mono text-primary">Fix Plan</p>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
           {fixPlan.title}
         </h1>
-        <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
+        <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base sm:leading-7">
           {fixPlan.summary}
         </p>
       </section>
 
-      <section className="surface-card-strong p-6 sm:p-7">
+      <section className="surface-card-strong p-5 sm:p-6 lg:p-7">
         <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr] lg:items-end">
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -124,23 +135,23 @@ export default async function FixPlanPage({
 
       <section className="grid gap-5 xl:grid-cols-[1.65fr_1fr]">
         <div className="space-y-5">
-          <section className="surface-card p-5 sm:p-6">
+          <section className="surface-card p-4 sm:p-5 lg:p-6">
             <p className="data-mono text-primary">Why this matters</p>
             <p className="mt-3 text-sm leading-7 text-muted-foreground sm:text-base">
               {fixPlan.whyItMatters}
             </p>
           </section>
 
-          <section className="surface-card p-5 sm:p-6">
+          <section className="surface-card p-4 sm:p-5 lg:p-6">
             <p className="data-mono text-primary">Recommended fix</p>
             <p className="mt-3 text-sm leading-7 text-muted-foreground sm:text-base">
               {fixPlan.recommendedFix}
             </p>
           </section>
 
-          <section className="surface-card p-5 sm:p-6">
+          <section className="surface-card p-4 sm:p-5 lg:p-6">
             <p className="data-mono text-primary">Action steps</p>
-            <ol className="mt-4 space-y-4">
+            <ol className="mt-4 space-y-3 sm:space-y-4">
               {fixPlan.steps.map((step, index) => (
                 <li key={step.id} className="rounded-xl border border-border/70 bg-background/40 p-4">
                   <p className="data-mono text-muted-foreground">
@@ -157,7 +168,7 @@ export default async function FixPlanPage({
         </div>
 
         <div className="space-y-5">
-          <section className="surface-card p-5 sm:p-6">
+          <section className="surface-card p-4 sm:p-5 lg:p-6">
             <p className="data-mono text-primary">Platform context</p>
             <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
               {fixPlan.platformContext.map((item) => (
@@ -169,18 +180,18 @@ export default async function FixPlanPage({
             </ul>
           </section>
 
-          <section className="surface-card p-5 sm:p-6">
+          <section className="surface-card p-4 sm:p-5 lg:p-6">
             <p className="data-mono text-primary">Expected outcome</p>
             <p className="mt-3 text-sm text-muted-foreground">{fixPlan.expectedOutcome}</p>
           </section>
 
-          <section className="surface-card p-5 sm:p-6">
+          <section className="surface-card p-4 sm:p-5 lg:p-6">
             <p className="data-mono text-primary">Success signal</p>
             <p className="mt-3 text-sm text-muted-foreground">{fixPlan.successSignal}</p>
           </section>
 
           {fixPlan.relatedIssues.length ? (
-            <section className="surface-card p-5 sm:p-6">
+            <section className="surface-card p-4 sm:p-5 lg:p-6">
               <p className="data-mono text-primary">Related signals</p>
               <ul className="mt-4 space-y-3">
                 {fixPlan.relatedIssues.slice(0, 2).map((related) => (
@@ -202,3 +213,4 @@ export default async function FixPlanPage({
     </div>
   )
 }
+

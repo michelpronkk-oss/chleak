@@ -99,10 +99,10 @@ export default function ProductPage() {
         </p>
         <div className="flex flex-col gap-3 pt-2 sm:flex-row">
           <Link
-            href="/app"
+            href="/api/app/access?next=/app/billing&intent=choose-plan&source=product_page"
             className="marketing-primary-cta inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
           >
-            Open Dashboard
+            Start plan setup
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
           <Link
