@@ -1,0 +1,79 @@
+import Link from "next/link"
+
+import { CheckoutLeakLogo } from "@/components/brand/logo"
+
+const footerGroups = [
+  {
+    title: "Product",
+    links: [
+      { label: "Pricing", href: "/#pricing" },
+      { label: "Dashboard", href: "/app" },
+      { label: "Product", href: "/product" },
+    ],
+  },
+  {
+    title: "Company",
+    links: [
+      { label: "Contact", href: "/contact" },
+      { label: "Book Demo", href: "/contact#demo" },
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
+      { label: "Terms of Use", href: "/terms" },
+      { label: "Privacy Policy", href: "/privacy" },
+    ],
+  },
+]
+
+export function MarketingFooter() {
+  return (
+    <footer className="border-t border-border/60 py-12">
+      <div className="mx-auto w-full max-w-6xl px-5 sm:px-8">
+        <div className="grid gap-12 lg:grid-cols-[1.2fr_1.8fr]">
+          <div className="max-w-sm space-y-4">
+            <CheckoutLeakLogo />
+            <p className="text-sm leading-7 text-muted-foreground sm:text-base">
+              Find lost revenue across checkout, payments, and billing.
+            </p>
+            <a
+              href="mailto:support@checkoutleak.com"
+              className="inline-flex text-sm text-primary transition-opacity hover:opacity-80"
+            >
+              support@checkoutleak.com
+            </a>
+          </div>
+
+          <div className="grid gap-8 sm:grid-cols-3">
+            {footerGroups.map((group) => (
+              <div key={group.title}>
+                <h3 className="font-mono text-[0.7rem] tracking-[0.12em] uppercase text-primary/70">
+                  {group.title}
+                </h3>
+                <ul className="mt-4 space-y-3">
+                  {group.links.map((link) => (
+                    <li key={link.label}>
+                      <Link
+                        href={link.href}
+                        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-10 border-t border-border/60 pt-5">
+          <p className="text-xs text-muted-foreground">
+            © 2026 CheckoutLeak. All rights reserved.
+          </p>
+        </div>
+      </div>
+    </footer>
+  )
+}
