@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/c/Users/miche/Desktop/Checkoutleak/**)",
+      "Bash(npx tsc *)"
+    ]
+  }
+}
