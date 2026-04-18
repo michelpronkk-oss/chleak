@@ -1,4 +1,4 @@
-﻿import Link from "next/link"
+import Link from "next/link"
 
 import { CheckoutLeakLogo } from "@/components/brand/logo"
 
@@ -35,14 +35,17 @@ export function MarketingFooter() {
     <footer className="border-t border-border/60 py-8 sm:py-12">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-8 sm:gap-12 lg:grid-cols-[1.2fr_1.8fr]">
-          <div className="max-w-sm space-y-3.5">
+          <div className="max-w-sm space-y-3">
             <CheckoutLeakLogo />
-            <p className="text-sm leading-6 text-muted-foreground sm:text-base sm:leading-7">
-              Find lost revenue across checkout, payments, and billing.
+            <p className="text-[0.88rem] leading-[1.68] text-muted-foreground sm:text-sm sm:leading-[1.75]">
+              Revenue leak intelligence for Shopify and Stripe operators.
+            </p>
+            <p className="text-[0.8rem] leading-[1.6] text-muted-foreground/55 sm:text-[0.83rem]">
+              Checkout friction, payment gaps, and failed billing recovery — ranked by impact.
             </p>
             <a
               href="mailto:support@checkoutleak.com"
-              className="inline-flex text-sm text-primary transition-opacity hover:opacity-80"
+              className="inline-flex text-[0.85rem] text-primary transition-opacity hover:opacity-80 sm:text-sm"
             >
               support@checkoutleak.com
             </a>
@@ -71,14 +74,15 @@ export function MarketingFooter() {
           </div>
         </div>
 
-        <div className="mt-7 border-t border-border/60 pt-4">
-          <p className="text-xs text-muted-foreground">
+        <div className="mt-7 flex flex-col gap-2 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-muted-foreground/70">
             © 2026 CheckoutLeak. All rights reserved.
+          </p>
+          <p className="font-mono text-[0.63rem] tracking-[0.1em] uppercase text-muted-foreground/35">
+            Operator-grade · Private by design
           </p>
         </div>
       </div>
     </footer>
   )
 }
-
-
