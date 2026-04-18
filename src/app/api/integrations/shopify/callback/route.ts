@@ -31,8 +31,6 @@ export async function GET(request: Request) {
     cookieStore.get(SHOPIFY_OAUTH_STATE_COOKIE)?.value
   )
 
-  const normalizedShop = typeof shop === "string" ? shop.trim().toLowerCase() : shop
-
   console.info(
     `[shopify] OAuth callback received: shop=${shop}; state_present=${!!state}; hmac_present=${!!hmac}; cookie_present=${!!storedState}; stored_shop=${storedState?.shopDomain ?? "none"}; stored_nonce_prefix=${storedState?.nonce?.slice(0, 8) ?? "none"}`
   )
@@ -72,6 +70,8 @@ export async function GET(request: Request) {
       message: "Missing callback parameters",
     })
   }
+
+  const normalizedShop = shop.trim().toLowerCase()
 
   const isValidHmac = verifyShopifyCallbackHmac({
     queryParams: url.searchParams,
