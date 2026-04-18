@@ -62,6 +62,10 @@ interface BackendSourceSignals {
     shopify: boolean
     stripe: boolean
   }
+  declaredOutcomeByProvider: {
+    shopify: "no_signal" | "clean" | "issues_found" | null
+    stripe: "no_signal" | "clean" | "issues_found" | null
+  }
 }
 
 interface ShopifyDomainView {
@@ -127,6 +131,7 @@ function deriveScanOutcomeForPrimarySource(input: {
   const scans = input.signals.scanCountByProvider[provider]
   const issues = input.signals.issueCountByProvider[provider]
   const meaningfulSignal = input.signals.meaningfulSignalByProvider[provider]
+  const declaredOutcome = input.signals.declaredOutcomeByProvider[provider]
 
   if (scans === 0) {
     return null
@@ -134,6 +139,10 @@ function deriveScanOutcomeForPrimarySource(input: {
 
   if (issues > 0) {
     return "issues_found"
+  }
+
+  if (declaredOutcome === "clean" || declaredOutcome === "no_signal") {
+    return declaredOutcome
   }
 
   return scans > 0 ? (meaningfulSignal ? "clean" : "no_signal") : null
@@ -160,6 +169,11 @@ async function loadBackendSourceSignals(
         (row): row is typeof row & { provider: ConnectedProvider } =>
           row.provider === "shopify" || row.provider === "stripe"
       ) ?? []
+    const rowsByRecency = [...rows].sort((a, b) => {
+      const left = a.installed_at ?? a.created_at ?? ""
+      const right = b.installed_at ?? b.created_at ?? ""
+      return right.localeCompare(left)
+    })
 
     if (!rows.length) {
       return {
@@ -169,6 +183,7 @@ async function loadBackendSourceSignals(
         scanCountByProvider: { shopify: 0, stripe: 0 },
         issueCountByProvider: { shopify: 0, stripe: 0 },
         meaningfulSignalByProvider: { shopify: false, stripe: false },
+        declaredOutcomeByProvider: { shopify: null, stripe: null },
       }
     }
 
@@ -188,11 +203,7 @@ async function loadBackendSourceSignals(
       (provider) => storeIdsByProvider[provider].length > 0
     )
 
-    const primaryRow = [...rows].sort((a, b) => {
-      const left = a.installed_at ?? a.created_at ?? ""
-      const right = b.installed_at ?? b.created_at ?? ""
-      return right.localeCompare(left)
-    })[0]
+    const primaryRow = rowsByRecency[0]
 
     const primaryProvider = primaryRow?.provider ?? providers[0] ?? null
     const allStoreIds = Array.from(
@@ -207,6 +218,7 @@ async function loadBackendSourceSignals(
         scanCountByProvider: { shopify: 0, stripe: 0 },
         issueCountByProvider: { shopify: 0, stripe: 0 },
         meaningfulSignalByProvider: { shopify: false, stripe: false },
+        declaredOutcomeByProvider: { shopify: null, stripe: null },
       }
     }
 
@@ -241,6 +253,10 @@ async function loadBackendSourceSignals(
       shopify: false,
       stripe: false,
     }
+    const declaredOutcomeByProvider: BackendSourceSignals["declaredOutcomeByProvider"] = {
+      shopify: null,
+      stripe: null,
+    }
 
     const storeIdToProvider = new Map<string, ConnectedProvider>()
     storeIdsByProvider.shopify.forEach((storeId) =>
@@ -264,15 +280,30 @@ async function loadBackendSourceSignals(
       }
     })
 
-    for (const row of rows) {
-      if (row.provider !== "shopify") {
+    const evaluatedProviders = new Set<ConnectedProvider>()
+    for (const row of rowsByRecency) {
+      if (evaluatedProviders.has(row.provider)) {
         continue
       }
+      evaluatedProviders.add(row.provider)
 
       const metadata =
         row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
           ? (row.metadata as Record<string, unknown>)
           : null
+      const declaredOutcome =
+        metadata?.scan_outcome === "no_signal" ||
+        metadata?.scan_outcome === "clean" ||
+        metadata?.scan_outcome === "issues_found"
+          ? metadata.scan_outcome
+          : null
+      if (declaredOutcome) {
+        declaredOutcomeByProvider[row.provider] = declaredOutcome
+      }
+
+      if (row.provider !== "shopify") {
+        continue
+      }
       const signalSnapshot =
         metadata &&
         metadata.signal_snapshot &&
@@ -313,6 +344,7 @@ async function loadBackendSourceSignals(
       scanCountByProvider,
       issueCountByProvider,
       meaningfulSignalByProvider,
+      declaredOutcomeByProvider,
     }
   } catch {
     return null
