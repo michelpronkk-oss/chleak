@@ -1027,10 +1027,10 @@ export async function getDashboardJourneyData() {
     }
   }
 
-  if (isFirstResultState(journey.state)) {
+  if (primaryOutcome === "no_signal") {
     return {
-      mode: "first_results" as const,
-      scanOutcome: "issues_found" as const,
+      mode: "no_signal" as const,
+      scanOutcome: "no_signal" as const,
       onboardingState: journey.state,
       organization: journey.baseSnapshot.organization,
       sourceLabel: getSourceLabel(journey.state),
@@ -1038,10 +1038,10 @@ export async function getDashboardJourneyData() {
     }
   }
 
-  if (primaryOutcome === "no_signal") {
+  if (isFirstResultState(journey.state)) {
     return {
-      mode: "no_signal" as const,
-      scanOutcome: "no_signal" as const,
+      mode: "first_results" as const,
+      scanOutcome: "issues_found" as const,
       onboardingState: journey.state,
       organization: journey.baseSnapshot.organization,
       sourceLabel: getSourceLabel(journey.state),

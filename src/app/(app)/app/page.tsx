@@ -225,32 +225,60 @@ export default async function DashboardOverviewPage() {
     return (
       <div className="space-y-5 pb-24 lg:pb-4">
         <section className="space-y-2">
-          <p className="data-mono text-primary">Monitoring Ready</p>
+          <p className="data-mono text-primary">First Scan Complete</p>
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
-            {journey.sourceLabel} source connected. No meaningful signal yet.
+            {journey.sourceLabel} source connected. Monitoring is active.
           </h1>
           <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-            CheckoutLeak is connected and monitoring correctly. Leak analysis becomes meaningful once orders, checkouts, and billing activity accumulate.
+            First scan completed successfully, but there is not enough commercial activity yet for meaningful leakage analysis.
           </p>
+        </section>
+
+        <section className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+          <article className="surface-card-strong p-5 sm:p-6 lg:p-7">
+            <p className="data-mono text-primary">No-Signal Outcome</p>
+            <h2 className="mt-2 text-lg font-semibold tracking-tight">
+              Data pipeline is healthy. Analysis depth will increase with activity.
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              CheckoutLeak will continue monitoring checkout and billing signals automatically as new activity arrives.
+            </p>
+          </article>
+
+          <article className="surface-card p-4 sm:p-5 lg:p-6">
+            <p className="data-mono text-primary">Next Operator Move</p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Keep this source connected, then review store details after orders, checkout sessions, or billing events are available.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2.5">
+              <Link
+                href="/app/stores"
+                className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
+              >
+                Open store details
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+              <Link
+                href="/app/connect"
+                className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Connect another source
+              </Link>
+            </div>
+          </article>
         </section>
 
         <section className="surface-card p-5 sm:p-6 lg:p-7">
           <p className="text-sm text-muted-foreground">
-            Current scan outcome: no signal. Keep the source connected and return after real commercial activity starts.
+            No meaningful commercial signal was detected yet. Monitoring stays active and leakage scoring will update automatically as activity appears.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link
-              href="/app/stores"
+              href="/app/connect"
               className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
             >
-              Open stores
+              Review connected source
               <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-            <Link
-              href="/app/connect"
-              className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Manage source connection
             </Link>
           </div>
         </section>
@@ -362,7 +390,7 @@ export default async function DashboardOverviewPage() {
                 ))
               ) : (
                 <div className="surface-card border-dashed p-8 text-center text-sm text-muted-foreground">
-                  No leaks detected yet. Run the next scan to populate issue insights.
+                  No issues detected yet. Monitoring is active and issue insights will appear automatically as source activity grows.
                 </div>
               )}
             </div>
