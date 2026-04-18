@@ -18,6 +18,8 @@ export type ScanProcessResult = {
   estimatedMonthlyLeakage?: number | null
 }
 
+export type ScanSimulationOutcome = "no_signal" | "clean" | "findings_present"
+
 function asRecord(input: unknown): Record<string, unknown> | null {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     return null
@@ -133,7 +135,41 @@ function buildShopifyFindings(input: {
   return findings
 }
 
-export async function processQueuedScanV1(input?: { scanId?: string | null }): Promise<ScanProcessResult> {
+function buildSimulatedFindings(): FindingDraft[] {
+  return [
+    {
+      key: "simulated_webhook_coverage_gap",
+      type: "setup_gap",
+      severity: "high",
+      title: "Monitoring coverage incomplete",
+      summary:
+        "Simulation: event coverage is incomplete for a commercially active store profile.",
+      whyItMatters:
+        "Limited coverage reduces confidence in leakage detection for active checkout flows.",
+      recommendedAction:
+        "Reconnect Shopify and confirm full event coverage for checkout monitoring.",
+      estimatedMonthlyRevenueImpact: 0,
+    },
+    {
+      key: "simulated_signal_confidence_limited",
+      type: "setup_gap",
+      severity: "medium",
+      title: "Signal confidence limited",
+      summary:
+        "Simulation: structured event depth is below recommended confidence for ranked leakage findings.",
+      whyItMatters:
+        "Lower confidence can delay prioritization of highest-impact leakage opportunities.",
+      recommendedAction:
+        "Verify webhook continuity and run another scan after additional checkout activity.",
+      estimatedMonthlyRevenueImpact: 0,
+    },
+  ]
+}
+
+export async function processQueuedScanV1(input?: {
+  scanId?: string | null
+  simulationOutcome?: ScanSimulationOutcome | null
+}): Promise<ScanProcessResult> {
   const admin = createSupabaseAdminClient()
   const queuedScanResult = input?.scanId
     ? await admin
@@ -266,9 +302,15 @@ export async function processQueuedScanV1(input?: { scanId?: string | null }): P
   const detectedAt = new Date().toISOString()
   const integrationMetadata = asRecord(integrationResult.data.metadata) ?? {}
   const signalSnapshot = readShopifySignalSnapshot(integrationMetadata)
-  const meaningfulCommercialSignal = hasMeaningfulCommercialSignal(signalSnapshot)
-  const findings =
-    integrationResult.data.provider === "shopify"
+  const simulationOutcome = input?.simulationOutcome ?? null
+  const meaningfulCommercialSignal = simulationOutcome
+    ? simulationOutcome !== "no_signal"
+    : hasMeaningfulCommercialSignal(signalSnapshot)
+  const findings = simulationOutcome
+    ? simulationOutcome === "findings_present"
+      ? buildSimulatedFindings()
+      : []
+    : integrationResult.data.provider === "shopify"
       ? buildShopifyFindings({
           metadata: integrationMetadata,
           integrationStatus: integrationResult.data.status,
@@ -278,14 +320,19 @@ export async function processQueuedScanV1(input?: { scanId?: string | null }): P
         })
       : []
 
-  const managedIssueSource = "shopify_monitoring_v1"
+  const managedIssueSource = simulationOutcome
+    ? "shopify_simulation_v1"
+    : "shopify_monitoring_v1"
   if (integrationResult.data.provider === "shopify") {
+    const sourcesToResolve = simulationOutcome
+      ? ["shopify_simulation_v1", "shopify_monitoring_v1"]
+      : [managedIssueSource]
     const resolveOldIssues = await admin
       .from("issues")
       .update({ status: "resolved" })
       .eq("organization_id", queuedScan.organization_id)
       .eq("store_id", queuedScan.store_id)
-      .eq("source", managedIssueSource)
+      .in("source", sourcesToResolve)
       .neq("status", "resolved")
 
     if (resolveOldIssues.error) {
@@ -376,10 +423,14 @@ export async function processQueuedScanV1(input?: { scanId?: string | null }): P
   const metadata = asRecord(integrationResult.data.metadata) ?? {}
   const metadataUpdate = {
     ...metadata,
-    scan_outcome: outcome,
+    scan_outcome:
+      simulationOutcome === "findings_present"
+        ? "issues_found"
+        : simulationOutcome ?? outcome,
     scan_outcome_updated_at: new Date().toISOString(),
     meaningful_signal_detected: meaningfulCommercialSignal,
     finding_keys: findings.map((finding) => finding.key),
+    simulation_outcome: simulationOutcome,
   }
 
   const integrationUpdate = await admin
@@ -398,7 +449,7 @@ export async function processQueuedScanV1(input?: { scanId?: string | null }): P
   }
 
   console.info(
-    `[scan-runner] outcome classified: scan_id=${queuedScan.id}; outcome=${outcome}; completed_count=${completedCount}; meaningful_signal=${meaningfulCommercialSignal}; findings=${insertedFindings}`
+    `[scan-runner] outcome classified: scan_id=${queuedScan.id}; outcome=${outcome}; completed_count=${completedCount}; meaningful_signal=${meaningfulCommercialSignal}; findings=${insertedFindings}; simulation_outcome=${simulationOutcome ?? "none"}`
   )
 
   console.info(
