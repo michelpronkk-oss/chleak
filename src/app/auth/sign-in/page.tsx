@@ -1,5 +1,7 @@
 import { AccessPanel } from "@/components/auth/access-panel"
 import { sanitizeNextPath } from "@/lib/auth/navigation"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { redirect } from "next/navigation"
 
 const errorMessage: Record<string, string> = {
   missing_fields: "Enter both email and password to continue.",
@@ -49,6 +51,18 @@ export default async function SignInPage({
   const secondaryHref = selectedPlan
     ? `/auth/sign-up?next=${encodeURIComponent(next)}&plan=${selectedPlan}`
     : `/auth/sign-up?next=${encodeURIComponent(next)}`
+
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (user) {
+    console.info(`[auth] sign-in page session detection: authenticated=true; redirect=${next}`)
+    redirect(next)
+  }
+
+  console.info("[auth] sign-in page session detection: authenticated=false")
 
   return (
     <AccessPanel

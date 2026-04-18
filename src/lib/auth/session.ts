@@ -6,27 +6,27 @@ import { ensureWorkspaceForUser } from "@/server/services/account-bootstrap-serv
 import type { AppSession } from "@/types/auth"
 
 export const getServerSession = cache(async (): Promise<AppSession | null> => {
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
+
+  if (error || !user) {
+    return null
+  }
+
+  const metadata = user.user_metadata as Record<string, unknown> | null
+  const fullName =
+    typeof metadata?.full_name === "string" && metadata.full_name.trim().length > 0
+      ? metadata.full_name.trim()
+      : null
+  const timezone =
+    typeof metadata?.timezone === "string" && metadata.timezone.trim().length > 0
+      ? metadata.timezone.trim()
+      : null
+
   try {
-    const supabase = await createSupabaseServerClient()
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser()
-
-    if (error || !user) {
-      return null
-    }
-
-    const metadata = user.user_metadata as Record<string, unknown> | null
-    const fullName =
-      typeof metadata?.full_name === "string" && metadata.full_name.trim().length > 0
-        ? metadata.full_name.trim()
-        : null
-    const timezone =
-      typeof metadata?.timezone === "string" && metadata.timezone.trim().length > 0
-        ? metadata.timezone.trim()
-        : null
-
     const membership = await ensureWorkspaceForUser({
       userId: user.id,
       email: user.email ?? null,
@@ -43,7 +43,18 @@ export const getServerSession = cache(async (): Promise<AppSession | null> => {
       membership,
     }
   } catch {
-    return null
+    console.error(
+      `[auth] workspace bootstrap failed for authenticated user: user=${user.id}`
+    )
+    return {
+      user: {
+        id: user.id,
+        email: user.email ?? null,
+        fullName,
+        timezone,
+      },
+      membership: null,
+    }
   }
 })
 

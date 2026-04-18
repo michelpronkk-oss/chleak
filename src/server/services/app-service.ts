@@ -10,6 +10,7 @@ import {
 import { getMockDashboardSnapshot } from "@/data/mock/dashboard"
 import { getServerSession } from "@/lib/auth/session"
 import { createSupabaseAdminClient } from "@/lib/supabase/shared"
+import { ensureWorkspaceForUser } from "@/server/services/account-bootstrap-service"
 import { getFixPlanHrefForIssue } from "@/server/services/fix-plan-service"
 import type { DashboardSnapshot, Store } from "@/types/domain"
 
@@ -644,11 +645,31 @@ async function getJourneyContext() {
   const cookieState = await getOnboardingState()
   const session = await getServerSession()
 
-  if (!session || !session.membership) {
+  if (!session) {
+    console.info("[auth] app route decision: authenticated=false; redirect=/auth/sign-in")
     redirect("/auth/sign-in?next=/app")
   }
 
-  const organizationId = session.membership.organizationId
+  let membership = session.membership
+  if (!membership) {
+    console.warn(
+      `[auth] app route decision: authenticated=true; membership_missing=true; user=${session.user.id}`
+    )
+    try {
+      membership = await ensureWorkspaceForUser({
+        userId: session.user.id,
+        email: session.user.email,
+        fullName: session.user.fullName,
+      })
+    } catch {
+      console.error(
+        `[auth] app route decision: workspace_recovery_failed=true; user=${session.user.id}`
+      )
+      redirect("/app/billing?intent=workspace_setup_failed")
+    }
+  }
+
+  const organizationId = membership.organizationId
   const planState = await getPlanStateForOrganization(organizationId)
   const entitlement = getPlanEntitlement(planState)
   const hasPlan = entitlement.hasActiveAccess
@@ -726,9 +747,9 @@ async function getJourneyContext() {
     ...rawSnapshot,
     organization: {
       ...rawSnapshot.organization,
-      id: session.membership.organizationId,
-      name: session.membership.organizationName,
-      slug: session.membership.organizationSlug,
+      id: membership.organizationId,
+      name: membership.organizationName,
+      slug: membership.organizationSlug,
     },
   }
   let filteredSnapshot = filterSnapshotForState(baseSnapshot, state)
@@ -773,13 +794,13 @@ async function getJourneyContext() {
     fullName: session.user.fullName,
   })
   const shellUser = {
-    id: session.user.id,
-    fullName: displayName,
-    email: session.user.email ?? "Unknown email",
-    roleLabel: toRoleLabel(session.membership.role),
-    initials: toInitials(displayName),
-    timezone: session.user.timezone ?? "UTC",
-  }
+      id: session.user.id,
+      fullName: displayName,
+      email: session.user.email ?? "Unknown email",
+      roleLabel: toRoleLabel(membership.role),
+      initials: toInitials(displayName),
+      timezone: session.user.timezone ?? "UTC",
+    }
 
   return {
     state,
