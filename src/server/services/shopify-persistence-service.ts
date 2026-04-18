@@ -32,6 +32,13 @@ export async function persistShopifyIntegration(input: {
   shopName: string
   scopes: string[]
   accessToken: string
+  signalSnapshot?: {
+    capturedAt: string
+    ordersLast30Days: number | null
+    totalOrders: number | null
+    products: number | null
+    customers: number | null
+  } | null
 }) {
   const supabase = createSupabaseAdminClient()
   const storeInsert: StoreInsert = {
@@ -81,6 +88,16 @@ export async function persistShopifyIntegration(input: {
     metadata: {
       install_source: "oauth_callback",
       canonical_shop_domain: input.canonicalShopDomain ?? input.shopDomain,
+      signal_snapshot: input.signalSnapshot
+        ? {
+            captured_at: input.signalSnapshot.capturedAt,
+            orders_30d: input.signalSnapshot.ordersLast30Days,
+            total_orders: input.signalSnapshot.totalOrders,
+            products: input.signalSnapshot.products,
+            customers: input.signalSnapshot.customers,
+          }
+        : null,
+      signal_snapshot_updated_at: input.signalSnapshot?.capturedAt ?? null,
     },
     last_synced_at: null,
   }

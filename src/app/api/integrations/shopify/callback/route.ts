@@ -11,6 +11,7 @@ import {
 } from "@/server/services/shopify-persistence-service"
 import { processQueuedScanV1 } from "@/server/services/scan-processing-service"
 import {
+  fetchShopifySignalSnapshot,
   SHOPIFY_OAUTH_STATE_COOKIE,
   exchangeShopifyCodeForToken,
   fetchShopDetails,
@@ -123,6 +124,14 @@ export async function GET(request: Request) {
     })
     console.info(`[shopify] fetch shop details success: myshopify_domain=${shopMeta.myshopifyDomain}; name=${shopMeta.name}`)
 
+    const signalSnapshot = await fetchShopifySignalSnapshot({
+      shopDomain: shopMeta.myshopifyDomain,
+      accessToken: token.accessToken,
+    })
+    console.info(
+      `[shopify] signal snapshot: organization=${storedState.organizationId}; shop=${shopMeta.myshopifyDomain}; captured=${Boolean(signalSnapshot)}; orders_30d=${signalSnapshot?.ordersLast30Days ?? "n/a"}; total_orders=${signalSnapshot?.totalOrders ?? "n/a"}; products=${signalSnapshot?.products ?? "n/a"}; customers=${signalSnapshot?.customers ?? "n/a"}`
+    )
+
     console.info(`[shopify] persist integration start: organization=${storedState.organizationId}; shop=${shopMeta.myshopifyDomain}`)
     const persistence = await persistShopifyIntegration({
       organizationId: storedState.organizationId,
@@ -132,6 +141,7 @@ export async function GET(request: Request) {
       shopName: shopMeta.name,
       scopes: token.scopes,
       accessToken: token.accessToken,
+      signalSnapshot,
     })
     console.info(`[shopify] persist integration success: organization=${storedState.organizationId}; shop=${shopMeta.myshopifyDomain}`)
 

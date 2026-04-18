@@ -7,6 +7,7 @@ import { IssueCard } from "@/components/dashboard/issue-card"
 import { RevenueOpportunityPanel } from "@/components/dashboard/revenue-opportunity-panel"
 import { ScanActivity } from "@/components/dashboard/scan-activity"
 import { SuggestedActions } from "@/components/dashboard/suggested-actions"
+import { ProcessingStagePanel } from "@/components/dashboard/processing-stage-panel"
 import { formatCompactCurrency } from "@/lib/format"
 import { getDashboardJourneyData } from "@/server/services/app-service"
 import {
@@ -97,6 +98,17 @@ export default async function DashboardOverviewPage() {
 
         <section className="surface-card-strong p-5 sm:p-6">
           <p className="data-mono mb-4 text-muted-foreground">Scan coverage</p>
+          <ProcessingStagePanel
+            title="Processing"
+            className="mb-4"
+            stages={[
+              "Source connected",
+              "Starting first scan...",
+              "Reviewing source configuration...",
+              "Checking signal readiness...",
+              "Preparing monitoring baseline...",
+            ]}
+          />
           <ul className="space-y-2.5">
             {journey.checks.map((check) => (
               <li

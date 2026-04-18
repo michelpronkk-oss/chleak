@@ -243,6 +243,92 @@ export async function fetchShopDetails(input: {
   return shop
 }
 
+interface ShopifySignalSnapshot {
+  capturedAt: string
+  ordersLast30Days: number | null
+  totalOrders: number | null
+  products: number | null
+  customers: number | null
+}
+
+async function fetchShopifyCount(input: {
+  shopDomain: string
+  accessToken: string
+  path: string
+  query?: Record<string, string>
+}) {
+  const query = new URLSearchParams(input.query ?? {})
+  const url = `https://${input.shopDomain}/admin/api/${SHOPIFY_ADMIN_API_VERSION}${input.path}${query.size ? `?${query.toString()}` : ""}`
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Shopify-Access-Token": input.accessToken,
+    },
+    cache: "no-store",
+  })
+
+  if (!response.ok) {
+    const body = await response.text()
+    throw new Error(`status=${response.status}; body=${body}`)
+  }
+
+  const payload = (await response.json()) as { count?: number }
+  return typeof payload.count === "number" ? payload.count : 0
+}
+
+export async function fetchShopifySignalSnapshot(input: {
+  shopDomain: string
+  accessToken: string
+}): Promise<ShopifySignalSnapshot | null> {
+  const now = new Date()
+  const createdAtMin = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
+
+  try {
+    const [ordersLast30Days, totalOrders, products, customers] = await Promise.all([
+      fetchShopifyCount({
+        shopDomain: input.shopDomain,
+        accessToken: input.accessToken,
+        path: "/orders/count.json",
+        query: {
+          status: "any",
+          created_at_min: createdAtMin,
+        },
+      }),
+      fetchShopifyCount({
+        shopDomain: input.shopDomain,
+        accessToken: input.accessToken,
+        path: "/orders/count.json",
+        query: { status: "any" },
+      }),
+      fetchShopifyCount({
+        shopDomain: input.shopDomain,
+        accessToken: input.accessToken,
+        path: "/products/count.json",
+      }),
+      fetchShopifyCount({
+        shopDomain: input.shopDomain,
+        accessToken: input.accessToken,
+        path: "/customers/count.json",
+      }),
+    ])
+
+    return {
+      capturedAt: now.toISOString(),
+      ordersLast30Days,
+      totalOrders,
+      products,
+      customers,
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.warn(
+      `[shopify] signal snapshot fetch failed: shop=${input.shopDomain}; api_version=${SHOPIFY_ADMIN_API_VERSION}; error=${message}`
+    )
+    return null
+  }
+}
+
 export async function registerShopifyWebhooks(input: {
   shopDomain: string
   accessToken: string

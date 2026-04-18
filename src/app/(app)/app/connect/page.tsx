@@ -2,8 +2,10 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { ArrowRight, Check, ChevronRight, CircleCheck, CircleDashed } from "lucide-react"
 
+import { ProcessingStagePanel } from "@/components/dashboard/processing-stage-panel"
 import { cn } from "@/lib/utils"
 import { getConnectJourneyData } from "@/server/services/app-service"
+import { ShopifyConnectSubmitButton } from "./shopify-connect-submit-button"
 
 const statusMessage: Record<string, string> = {
   setup_required: "Stripe connect setup is incomplete in this environment.",
@@ -148,6 +150,8 @@ export default async function ConnectPage({
     (data.shopifySetupAttention
       ? "Shopify connected, but webhook registration needs attention. Retry setup."
       : null)
+  const showShopifyProcessingHandoff =
+    provider === "shopify" && (status === "connected" || isPendingShopify)
 
   return (
     <div className="space-y-5 pb-24 lg:pb-4">
@@ -175,6 +179,18 @@ export default async function ConnectPage({
         >
           <p className="text-sm leading-6 text-muted-foreground">{showStatusMessage}</p>
         </section>
+      ) : null}
+      {showShopifyProcessingHandoff ? (
+        <ProcessingStagePanel
+          title="Connection Handoff"
+          stages={[
+            "Source connected",
+            "Starting first scan...",
+            "Reviewing source configuration...",
+            "Checking signal readiness...",
+            "Preparing monitoring baseline...",
+          ]}
+        />
       ) : null}
 
       {/* Source cards */}
@@ -226,14 +242,10 @@ export default async function ConnectPage({
                 Exact myshopify domain. We initiate app authorization and return after approval.
               </p>
             </div>
-            <button
-              type="submit"
+            <ShopifyConnectSubmitButton
               disabled={!data.shopifyConfigured}
-              className="marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-            >
-              {data.shopifyConfigured ? shopifyButtonLabel : "Shopify setup required"}
-              <ArrowRight className="h-3.5 w-3.5" />
-            </button>
+              label={data.shopifyConfigured ? shopifyButtonLabel : "Shopify setup required"}
+            />
           </form>
 
           {data.shopifySourceState.status !== "not_connected" ? (

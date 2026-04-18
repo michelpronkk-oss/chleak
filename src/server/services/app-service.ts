@@ -58,6 +58,10 @@ interface BackendSourceSignals {
     shopify: number
     stripe: number
   }
+  meaningfulSignalByProvider: {
+    shopify: boolean
+    stripe: boolean
+  }
 }
 
 interface ShopifyDomainView {
@@ -122,6 +126,7 @@ function deriveScanOutcomeForPrimarySource(input: {
 
   const scans = input.signals.scanCountByProvider[provider]
   const issues = input.signals.issueCountByProvider[provider]
+  const meaningfulSignal = input.signals.meaningfulSignalByProvider[provider]
 
   if (scans === 0) {
     return null
@@ -131,7 +136,7 @@ function deriveScanOutcomeForPrimarySource(input: {
     return "issues_found"
   }
 
-  return scans > 0 ? "no_signal" : null
+  return scans > 0 ? (meaningfulSignal ? "clean" : "no_signal") : null
 }
 
 async function loadBackendSourceSignals(
@@ -141,7 +146,7 @@ async function loadBackendSourceSignals(
     const admin = createSupabaseAdminClient()
     const integrationsResult = await admin
       .from("store_integrations")
-      .select("provider, status, store_id, installed_at, created_at")
+      .select("provider, status, store_id, metadata, installed_at, created_at")
       .eq("organization_id", organizationId)
       .in("provider", ["shopify", "stripe"])
       .neq("status", "disconnected")
@@ -163,6 +168,7 @@ async function loadBackendSourceSignals(
         storeIdsByProvider: { shopify: [], stripe: [] },
         scanCountByProvider: { shopify: 0, stripe: 0 },
         issueCountByProvider: { shopify: 0, stripe: 0 },
+        meaningfulSignalByProvider: { shopify: false, stripe: false },
       }
     }
 
@@ -200,6 +206,7 @@ async function loadBackendSourceSignals(
         storeIdsByProvider: { shopify: [], stripe: [] },
         scanCountByProvider: { shopify: 0, stripe: 0 },
         issueCountByProvider: { shopify: 0, stripe: 0 },
+        meaningfulSignalByProvider: { shopify: false, stripe: false },
       }
     }
 
@@ -230,6 +237,10 @@ async function loadBackendSourceSignals(
       shopify: 0,
       stripe: 0,
     }
+    const meaningfulSignalByProvider: BackendSourceSignals["meaningfulSignalByProvider"] = {
+      shopify: false,
+      stripe: false,
+    }
 
     const storeIdToProvider = new Map<string, ConnectedProvider>()
     storeIdsByProvider.shopify.forEach((storeId) =>
@@ -253,12 +264,41 @@ async function loadBackendSourceSignals(
       }
     })
 
+    for (const row of rows) {
+      if (row.provider !== "shopify") {
+        continue
+      }
+
+      const metadata =
+        row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+          ? (row.metadata as Record<string, unknown>)
+          : null
+      const signalSnapshot =
+        metadata &&
+        metadata.signal_snapshot &&
+        typeof metadata.signal_snapshot === "object" &&
+        !Array.isArray(metadata.signal_snapshot)
+          ? (metadata.signal_snapshot as Record<string, unknown>)
+          : null
+      const orders30d =
+        typeof signalSnapshot?.orders_30d === "number" ? signalSnapshot.orders_30d : 0
+      const totalOrders =
+        typeof signalSnapshot?.total_orders === "number"
+          ? signalSnapshot.total_orders
+          : 0
+
+      if (orders30d >= 5 || totalOrders >= 25) {
+        meaningfulSignalByProvider.shopify = true
+      }
+    }
+
     return {
       providers,
       primaryProvider,
       storeIdsByProvider,
       scanCountByProvider,
       issueCountByProvider,
+      meaningfulSignalByProvider,
     }
   } catch {
     return null
