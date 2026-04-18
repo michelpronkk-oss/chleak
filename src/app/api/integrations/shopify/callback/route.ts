@@ -5,6 +5,7 @@ import {
   ONBOARDING_STATE_COOKIE,
 } from "@/server/services/onboarding-state-service"
 import {
+  enqueueShopifyQueuedScan,
   persistShopifyIntegration,
 } from "@/server/services/shopify-persistence-service"
 import {
@@ -121,7 +122,7 @@ export async function GET(request: Request) {
     console.info(`[shopify] fetch shop details success: myshopify_domain=${shopMeta.myshopifyDomain}; name=${shopMeta.name}`)
 
     console.info(`[shopify] persist integration start: organization=${storedState.organizationId}; shop=${shopMeta.myshopifyDomain}`)
-    await persistShopifyIntegration({
+    const persistence = await persistShopifyIntegration({
       organizationId: storedState.organizationId,
       shopDomain: shopMeta.myshopifyDomain,
       shopName: shopMeta.name,
@@ -129,6 +130,21 @@ export async function GET(request: Request) {
       accessToken: token.accessToken,
     })
     console.info(`[shopify] persist integration success: organization=${storedState.organizationId}; shop=${shopMeta.myshopifyDomain}`)
+
+    if (!persistence.scanId) {
+      console.warn(
+        `[shopify] scan missing after persistence: organization=${storedState.organizationId}; store_id=${persistence.storeId}; reason=retrying_scan_insert`
+      )
+      const fallbackScanId = await enqueueShopifyQueuedScan({
+        organizationId: storedState.organizationId,
+        storeId: persistence.storeId,
+      })
+      if (!fallbackScanId) {
+        console.error(
+          `[shopify] scan insert retry failed: organization=${storedState.organizationId}; store_id=${persistence.storeId}`
+        )
+      }
+    }
 
     console.info(`[shopify] webhook registration start: shop=${normalizedShop}`)
     const webhookResults = await registerShopifyWebhooks({

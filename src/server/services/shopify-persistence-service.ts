@@ -113,11 +113,7 @@ export async function persistShopifyIntegration(input: {
     `[shopify] scan insert start: organization=${input.organizationId}; store_id=${storeResult.data.id}`
   )
 
-  const scanResult = await supabase
-    .from("scans")
-    .insert(scanInsert)
-    .select("id")
-    .single()
+  const scanResult = await supabase.from("scans").insert(scanInsert).select("id").single()
 
   if (scanResult.error || !scanResult.data) {
     console.error(
@@ -135,6 +131,40 @@ export async function persistShopifyIntegration(input: {
     integrationId: integrationResult.data.id,
     scanId: scanResult.data?.id ?? null,
   }
+}
+
+export async function enqueueShopifyQueuedScan(input: {
+  organizationId: string
+  storeId: string
+}) {
+  const supabase = createSupabaseAdminClient()
+  const scanInsert: ScanInsert = {
+    organization_id: input.organizationId,
+    store_id: input.storeId,
+    status: "queued",
+    scanned_at: new Date().toISOString(),
+    detected_issues_count: 0,
+    estimated_monthly_leakage: 0,
+  }
+
+  console.info(
+    `[shopify] scan insert start: organization=${input.organizationId}; store_id=${input.storeId}`
+  )
+
+  const scanResult = await supabase.from("scans").insert(scanInsert).select("id").single()
+
+  if (scanResult.error || !scanResult.data) {
+    console.error(
+      `[shopify] scan insert failed: organization=${input.organizationId}; store_id=${input.storeId}; error=${JSON.stringify({ code: scanResult.error?.code, message: scanResult.error?.message, details: scanResult.error?.details, hint: scanResult.error?.hint })}`
+    )
+    return null
+  }
+
+  console.info(
+    `[shopify] scan insert success: organization=${input.organizationId}; store_id=${input.storeId}; scan_id=${scanResult.data.id}`
+  )
+
+  return scanResult.data.id
 }
 
 export async function markShopifyIntegrationErrored(input: {
