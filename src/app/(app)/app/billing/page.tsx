@@ -12,6 +12,9 @@ export default async function BillingPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const data = await getBillingData()
+  console.info(
+    `[auth] billing page auth decision: has_plan=${data.hasPlan}; org=${data.organization.id}`
+  )
   const params = await searchParams
   const intent = Array.isArray(params.intent) ? params.intent[0] : params.intent
   const nextParam = Array.isArray(params.next) ? params.next[0] : params.next

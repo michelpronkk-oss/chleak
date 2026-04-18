@@ -12,27 +12,26 @@ export async function getServerSession(): Promise<AppSession | null> {
 
 const getServerSessionCached = cache(async (): Promise<AppSession | null> => {
   const supabase = await createSupabaseServerClient()
-  const getUserResult = await supabase.auth.getUser()
-  let user = getUserResult.data.user
+  const getSessionResult = await supabase.auth.getSession()
+  let user = getSessionResult.data.session?.user ?? null
+  let userSource: "getSession" | "getUser" = "getSession"
 
-  if (getUserResult.error || !user) {
-    const getSessionResult = await supabase.auth.getSession()
-    const fallbackUser = getSessionResult.data.session?.user ?? null
+  if (!user) {
+    const getUserResult = await supabase.auth.getUser()
+    user = getUserResult.data.user ?? null
+    userSource = "getUser"
 
-    if (fallbackUser) {
-      user = fallbackUser
-      console.warn(
-        `[auth] getServerSession fallback: getUser_failed=true; user_id=${fallbackUser.id}; getUser_error=${getUserResult.error?.message ?? "none"}`
-      )
-    } else {
+    if (!user) {
       console.info(
-        `[auth] getServerSession unauthenticated: getUser_error=${getUserResult.error?.message ?? "none"}; has_user=${Boolean(getUserResult.data.user)}; has_session=${Boolean(getSessionResult.data.session)}`
+        `[auth] getServerSession unauthenticated: getSession_error=${getSessionResult.error?.message ?? "none"}; has_session=${Boolean(getSessionResult.data.session)}; getUser_error=${getUserResult.error?.message ?? "none"}; has_user=${Boolean(getUserResult.data.user)}`
       )
       return null
     }
-  } else {
-    console.info(`[auth] getServerSession authenticated: user_id=${user.id}; source=getUser`)
   }
+
+  console.info(
+    `[auth] getServerSession authenticated: user_id=${user.id}; source=${userSource}`
+  )
 
   const metadata = user.user_metadata as Record<string, unknown> | null
   const fullName =

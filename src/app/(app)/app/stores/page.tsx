@@ -7,6 +7,9 @@ import { getStoresIndexData } from "@/server/services/app-service"
 
 export default async function StoresPage() {
   const data = await getStoresIndexData()
+  console.info(
+    `[auth] stores page auth decision: has_plan=${data.hasPlan}; org=${data.organization.id}`
+  )
 
   if (!data.hasPlan) {
     redirect("/app/billing?intent=plan_required")

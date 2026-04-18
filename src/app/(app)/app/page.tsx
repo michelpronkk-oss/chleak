@@ -18,6 +18,15 @@ import {
 
 export default async function DashboardOverviewPage() {
   const journey = await getDashboardJourneyData()
+  const authOrgId =
+    "organization" in journey
+      ? journey.organization?.id ?? "none"
+      : "snapshot" in journey
+        ? journey.snapshot.organization.id
+        : "none"
+  console.info(
+    `[auth] overview page auth decision: mode=${journey.mode}; org=${authOrgId}`
+  )
 
   if (journey.mode === "plan_required") {
     redirect("/app/billing?intent=plan_required")

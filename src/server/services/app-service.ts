@@ -782,7 +782,9 @@ async function getJourneyContext() {
   const session = await getServerSession()
 
   if (!session) {
-    console.info("[auth] app route decision: authenticated=false; redirect=/auth/sign-in")
+    console.info(
+      "[auth] app route decision: authenticated=false; redirect=/auth/sign-in?next=/app; reason=no_server_session"
+    )
     redirect("/auth/sign-in?next=/app")
   }
 

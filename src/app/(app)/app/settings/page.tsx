@@ -6,6 +6,9 @@ import { getSettingsData } from "@/server/services/app-service"
 
 export default async function SettingsPage() {
   const data = await getSettingsData()
+  console.info(
+    `[auth] settings page auth decision: has_plan=${data.hasPlan}; org=${data.organization.id}`
+  )
 
   if (!data.hasPlan) {
     redirect("/app/billing?intent=plan_required")
