@@ -101,6 +101,61 @@ function parseJsonSafely(input: string): unknown {
   }
 }
 
+function parseSignatureCandidates(signatureHeader: string): string[] {
+  const raw = signatureHeader.trim()
+  if (!raw) {
+    return []
+  }
+
+  const segments = raw.split(",").map((part) => part.trim())
+  const keyedValues = segments
+    .map((segment) => {
+      const index = segment.indexOf("=")
+      if (index < 1) {
+        return null
+      }
+      const key = segment.slice(0, index).trim().toLowerCase()
+      const value = segment.slice(index + 1).trim()
+      if (!value) {
+        return null
+      }
+      if (key === "sha256" || key === "v1" || key === "signature") {
+        return value
+      }
+      return null
+    })
+    .filter((value): value is string => Boolean(value))
+
+  if (keyedValues.length > 0) {
+    return keyedValues
+  }
+
+  const trimmed = raw.replace(/^sha256=/i, "").trim()
+  return trimmed ? [trimmed] : []
+}
+
+function toHexDigestCandidate(candidate: string): string | null {
+  const normalized = candidate.trim()
+  if (!normalized) {
+    return null
+  }
+
+  if (/^[a-fA-F0-9]{64,}$/.test(normalized)) {
+    return normalized.toLowerCase()
+  }
+
+  try {
+    const decoded = Buffer.from(normalized, "base64")
+    if (decoded.length > 0) {
+      return decoded.toString("hex").toLowerCase()
+    }
+  } catch {
+    // Ignore invalid base64 candidates.
+  }
+
+  return null
+}
+
 export async function createDodoCheckoutSession(input: DodoCheckoutRequest) {
   const validated = dodoCheckoutRequestSchema.parse(input)
   const config = getDodoConfig()
@@ -194,24 +249,19 @@ export async function parseAndVerifyDodoWebhook(input: {
     .createHmac("sha256", config.webhookSecret)
     .update(input.rawBody)
     .digest("hex")
-
-  const expectedBuffer = Buffer.from(expected)
-  const incomingBuffer = Buffer.from(input.signature)
-
-  if (expectedBuffer.length !== incomingBuffer.length) {
-    return {
-      verified: false,
-      reason:
-        "Webhook signature length mismatch. Confirm hashing strategy against current Dodo docs before production use.",
-      eventType: typeof payload.type === "string" ? payload.type : "unknown",
-      payload,
+  const expectedBuffer = Buffer.from(expected, "hex")
+  const signatureCandidates = parseSignatureCandidates(input.signature)
+  const signaturesMatch = signatureCandidates.some((candidate) => {
+    const candidateHex = toHexDigestCandidate(candidate)
+    if (!candidateHex) {
+      return false
     }
-  }
-
-  const signaturesMatch = crypto.timingSafeEqual(
-    expectedBuffer,
-    incomingBuffer
-  )
+    const incomingBuffer = Buffer.from(candidateHex, "hex")
+    if (incomingBuffer.length !== expectedBuffer.length) {
+      return false
+    }
+    return crypto.timingSafeEqual(expectedBuffer, incomingBuffer)
+  })
 
   return {
     verified: signaturesMatch,
