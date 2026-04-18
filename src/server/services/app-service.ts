@@ -280,6 +280,14 @@ async function loadBackendSourceSignals(
         !Array.isArray(metadata.signal_snapshot)
           ? (metadata.signal_snapshot as Record<string, unknown>)
           : null
+      const explicitMeaningfulSignal =
+        typeof metadata?.meaningful_signal_detected === "boolean"
+          ? metadata.meaningful_signal_detected
+          : null
+      const explicitOutcome =
+        typeof metadata?.scan_outcome === "string"
+          ? metadata.scan_outcome
+          : null
       const orders30d =
         typeof signalSnapshot?.orders_30d === "number" ? signalSnapshot.orders_30d : 0
       const totalOrders =
@@ -287,7 +295,13 @@ async function loadBackendSourceSignals(
           ? signalSnapshot.total_orders
           : 0
 
-      if (orders30d >= 5 || totalOrders >= 25) {
+      if (
+        explicitMeaningfulSignal === true ||
+        explicitOutcome === "clean" ||
+        explicitOutcome === "issues_found" ||
+        orders30d >= 5 ||
+        totalOrders >= 25
+      ) {
         meaningfulSignalByProvider.shopify = true
       }
     }
