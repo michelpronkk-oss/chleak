@@ -2,7 +2,6 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { ArrowRight, Check, ChevronRight, CircleCheck, CircleDashed } from "lucide-react"
 
-import { ProcessingStagePanel } from "@/components/dashboard/processing-stage-panel"
 import { cn } from "@/lib/utils"
 import { getConnectJourneyData } from "@/server/services/app-service"
 import { PostOauthHandoff } from "./post-oauth-handoff"
@@ -151,8 +150,6 @@ export default async function ConnectPage({
     (data.shopifySetupAttention
       ? "Shopify connected, but webhook registration needs attention. Retry setup."
       : null)
-  const showShopifyProcessingHandoff =
-    provider === "shopify" && (status === "connected" || isPendingShopify)
   const showPostOauthHandoff =
     provider === "shopify" && (status === "connected" || isPendingShopify || isReady)
 
@@ -182,18 +179,6 @@ export default async function ConnectPage({
         >
           <p className="text-sm leading-6 text-muted-foreground">{showStatusMessage}</p>
         </section>
-      ) : null}
-      {showShopifyProcessingHandoff ? (
-        <ProcessingStagePanel
-          title="Connection Handoff"
-          stages={[
-            "Source connected",
-            "Starting first scan...",
-            "Reviewing source configuration...",
-            "Checking signal readiness...",
-            "Preparing monitoring baseline...",
-          ]}
-        />
       ) : null}
       {showPostOauthHandoff ? (
         <PostOauthHandoff

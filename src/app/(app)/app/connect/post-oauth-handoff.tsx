@@ -18,14 +18,22 @@ export function PostOauthHandoff({
 }) {
   const router = useRouter()
   const [isForwarding, setIsForwarding] = useState(false)
+  const [visualStep, setVisualStep] = useState(0)
 
   const stages = useMemo(
-    () => [
-      { label: "Shopify connected", done: connected, active: connected && !scanRunning },
-      { label: "Starting first scan...", done: scanRunning || resultsReady, active: scanRunning && !resultsReady },
-      { label: "Preparing results view...", done: resultsReady, active: resultsReady },
-    ],
-    [connected, scanRunning, resultsReady]
+    () =>
+      resultsReady
+        ? [
+            "Shopify connected",
+            "First scan completed",
+            "Revealing results...",
+          ]
+        : [
+            "Shopify connected",
+            scanRunning ? "First scan running..." : "Starting first scan...",
+            "Preparing results view...",
+          ],
+    [resultsReady, scanRunning]
   )
 
   useEffect(() => {
@@ -33,36 +41,69 @@ export function PostOauthHandoff({
       return
     }
 
+    const stepIntervalMs = 850
+    const interval = window.setInterval(() => {
+      setVisualStep((current) => {
+        if (current >= stages.length) {
+          return current
+        }
+        return current + 1
+      })
+    }, stepIntervalMs)
+
+    return () => window.clearInterval(interval)
+  }, [connected, stages.length])
+
+  useEffect(() => {
+    if (!connected || visualStep < stages.length || isForwarding) {
+      return
+    }
+
     const timeout = window.setTimeout(() => {
       setIsForwarding(true)
       router.push("/app")
-    }, 1600)
+    }, 300)
 
     return () => window.clearTimeout(timeout)
-  }, [connected, router])
+  }, [connected, isForwarding, router, stages.length, visualStep])
+
+  const progressPercent = Math.min(
+    100,
+    Math.round((visualStep / Math.max(stages.length, 1)) * 100)
+  )
 
   return (
     <section className="surface-card border border-primary/25 bg-primary/[0.05] p-4">
       <p className="data-mono text-primary">Connection Confirmed</p>
+      <div className="mt-3 h-1.5 rounded-full bg-background/70">
+        <div
+          className="h-1.5 rounded-full bg-primary/70 transition-all duration-500 ease-out"
+          style={{ width: `${progressPercent}%` }}
+        />
+      </div>
       <ul className="mt-3 space-y-2.5">
-        {stages.map((stage) => (
+        {stages.map((stage, index) => {
+          const isDone = index < visualStep
+          const isCurrent = index === visualStep && visualStep < stages.length
+          return (
           <li
-            key={stage.label}
+            key={stage}
             className={cn(
               "flex items-center gap-2.5 text-sm",
-              stage.done ? "text-primary/90" : "text-muted-foreground/70"
+              isDone || isCurrent ? "text-primary/90" : "text-muted-foreground/70"
             )}
           >
-            {stage.done ? (
+            {isDone ? (
               <Check className="h-3.5 w-3.5" />
-            ) : stage.active ? (
+            ) : isCurrent ? (
               <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
             ) : (
               <span className="h-1.5 w-1.5 rounded-full bg-border/70" />
             )}
-            {stage.label}
+            {stage}
           </li>
-        ))}
+          )
+        })}
       </ul>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <p className="text-xs text-muted-foreground">
@@ -78,4 +119,3 @@ export function PostOauthHandoff({
     </section>
   )
 }
-

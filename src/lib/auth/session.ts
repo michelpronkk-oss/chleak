@@ -1,18 +1,37 @@
 import { redirect } from "next/navigation"
+import { cache } from "react"
 
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { ensureWorkspaceForUser } from "@/server/services/account-bootstrap-service"
 import type { AppSession } from "@/types/auth"
 
 export async function getServerSession(): Promise<AppSession | null> {
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser()
+  const session = await getServerSessionCached()
+  return session
+}
 
-  if (error || !user) {
-    return null
+const getServerSessionCached = cache(async (): Promise<AppSession | null> => {
+  const supabase = await createSupabaseServerClient()
+  const getUserResult = await supabase.auth.getUser()
+  let user = getUserResult.data.user
+
+  if (getUserResult.error || !user) {
+    const getSessionResult = await supabase.auth.getSession()
+    const fallbackUser = getSessionResult.data.session?.user ?? null
+
+    if (fallbackUser) {
+      user = fallbackUser
+      console.warn(
+        `[auth] getServerSession fallback: getUser_failed=true; user_id=${fallbackUser.id}; getUser_error=${getUserResult.error?.message ?? "none"}`
+      )
+    } else {
+      console.info(
+        `[auth] getServerSession unauthenticated: getUser_error=${getUserResult.error?.message ?? "none"}; has_user=${Boolean(getUserResult.data.user)}; has_session=${Boolean(getSessionResult.data.session)}`
+      )
+      return null
+    }
+  } else {
+    console.info(`[auth] getServerSession authenticated: user_id=${user.id}; source=getUser`)
   }
 
   const metadata = user.user_metadata as Record<string, unknown> | null
@@ -55,7 +74,7 @@ export async function getServerSession(): Promise<AppSession | null> {
       membership: null,
     }
   }
-}
+})
 
 export async function requireServerSession() {
   const session = await getServerSession()

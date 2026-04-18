@@ -28,11 +28,10 @@ export async function updateSupabaseSession(request: NextRequest) {
     },
   })
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const getUserResult = await supabase.auth.getUser()
+  const user = getUserResult.data.user
   console.info(
-    `[auth] middleware auth decision: path=${request.nextUrl.pathname}; authenticated=${Boolean(user)}`
+    `[auth] middleware auth decision: path=${request.nextUrl.pathname}; authenticated=${Boolean(user)}; user_id=${user?.id ?? "none"}; getUser_error=${getUserResult.error?.message ?? "none"}`
   )
 
   return response
