@@ -7,16 +7,12 @@ import {
 } from "./dashboard-repository"
 
 export async function createDashboardRepository(): Promise<DashboardRepository> {
-  const dataSource = process.env.CHECKOUTLEAK_DATA_SOURCE ?? "mock"
+  const dataSource = process.env.CHECKOUTLEAK_DATA_SOURCE ?? "supabase"
 
-  if (dataSource === "supabase") {
-    try {
-      const supabase = await createSupabaseServerClient()
-      return new SupabaseDashboardRepository(supabase)
-    } catch {
-      return new MockDashboardRepository()
-    }
+  if (dataSource === "mock") {
+    return new MockDashboardRepository()
   }
 
-  return new MockDashboardRepository()
+  const supabase = await createSupabaseServerClient()
+  return new SupabaseDashboardRepository(supabase)
 }

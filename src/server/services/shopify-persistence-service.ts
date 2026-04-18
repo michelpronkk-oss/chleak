@@ -33,15 +33,26 @@ export async function persistShopifyIntegration(input: {
     active: true,
   }
 
+  console.info(
+    `[shopify] store upsert start: organization=${input.organizationId}; domain=${input.shopDomain}; name=${input.shopName}; platform=${storeInsert.platform}`
+  )
+
   const storeResult = await supabase
     .from("stores")
-    .upsert([storeInsert], { onConflict: "organization_id,domain" })
+    .upsert([storeInsert], { onConflict: "organization_id" })
     .select("id")
     .single()
 
   if (storeResult.error || !storeResult.data) {
+    console.error(
+      `[shopify] store upsert failed: organization=${input.organizationId}; code=${storeResult.error?.code ?? "none"}; message=${storeResult.error?.message ?? "no_data"}; details=${storeResult.error?.details ?? ""}; hint=${storeResult.error?.hint ?? ""}`
+    )
     throw new Error("Failed to persist Shopify store.")
   }
+
+  console.info(
+    `[shopify] store upsert success: organization=${input.organizationId}; store_id=${storeResult.data.id}`
+  )
 
   const integrationInsert: StoreIntegrationInsert = {
     organization_id: input.organizationId,
@@ -60,6 +71,10 @@ export async function persistShopifyIntegration(input: {
     last_synced_at: null,
   }
 
+  console.info(
+    `[shopify] integration upsert start: organization=${input.organizationId}; store_id=${storeResult.data.id}; provider=shopify`
+  )
+
   const integrationResult = await supabase
     .from("store_integrations")
     .upsert([integrationInsert], { onConflict: "organization_id,store_id,provider" })
@@ -67,8 +82,15 @@ export async function persistShopifyIntegration(input: {
     .single()
 
   if (integrationResult.error || !integrationResult.data) {
+    console.error(
+      `[shopify] integration upsert failed: organization=${input.organizationId}; store_id=${storeResult.data.id}; code=${integrationResult.error?.code ?? "none"}; message=${integrationResult.error?.message ?? "no_data"}; details=${integrationResult.error?.details ?? ""}; hint=${integrationResult.error?.hint ?? ""}`
+    )
     throw new Error("Failed to persist Shopify integration.")
   }
+
+  console.info(
+    `[shopify] integration upsert success: organization=${input.organizationId}; integration_id=${integrationResult.data.id}`
+  )
 
   // Token handling should move to encrypted secret storage before production.
   // This placeholder shows where a secure token reference would be persisted.

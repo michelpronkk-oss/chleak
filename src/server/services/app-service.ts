@@ -7,6 +7,7 @@ import {
   mockStoreContexts,
   mockSubscriptionState,
 } from "@/data/mock/app-state"
+import { getMockDashboardSnapshot } from "@/data/mock/dashboard"
 import { getServerSession } from "@/lib/auth/session"
 import { createSupabaseAdminClient } from "@/lib/supabase/shared"
 import { getFixPlanHrefForIssue } from "@/server/services/fix-plan-service"
@@ -720,7 +721,10 @@ async function getJourneyContext() {
     }
   }
 
-  const rawSnapshot = await getDashboardSnapshotForOrganization(organizationId)
+  const rawSnapshot =
+    state === "demo"
+      ? getMockDashboardSnapshot()
+      : await getDashboardSnapshotForOrganization(organizationId)
   const baseSnapshot: DashboardSnapshot = {
     ...rawSnapshot,
     organization: {
