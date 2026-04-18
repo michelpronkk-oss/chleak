@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import { parseAndVerifyDodoWebhook } from "@/lib/billing/dodo"
 import { createSupabaseAdminClient } from "@/lib/supabase/shared"
 import { syncSubscriptionFromDodoWebhook } from "@/server/services/dodo-billing-service"
+import type { Json } from "@/types/database"
 
 function asRecord(input: unknown): Record<string, unknown> | null {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
@@ -33,6 +34,10 @@ function parseJsonSafely(rawBody: string) {
   } catch {
     return null
   }
+}
+
+function asJson(input: unknown): Json {
+  return input as Json
 }
 
 function resolveOrganizationId(payload: unknown) {
@@ -75,12 +80,12 @@ export async function POST(request: Request) {
       provider: "dodo",
       source_domain: null,
       topic: eventType,
-      payload:
-        parsedPayload ??
-        ({
+      payload: asJson(
+        parsedPayload ?? {
           raw_body: rawBody,
           parse_error: "invalid_json",
-        } as Record<string, unknown>),
+        }
+      ),
     })
 
     if (insertResult.error) {
