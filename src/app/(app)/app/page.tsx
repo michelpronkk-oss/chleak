@@ -317,6 +317,56 @@ export default async function DashboardOverviewPage() {
     )
   }
 
+  if (journey.mode === "ready" && journey.scanOutcome === "clean") {
+    return (
+      <div className="space-y-5 pb-24 lg:pb-4">
+        <section className="space-y-2">
+          <p className="data-mono text-primary">Baseline Analysis Complete</p>
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
+            {journey.snapshot.organization.name} is currently clean.
+          </h1>
+          <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
+            CheckoutLeak analyzed available commercial signal and found no material leakage issues at this time.
+          </p>
+        </section>
+
+        <section className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+          <article className="surface-card-strong p-5 sm:p-6 lg:p-7">
+            <p className="data-mono text-primary">Monitoring Status</p>
+            <h2 className="mt-2 text-lg font-semibold tracking-tight">
+              Monitoring active with no material findings.
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Source coverage is healthy and ongoing scan cycles will surface new issues automatically if risk appears.
+            </p>
+          </article>
+
+          <article className="surface-card p-4 sm:p-5 lg:p-6">
+            <p className="data-mono text-primary">Next Operator Move</p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Keep sources connected and review store status periodically. No immediate corrective action is required.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2.5">
+              <Link
+                href="/app/stores"
+                className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
+              >
+                Open store details
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+              <Link
+                href="/app/connect"
+                className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Connect another source
+              </Link>
+            </div>
+          </article>
+        </section>
+      </div>
+    )
+  }
+
   const snapshot = journey.snapshot
   const primaryIssue = snapshot.summary.highestImpactIssue
   const fallbackFixPlanHref = getFallbackFixPlanHref()
