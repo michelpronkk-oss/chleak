@@ -33,8 +33,11 @@ export async function persistShopifyIntegration(input: {
     active: true,
   }
 
+  // NOTE: onConflict:"organization_id" requires a unique constraint on stores.organization_id.
+  // If that constraint does not exist the upsert will error with code 42P10 (no unique/exclusion constraint).
+  // NOTE: using service-role admin client — RLS is bypassed.
   console.info(
-    `[shopify] store upsert start: organization=${input.organizationId}; domain=${input.shopDomain}; name=${input.shopName}; platform=${storeInsert.platform}`
+    `[shopify] store upsert start: organization=${input.organizationId}; payload=${JSON.stringify(storeInsert)}`
   )
 
   const storeResult = await supabase
@@ -45,7 +48,7 @@ export async function persistShopifyIntegration(input: {
 
   if (storeResult.error || !storeResult.data) {
     console.error(
-      `[shopify] store upsert failed: organization=${input.organizationId}; code=${storeResult.error?.code ?? "none"}; message=${storeResult.error?.message ?? "no_data"}; details=${storeResult.error?.details ?? ""}; hint=${storeResult.error?.hint ?? ""}`
+      `[shopify] store upsert failed: organization=${input.organizationId}; error=${JSON.stringify({ code: storeResult.error?.code, message: storeResult.error?.message, details: storeResult.error?.details, hint: storeResult.error?.hint })}`
     )
     throw new Error("Failed to persist Shopify store.")
   }
@@ -71,8 +74,9 @@ export async function persistShopifyIntegration(input: {
     last_synced_at: null,
   }
 
+  // NOTE: onConflict:"organization_id,store_id,provider" requires a composite unique constraint on those three columns.
   console.info(
-    `[shopify] integration upsert start: organization=${input.organizationId}; store_id=${storeResult.data.id}; provider=shopify`
+    `[shopify] integration upsert start: organization=${input.organizationId}; store_id=${storeResult.data.id}; payload=${JSON.stringify({ ...integrationInsert, scopes: integrationInsert.scopes })}`
   )
 
   const integrationResult = await supabase
@@ -83,7 +87,7 @@ export async function persistShopifyIntegration(input: {
 
   if (integrationResult.error || !integrationResult.data) {
     console.error(
-      `[shopify] integration upsert failed: organization=${input.organizationId}; store_id=${storeResult.data.id}; code=${integrationResult.error?.code ?? "none"}; message=${integrationResult.error?.message ?? "no_data"}; details=${integrationResult.error?.details ?? ""}; hint=${integrationResult.error?.hint ?? ""}`
+      `[shopify] integration upsert failed: organization=${input.organizationId}; store_id=${storeResult.data.id}; error=${JSON.stringify({ code: integrationResult.error?.code, message: integrationResult.error?.message, details: integrationResult.error?.details, hint: integrationResult.error?.hint })}`
     )
     throw new Error("Failed to persist Shopify integration.")
   }
