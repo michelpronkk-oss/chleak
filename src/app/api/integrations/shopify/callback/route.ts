@@ -31,6 +31,12 @@ export async function GET(request: Request) {
     cookieStore.get(SHOPIFY_OAUTH_STATE_COOKIE)?.value
   )
 
+  const normalizedShop = typeof shop === "string" ? shop.trim().toLowerCase() : shop
+
+  console.info(
+    `[shopify] OAuth callback received: shop=${shop}; state_present=${!!state}; hmac_present=${!!hmac}; cookie_present=${!!storedState}; stored_shop=${storedState?.shopDomain ?? "none"}; stored_nonce_prefix=${storedState?.nonce?.slice(0, 8) ?? "none"}`
+  )
+
   const redirectError = (status: string) =>
     NextResponse.redirect(
       new URL(`/app/connect?provider=shopify&status=${status}`, url.origin)
@@ -79,20 +85,29 @@ export async function GET(request: Request) {
     })
   }
 
-  if (storedState.nonce !== state || storedState.shopDomain !== shop) {
+  const nonceMismatch = storedState.nonce !== state
+  const shopMismatch = storedState.shopDomain !== normalizedShop
+  if (nonceMismatch || shopMismatch) {
+    console.error(
+      `[shopify] OAuth state mismatch: nonce_match=${!nonceMismatch}; shop_match=${!shopMismatch}; stored_shop="${storedState.shopDomain}"; received_shop="${normalizedShop}"; stored_nonce="${storedState.nonce}"; received_state="${state}"`
+    )
     return withErrorState(redirectError("state_mismatch"), {
       shopDomain: storedState.shopDomain,
       message: "State mismatch in OAuth callback",
     })
   }
 
+  console.info(
+    `[shopify] OAuth state verified: shop=${normalizedShop}; organization=${storedState.organizationId}`
+  )
+
   try {
     const token = await exchangeShopifyCodeForToken({
-      shopDomain: shop,
+      shopDomain: normalizedShop,
       code,
     })
     const shopMeta = await fetchShopDetails({
-      shopDomain: shop,
+      shopDomain: normalizedShop,
       accessToken: token.accessToken,
     })
     await persistShopifyIntegration({
@@ -104,7 +119,7 @@ export async function GET(request: Request) {
     })
 
     const webhookResults = await registerShopifyWebhooks({
-      shopDomain: shop,
+      shopDomain: normalizedShop,
       accessToken: token.accessToken,
     })
 

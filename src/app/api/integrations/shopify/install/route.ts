@@ -72,22 +72,24 @@ export async function GET(request: Request) {
       organizationId,
     })
 
-    const response = NextResponse.redirect(payload.installUrl)
-    response.cookies.set(
-      SHOPIFY_OAUTH_STATE_COOKIE,
-      serializeShopifyOauthState({
-        nonce: payload.stateNonce,
-        organizationId: payload.organizationId,
-        shopDomain: payload.shopDomain,
-      }),
-      {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-        maxAge: 60 * 10,
-      }
+    console.info(
+      `[shopify] OAuth install: shop=${shopDomain}; nonce=${payload.stateNonce}; organization=${organizationId}; redirecting to Shopify`
     )
+
+    const stateValue = serializeShopifyOauthState({
+      nonce: payload.stateNonce,
+      organizationId: payload.organizationId,
+      shopDomain: payload.shopDomain,
+    })
+
+    const response = NextResponse.redirect(payload.installUrl)
+    response.cookies.set(SHOPIFY_OAUTH_STATE_COOKIE, stateValue, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 10,
+    })
     response.cookies.set(
       SHOPIFY_SOURCE_STATE_COOKIE,
       serializeShopifySourceState({
