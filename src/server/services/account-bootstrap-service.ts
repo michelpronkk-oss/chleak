@@ -81,6 +81,38 @@ async function createOrganizationWithUniqueSlug(input: {
   throw new Error("Unable to allocate unique workspace slug.")
 }
 
+async function getEarliestMembershipForUser(userId: string) {
+  const supabase = createSupabaseAdminClient()
+  const membershipResult = await supabase
+    .from("org_members")
+    .select("organization_id, role")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
+  if (membershipResult.error) {
+    throw new Error("Failed to load organization membership.")
+  }
+
+  return membershipResult.data ?? null
+}
+
+async function loadOrganizationById(organizationId: string) {
+  const supabase = createSupabaseAdminClient()
+  const organizationResult = await supabase
+    .from("organizations")
+    .select("id, name, slug")
+    .eq("id", organizationId)
+    .maybeSingle()
+
+  if (organizationResult.error) {
+    throw new Error("Failed to load organization.")
+  }
+
+  return organizationResult.data ?? null
+}
+
 export async function ensureWorkspaceForUser(input: {
   userId: string
   email: string | null
@@ -88,35 +120,15 @@ export async function ensureWorkspaceForUser(input: {
 }): Promise<WorkspaceMembership> {
   const supabase = createSupabaseAdminClient()
 
-  const existingMembershipResult = await supabase
-    .from("org_members")
-    .select("organization_id, role")
-    .eq("user_id", input.userId)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle()
-
-  if (existingMembershipResult.error) {
-    throw new Error("Failed to load organization membership.")
-  }
-
-  if (existingMembershipResult.data?.organization_id) {
-    const organizationResult = await supabase
-      .from("organizations")
-      .select("id, name, slug")
-      .eq("id", existingMembershipResult.data.organization_id)
-      .maybeSingle()
-
-    if (organizationResult.error) {
-      throw new Error("Failed to load organization.")
-    }
-
-    if (organizationResult.data) {
+  const existingMembership = await getEarliestMembershipForUser(input.userId)
+  if (existingMembership?.organization_id) {
+    const organization = await loadOrganizationById(existingMembership.organization_id)
+    if (organization) {
       return {
-        organizationId: organizationResult.data.id,
-        organizationName: organizationResult.data.name,
-        organizationSlug: organizationResult.data.slug,
-        role: existingMembershipResult.data.role as WorkspaceMembership["role"],
+        organizationId: organization.id,
+        organizationName: organization.name,
+        organizationSlug: organization.slug,
+        role: existingMembership.role as WorkspaceMembership["role"],
       }
     }
   }
@@ -128,13 +140,34 @@ export async function ensureWorkspaceForUser(input: {
     preferredSlug,
   })
 
-  const membershipInsert = await supabase.from("org_members").insert({
-    organization_id: organization.id,
-    user_id: input.userId,
-    role: "owner",
-  })
+  const membershipWrite = await supabase.from("org_members").upsert(
+    {
+      organization_id: organization.id,
+      user_id: input.userId,
+      role: "owner",
+    },
+    { onConflict: "organization_id,user_id", ignoreDuplicates: true }
+  )
 
-  if (membershipInsert.error) {
+  if (membershipWrite.error) {
+    const existingAfterConflict = await getEarliestMembershipForUser(input.userId)
+    if (existingAfterConflict?.organization_id) {
+      await supabase.from("organizations").delete().eq("id", organization.id)
+      const linkedOrganization = await loadOrganizationById(
+        existingAfterConflict.organization_id
+      )
+
+      if (linkedOrganization) {
+        return {
+          organizationId: linkedOrganization.id,
+          organizationName: linkedOrganization.name,
+          organizationSlug: linkedOrganization.slug,
+          role: existingAfterConflict.role as WorkspaceMembership["role"],
+        }
+      }
+    }
+
+    await supabase.from("organizations").delete().eq("id", organization.id)
     throw new Error("Failed to create organization membership.")
   }
 
@@ -145,4 +178,3 @@ export async function ensureWorkspaceForUser(input: {
     role: "owner",
   }
 }
-

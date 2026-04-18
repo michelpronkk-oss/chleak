@@ -26,6 +26,18 @@ export class DodoConfigurationError extends Error {
   }
 }
 
+export class DodoCheckoutRequestError extends Error {
+  status: number
+  upstreamBody: string | null
+
+  constructor(input: { message: string; status: number; upstreamBody: string | null }) {
+    super(input.message)
+    this.name = "DodoCheckoutRequestError"
+    this.status = input.status
+    this.upstreamBody = input.upstreamBody
+  }
+}
+
 function getDodoConfig(): DodoConfig {
   const apiKey = process.env.DODO_API_KEY
   const checkoutSessionsUrl = process.env.DODO_CHECKOUT_SESSIONS_URL
@@ -81,6 +93,14 @@ function pickSessionId(payload: unknown): string | null {
   return null
 }
 
+function parseJsonSafely(input: string): unknown {
+  try {
+    return JSON.parse(input) as unknown
+  } catch {
+    return null
+  }
+}
+
 export async function createDodoCheckoutSession(input: DodoCheckoutRequest) {
   const validated = dodoCheckoutRequestSchema.parse(input)
   const config = getDodoConfig()
@@ -92,32 +112,47 @@ export async function createDodoCheckoutSession(input: DodoCheckoutRequest) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      plan_id: validated.planId,
-      customer_email: validated.customerEmail,
+      product_cart: [
+        {
+          product_id: validated.planId,
+          quantity: 1,
+        },
+      ],
+      customer: validated.customerEmail
+        ? {
+            email: validated.customerEmail,
+          }
+        : undefined,
       metadata: {
         organization_id: validated.organizationId,
       },
-      success_url: validated.successUrl,
+      return_url: validated.successUrl,
       cancel_url: validated.cancelUrl,
     }),
     cache: "no-store",
   })
 
-  const payload = await response.json().catch(() => null)
+  const responseText = await response.text().catch(() => "")
+  const payload = responseText ? parseJsonSafely(responseText) : null
 
   if (!response.ok) {
-    throw new Error(
-      `Dodo checkout session request failed with status ${response.status}.`
-    )
+    throw new DodoCheckoutRequestError({
+      message: `Dodo checkout session request failed with status ${response.status}.`,
+      status: response.status,
+      upstreamBody: responseText || null,
+    })
   }
 
   const checkoutUrl = pickCheckoutUrl(payload)
   const sessionId = pickSessionId(payload)
 
   if (!checkoutUrl) {
-    throw new Error(
-      "Dodo response did not include a checkout URL. Align the parser with your current Dodo API response shape."
-    )
+    throw new DodoCheckoutRequestError({
+      message:
+        "Dodo response did not include a checkout URL. Align the parser with your current Dodo API response shape.",
+      status: response.status,
+      upstreamBody: responseText || null,
+    })
   }
 
   return {

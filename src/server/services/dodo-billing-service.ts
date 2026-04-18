@@ -58,19 +58,22 @@ function resolvePlanIdEnv(plan: BillingPlan) {
   const candidates =
     plan === "starter"
       ? [
-          "DODO_STARTER_PLAN_ID",
+          "DODO_PRODUCT_STARTER",
           "DODO_STARTER_PRODUCT_ID",
+          "DODO_STARTER_PLAN_ID",
           "DODO_PLAN_STARTER_ID",
         ]
       : plan === "growth"
         ? [
-            "DODO_GROWTH_PLAN_ID",
+            "DODO_PRODUCT_GROWTH",
             "DODO_GROWTH_PRODUCT_ID",
+            "DODO_GROWTH_PLAN_ID",
             "DODO_PLAN_GROWTH_ID",
           ]
         : [
-            "DODO_PRO_PLAN_ID",
+            "DODO_PRODUCT_PRO",
             "DODO_PRO_PRODUCT_ID",
+            "DODO_PRO_PLAN_ID",
             "DODO_PLAN_PRO_ID",
           ]
 
@@ -168,7 +171,7 @@ export function resolveDodoPlanId(plan: BillingPlan) {
   const id = planMap[plan]
   if (!id) {
     throw new DodoConfigurationError(
-      `Missing Dodo plan mapping for '${plan}'. Set one of DODO_${plan.toUpperCase()}_PLAN_ID or DODO_${plan.toUpperCase()}_PRODUCT_ID.`
+      `Missing Dodo plan mapping for '${plan}'. Configure one supported Dodo product or plan env variable for this plan.`
     )
   }
 
@@ -349,4 +352,3 @@ export async function syncSubscriptionFromDodoWebhook(input: {
     status: payloadForWrite.status,
   }
 }
-

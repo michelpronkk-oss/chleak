@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 
-import { DodoConfigurationError } from "@/lib/billing/dodo"
+import {
+  DodoCheckoutRequestError,
+  DodoConfigurationError,
+} from "@/lib/billing/dodo"
 import { getAppOriginFromEnv, sanitizeNextPath } from "@/lib/auth/navigation"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { ensureWorkspaceForUser } from "@/server/services/account-bootstrap-service"
@@ -64,6 +67,17 @@ export async function GET(request: Request) {
 
     return NextResponse.redirect(checkout.checkoutUrl)
   } catch (error) {
+    if (error instanceof DodoCheckoutRequestError) {
+      const isProduction = process.env.NODE_ENV === "production"
+      const debugPayload = error.upstreamBody
+        ? error.upstreamBody.slice(0, 320)
+        : "empty"
+      const logPayload = isProduction ? "<redacted>" : debugPayload
+      console.error(
+        `[billing] Dodo checkout session failed: status=${error.status}; body=${logPayload}`
+      )
+    }
+
     const fallback = new URL("/app/billing", url.origin)
     fallback.searchParams.set(
       "intent",
@@ -71,6 +85,16 @@ export async function GET(request: Request) {
         ? "billing_config_missing"
         : "checkout_creation_failed"
     )
+    if (
+      error instanceof DodoCheckoutRequestError &&
+      process.env.NODE_ENV !== "production"
+    ) {
+      fallback.searchParams.set("dodo_status", String(error.status))
+      fallback.searchParams.set(
+        "dodo_error",
+        (error.upstreamBody ?? "empty").slice(0, 160)
+      )
+    }
     fallback.searchParams.set("plan", plan)
     return NextResponse.redirect(fallback)
   }
