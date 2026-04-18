@@ -16,7 +16,7 @@ function isValidPlan(value: string | null): value is ValidPlan {
 export async function GET(request: Request) {
   const url = new URL(request.url)
   const plan = url.searchParams.get("plan")
-  const next = sanitizeNextPath(url.searchParams.get("next"), "/app/connect")
+  const next = sanitizeNextPath(url.searchParams.get("next"), "/app")
 
   if (!isValidPlan(plan)) {
     return NextResponse.json({ message: "Invalid plan." }, { status: 400 })

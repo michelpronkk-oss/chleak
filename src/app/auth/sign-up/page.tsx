@@ -36,19 +36,24 @@ export default async function SignUpPage({
   const selectedPlan = parsePlan(planRaw)
   const errorText = error ? errorMessage[error] : null
   const planMessage = selectedPlan ? `Selected plan: ${planLabel[selectedPlan]}` : null
+  const secondaryHref = selectedPlan
+    ? `/auth/sign-in?next=${encodeURIComponent(next)}&plan=${selectedPlan}`
+    : `/auth/sign-in?next=${encodeURIComponent(next)}`
 
   return (
     <AccessPanel
       mode="sign-up"
       next={next}
+      plan={selectedPlan}
       infoMessage={planMessage}
       errorMessage={errorText}
       secondaryPrefix="Already have access?"
       secondaryLabel="Sign in"
-      secondaryHref={`/auth/sign-in?next=${encodeURIComponent(next)}`}
+      secondaryHref={secondaryHref}
     >
       <form method="POST" action="/api/auth/sign-up" className="space-y-4">
         <input type="hidden" name="next" value={next} />
+        {selectedPlan ? <input type="hidden" name="plan" value={selectedPlan} /> : null}
         <div className="space-y-2">
           <label htmlFor="fullName" className="block text-xs text-muted-foreground">
             Full name

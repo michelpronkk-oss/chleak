@@ -8,6 +8,7 @@ import {
   mockSubscriptionState,
 } from "@/data/mock/app-state"
 import { getServerSession } from "@/lib/auth/session"
+import { createSupabaseAdminClient } from "@/lib/supabase/shared"
 import { getFixPlanHrefForIssue } from "@/server/services/fix-plan-service"
 import type { DashboardSnapshot, Store } from "@/types/domain"
 
@@ -21,8 +22,8 @@ import {
   type OnboardingState,
 } from "./onboarding-state-service"
 import {
+  getPlanEntitlement,
   getPlanStateForOrganization,
-  hasActivePlan,
 } from "./plan-state-service"
 import {
   getShopifySourceState,
@@ -37,6 +38,25 @@ export type CommercialAccessState =
   | "paid_not_onboarded"
   | "paid_no_connected_source"
   | "paid_connected"
+
+type ConnectedProvider = "shopify" | "stripe"
+
+interface BackendSourceSignals {
+  providers: ConnectedProvider[]
+  primaryProvider: ConnectedProvider | null
+  storeIdsByProvider: {
+    shopify: string[]
+    stripe: string[]
+  }
+  scanCountByProvider: {
+    shopify: number
+    stripe: number
+  }
+  issueCountByProvider: {
+    shopify: number
+    stripe: number
+  }
+}
 
 function deriveCommercialAccessState(input: {
   hasIdentity: boolean
@@ -63,6 +83,203 @@ function deriveCommercialAccessState(input: {
   }
 
   return "paid_connected" as const
+}
+
+async function loadBackendSourceSignals(
+  organizationId: string
+): Promise<BackendSourceSignals | null> {
+  try {
+    const admin = createSupabaseAdminClient()
+    const integrationsResult = await admin
+      .from("store_integrations")
+      .select("provider, status, store_id, installed_at, created_at")
+      .eq("organization_id", organizationId)
+      .in("provider", ["shopify", "stripe"])
+      .neq("status", "disconnected")
+
+    if (integrationsResult.error) {
+      return null
+    }
+
+    const rows =
+      integrationsResult.data?.filter(
+        (row): row is typeof row & { provider: ConnectedProvider } =>
+          row.provider === "shopify" || row.provider === "stripe"
+      ) ?? []
+
+    if (!rows.length) {
+      return {
+        providers: [],
+        primaryProvider: null,
+        storeIdsByProvider: { shopify: [], stripe: [] },
+        scanCountByProvider: { shopify: 0, stripe: 0 },
+        issueCountByProvider: { shopify: 0, stripe: 0 },
+      }
+    }
+
+    const storeIdsByProvider: BackendSourceSignals["storeIdsByProvider"] = {
+      shopify: [],
+      stripe: [],
+    }
+
+    rows.forEach((row) => {
+      const target = storeIdsByProvider[row.provider]
+      if (!target.includes(row.store_id)) {
+        target.push(row.store_id)
+      }
+    })
+
+    const providers = (["shopify", "stripe"] as const).filter(
+      (provider) => storeIdsByProvider[provider].length > 0
+    )
+
+    const primaryRow = [...rows].sort((a, b) => {
+      const left = a.installed_at ?? a.created_at ?? ""
+      const right = b.installed_at ?? b.created_at ?? ""
+      return right.localeCompare(left)
+    })[0]
+
+    const primaryProvider = primaryRow?.provider ?? providers[0] ?? null
+    const allStoreIds = Array.from(
+      new Set([...storeIdsByProvider.shopify, ...storeIdsByProvider.stripe])
+    )
+
+    if (!allStoreIds.length) {
+      return {
+        providers: [],
+        primaryProvider: null,
+        storeIdsByProvider: { shopify: [], stripe: [] },
+        scanCountByProvider: { shopify: 0, stripe: 0 },
+        issueCountByProvider: { shopify: 0, stripe: 0 },
+      }
+    }
+
+    const [scansResult, issuesResult] = await Promise.all([
+      admin
+        .from("scans")
+        .select("store_id")
+        .eq("organization_id", organizationId)
+        .in("store_id", allStoreIds),
+      admin
+        .from("issues")
+        .select("store_id")
+        .eq("organization_id", organizationId)
+        .in("store_id", allStoreIds)
+        .neq("status", "resolved"),
+    ])
+
+    if (scansResult.error || issuesResult.error) {
+      return null
+    }
+
+    const scanCountByProvider: BackendSourceSignals["scanCountByProvider"] = {
+      shopify: 0,
+      stripe: 0,
+    }
+    const issueCountByProvider: BackendSourceSignals["issueCountByProvider"] = {
+      shopify: 0,
+      stripe: 0,
+    }
+
+    const storeIdToProvider = new Map<string, ConnectedProvider>()
+    storeIdsByProvider.shopify.forEach((storeId) =>
+      storeIdToProvider.set(storeId, "shopify")
+    )
+    storeIdsByProvider.stripe.forEach((storeId) =>
+      storeIdToProvider.set(storeId, "stripe")
+    )
+
+    ;(scansResult.data ?? []).forEach((scan) => {
+      const provider = storeIdToProvider.get(scan.store_id)
+      if (provider) {
+        scanCountByProvider[provider] += 1
+      }
+    })
+
+    ;(issuesResult.data ?? []).forEach((issue) => {
+      const provider = storeIdToProvider.get(issue.store_id)
+      if (provider) {
+        issueCountByProvider[provider] += 1
+      }
+    })
+
+    return {
+      providers,
+      primaryProvider,
+      storeIdsByProvider,
+      scanCountByProvider,
+      issueCountByProvider,
+    }
+  } catch {
+    return null
+  }
+}
+
+function toStateForProvider(input: {
+  provider: ConnectedProvider
+  phase: "pending" | "first_results" | "completed"
+}): OnboardingState {
+  if (input.provider === "shopify") {
+    if (input.phase === "pending") {
+      return "pending_shopify"
+    }
+    if (input.phase === "first_results") {
+      return "first_results_shopify"
+    }
+    return "completed_shopify"
+  }
+
+  if (input.phase === "pending") {
+    return "pending_stripe"
+  }
+  if (input.phase === "first_results") {
+    return "first_results_stripe"
+  }
+  return "completed_stripe"
+}
+
+function deriveOnboardingStateFromSignals(input: {
+  cookieState: OnboardingState
+  hasPlan: boolean
+  signals: BackendSourceSignals | null
+}): OnboardingState {
+  if (input.cookieState === "demo") {
+    return "demo"
+  }
+
+  if (!input.hasPlan) {
+    return "empty"
+  }
+
+  if (isConnectingState(input.cookieState)) {
+    return input.cookieState
+  }
+
+  if (!input.signals || input.signals.providers.length === 0) {
+    return "empty"
+  }
+
+  const provider = input.signals.primaryProvider ?? input.signals.providers[0]
+  if (!provider) {
+    return "empty"
+  }
+
+  const scans = input.signals.scanCountByProvider[provider]
+  const issues = input.signals.issueCountByProvider[provider]
+
+  if (scans === 0) {
+    return toStateForProvider({ provider, phase: "pending" })
+  }
+
+  if (scans === 1 && issues > 0) {
+    return toStateForProvider({ provider, phase: "first_results" })
+  }
+
+  if (input.cookieState === toStateForProvider({ provider, phase: "first_results" }) && scans < 2) {
+    return input.cookieState
+  }
+
+  return toStateForProvider({ provider, phase: "completed" })
 }
 
 function getStoreStatus({
@@ -270,6 +487,10 @@ function filterSnapshotForState(
     return buildFirstResultSnapshot(snapshot, state)
   }
 
+  if (state === "completed_shopify" || state === "completed_stripe") {
+    return snapshot
+  }
+
   const source = getConnectedSourceFromState(state)
 
   if (source === "demo") {
@@ -422,7 +643,7 @@ function getPrimarySourceStatus(input: {
 }
 
 async function getJourneyContext() {
-  const state = await getOnboardingState()
+  const cookieState = await getOnboardingState()
   const session = await getServerSession()
 
   if (!session || !session.membership) {
@@ -431,14 +652,74 @@ async function getJourneyContext() {
 
   const organizationId = session.membership.organizationId
   const planState = await getPlanStateForOrganization(organizationId)
-  const hasPlan = hasActivePlan(planState)
+  const entitlement = getPlanEntitlement(planState)
+  const hasPlan = entitlement.hasActiveAccess
+  const backendSignals = await loadBackendSourceSignals(organizationId)
+  const state = deriveOnboardingStateFromSignals({
+    cookieState,
+    hasPlan,
+    signals: backendSignals,
+  })
   const commercialAccessState = deriveCommercialAccessState({
     hasIdentity: true,
     hasPlan,
     onboardingState: state,
   })
-  const shopifySourceState = await getShopifySourceState()
-  const stripeSourceState = await getStripeSourceState()
+  let shopifySourceState = await getShopifySourceState()
+  let stripeSourceState = await getStripeSourceState()
+
+  const providerFromState = getConnectedSourceFromState(state)
+  const shopifyConnected = Boolean(backendSignals?.storeIdsByProvider.shopify.length)
+  const stripeConnected = Boolean(backendSignals?.storeIdsByProvider.stripe.length)
+
+  if (shopifyConnected) {
+    const shopifyPhaseStatus =
+      state === "pending_shopify"
+        ? "syncing"
+        : state === "connecting_shopify"
+          ? "connecting"
+          : "connected"
+
+    shopifySourceState = {
+      status: shopifyPhaseStatus,
+      shopDomain: shopifySourceState.shopDomain,
+      message:
+        shopifyPhaseStatus === "syncing"
+          ? "Initial scan in progress"
+          : "Connected and monitoring",
+    }
+  } else if (providerFromState !== "shopify" && cookieState !== "connecting_shopify") {
+    shopifySourceState = {
+      status: "not_connected",
+      shopDomain: null,
+      message: null,
+    }
+  }
+
+  if (stripeConnected) {
+    const stripePhaseStatus =
+      state === "pending_stripe"
+        ? "syncing"
+        : state === "connecting_stripe"
+          ? "connecting"
+          : "connected"
+
+    stripeSourceState = {
+      status: stripePhaseStatus,
+      accountId: stripeSourceState.accountId,
+      message:
+        stripePhaseStatus === "syncing"
+          ? "Initial billing scan in progress"
+          : "Connected and monitoring",
+    }
+  } else if (providerFromState !== "stripe" && cookieState !== "connecting_stripe") {
+    stripeSourceState = {
+      status: "not_connected",
+      accountId: null,
+      message: null,
+    }
+  }
+
   const rawSnapshot = await getDashboardSnapshotForOrganization(organizationId)
   const baseSnapshot: DashboardSnapshot = {
     ...rawSnapshot,
@@ -501,13 +782,16 @@ async function getJourneyContext() {
 
   return {
     state,
+    cookieState,
     session,
     organizationId,
     planState,
+    entitlement,
     hasPlan,
     commercialAccessState,
     shopifySourceState,
     stripeSourceState,
+    backendSignals,
     connectedSource,
     baseSnapshot,
     snapshot: filteredSnapshot,

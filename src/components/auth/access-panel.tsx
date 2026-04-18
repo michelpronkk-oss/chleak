@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 interface AccessPanelProps {
   mode: "sign-in" | "sign-up"
   next: string
+  plan?: "starter" | "growth" | "pro" | null
   infoMessage?: string | null
   errorMessage?: string | null
   secondaryPrefix: string
@@ -16,6 +17,7 @@ interface AccessPanelProps {
 export function AccessPanel({
   mode,
   next,
+  plan,
   infoMessage,
   errorMessage,
   secondaryPrefix,
@@ -23,8 +25,16 @@ export function AccessPanel({
   secondaryHref,
   children,
 }: AccessPanelProps) {
-  const signInHref = `/auth/sign-in?next=${encodeURIComponent(next)}`
-  const signUpHref = `/auth/sign-up?next=${encodeURIComponent(next)}`
+  const signInSearch = new URLSearchParams({ next })
+  const signUpSearch = new URLSearchParams({ next })
+
+  if (plan) {
+    signInSearch.set("plan", plan)
+    signUpSearch.set("plan", plan)
+  }
+
+  const signInHref = `/auth/sign-in?${signInSearch.toString()}`
+  const signUpHref = `/auth/sign-up?${signUpSearch.toString()}`
 
   return (
     <div className="w-full max-w-[400px]">

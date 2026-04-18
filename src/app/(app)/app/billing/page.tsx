@@ -15,7 +15,7 @@ export default async function BillingPage({
   const params = await searchParams
   const intent = Array.isArray(params.intent) ? params.intent[0] : params.intent
   const nextParam = Array.isArray(params.next) ? params.next[0] : params.next
-  const nextAfterCheckout = sanitizeNextPath(nextParam, "/app/connect")
+  const nextAfterCheckout = sanitizeNextPath(nextParam, "/app")
   const selectedPlanParam = Array.isArray(params.plan) ? params.plan[0] : params.plan
   const selectedPlan =
     (selectedPlanParam === "starter" ||
@@ -24,6 +24,7 @@ export default async function BillingPage({
       ? selectedPlanParam
       : data.selectedPlan) ?? "growth"
   const hasDegradedSubscription = !data.hasPlan && Boolean(data.subscription)
+  const selectedPlanDetails = data.planCatalog[selectedPlan]
   const billingStatusLabel =
     data.billingStatus === "active"
       ? "Active"
@@ -101,7 +102,7 @@ export default async function BillingPage({
               <p className="mt-3 text-sm text-muted-foreground">{plan.summary}</p>
               <p className="mt-2 text-xs text-muted-foreground">{plan.highlight}</p>
               <Link
-                href={`/api/app/plan/activate?plan=${plan.id}&next=/app/connect&source=billing_plan_activation`}
+                href={`/api/app/plan/activate?plan=${plan.id}&next=/app&source=billing_plan_activation`}
                 className="marketing-primary-cta mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
               >
                 Continue to checkout
@@ -109,6 +110,16 @@ export default async function BillingPage({
               </Link>
             </article>
           ))}
+        </section>
+
+        <section className="surface-card p-4 sm:p-5 lg:p-6">
+          <p className="data-mono text-primary">Activation Step</p>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Selected plan: {selectedPlanDetails.name} | {formatCompactCurrency(selectedPlanDetails.monthlyPrice)} / month
+          </p>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Billing is confirmed in the next step.
+          </p>
         </section>
 
         <section className="surface-card p-4 sm:p-5 lg:p-6">

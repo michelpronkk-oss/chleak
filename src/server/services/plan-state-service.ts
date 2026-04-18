@@ -25,6 +25,19 @@ interface PlanState {
   subscription: SubscriptionState | null
 }
 
+export interface PlanEntitlement {
+  currentPlan: BillingPlan | null
+  subscriptionStatus: CommercialPlanStatus
+  hasActiveAccess: boolean
+  requiresBilling: boolean
+}
+
+interface PostAuthDestinationInput {
+  organizationId: string
+  next: string
+  selectedPlan: BillingPlan | null
+}
+
 function isBillingPlan(value: string | null): value is BillingPlan {
   return value === "starter" || value === "growth" || value === "pro"
 }
@@ -45,6 +58,17 @@ function normalizeCommercialPlanStatus(value: string | null): CommercialPlanStat
 
 export function hasActivePlan(state: PlanState) {
   return state.status === "active" || state.status === "trialing"
+}
+
+export function getPlanEntitlement(state: PlanState): PlanEntitlement {
+  const hasActiveAccess = hasActivePlan(state)
+
+  return {
+    currentPlan: state.plan,
+    subscriptionStatus: state.status,
+    hasActiveAccess,
+    requiresBilling: !hasActiveAccess,
+  }
 }
 
 export async function getPlanStateForOrganization(
@@ -87,4 +111,21 @@ export async function getPlanStateForOrganization(
           }
         : null,
   }
+}
+
+export async function getPostAuthDestinationForPlanIntent(
+  input: PostAuthDestinationInput
+) {
+  if (!input.selectedPlan) {
+    return input.next
+  }
+
+  const planState = await getPlanStateForOrganization(input.organizationId)
+  const entitlement = getPlanEntitlement(planState)
+
+  if (entitlement.hasActiveAccess) {
+    return input.next
+  }
+
+  return `/app/billing?intent=choose-plan&plan=${input.selectedPlan}`
 }

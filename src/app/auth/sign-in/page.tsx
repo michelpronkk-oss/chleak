@@ -15,6 +15,20 @@ const stateMessage: Record<string, string> = {
     "Check your inbox to verify your account. After confirmation, sign in to continue.",
 }
 
+const planLabel: Record<"starter" | "growth" | "pro", string> = {
+  starter: "Starter",
+  growth: "Growth",
+  pro: "Pro",
+}
+
+function parsePlan(raw: string | undefined) {
+  if (raw === "starter" || raw === "growth" || raw === "pro") {
+    return raw
+  }
+
+  return null
+}
+
 export default async function SignInPage({
   searchParams,
 }: {
@@ -25,22 +39,31 @@ export default async function SignInPage({
   const emailRaw = Array.isArray(params.email) ? params.email[0] : params.email
   const error = Array.isArray(params.error) ? params.error[0] : params.error
   const state = Array.isArray(params.state) ? params.state[0] : params.state
+  const planRaw = Array.isArray(params.plan) ? params.plan[0] : params.plan
   const next = sanitizeNextPath(nextRaw, "/app")
+  const selectedPlan = parsePlan(planRaw)
   const errorText = error ? errorMessage[error] : null
   const stateText = state ? stateMessage[state] : null
+  const planText = selectedPlan ? `Selected plan: ${planLabel[selectedPlan]}` : null
+  const infoText = stateText ?? planText
+  const secondaryHref = selectedPlan
+    ? `/auth/sign-up?next=${encodeURIComponent(next)}&plan=${selectedPlan}`
+    : `/auth/sign-up?next=${encodeURIComponent(next)}`
 
   return (
     <AccessPanel
       mode="sign-in"
       next={next}
-      infoMessage={stateText}
+      plan={selectedPlan}
+      infoMessage={infoText}
       errorMessage={errorText}
       secondaryPrefix="No account?"
       secondaryLabel="Create one"
-      secondaryHref={`/auth/sign-up?next=${encodeURIComponent(next)}`}
+      secondaryHref={secondaryHref}
     >
       <form method="POST" action="/api/auth/sign-in" className="space-y-4">
         <input type="hidden" name="next" value={next} />
+        {selectedPlan ? <input type="hidden" name="plan" value={selectedPlan} /> : null}
         <div className="space-y-2">
           <label htmlFor="email" className="block text-xs text-muted-foreground">
             Work email
