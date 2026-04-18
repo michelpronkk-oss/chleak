@@ -1,11 +1,10 @@
 import { redirect } from "next/navigation"
-import { cache } from "react"
 
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { ensureWorkspaceForUser } from "@/server/services/account-bootstrap-service"
 import type { AppSession } from "@/types/auth"
 
-export const getServerSession = cache(async (): Promise<AppSession | null> => {
+export async function getServerSession(): Promise<AppSession | null> {
   const supabase = await createSupabaseServerClient()
   const {
     data: { user },
@@ -56,7 +55,7 @@ export const getServerSession = cache(async (): Promise<AppSession | null> => {
       membership: null,
     }
   }
-})
+}
 
 export async function requireServerSession() {
   const session = await getServerSession()

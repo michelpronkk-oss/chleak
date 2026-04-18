@@ -60,6 +60,11 @@ interface BackendSourceSignals {
   }
 }
 
+interface ShopifyDomainView {
+  displayDomain: string | null
+  canonicalDomain: string | null
+}
+
 function deriveCommercialAccessState(input: {
   hasIdentity: boolean
   hasPlan: boolean
@@ -216,6 +221,48 @@ async function loadBackendSourceSignals(
   } catch {
     return null
   }
+}
+
+function readStringFromRecord(source: unknown, key: string): string | null {
+  if (!source || typeof source !== "object" || Array.isArray(source)) {
+    return null
+  }
+  const value = (source as Record<string, unknown>)[key]
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null
+}
+
+async function loadShopifyDomainViews(organizationId: string) {
+  const admin = createSupabaseAdminClient()
+  const result = await admin
+    .from("store_integrations")
+    .select("store_id, shop_domain, metadata, installed_at, created_at")
+    .eq("organization_id", organizationId)
+    .eq("provider", "shopify")
+    .neq("status", "disconnected")
+    .order("installed_at", { ascending: false })
+    .order("created_at", { ascending: false })
+
+  if (result.error) {
+    return new Map<string, ShopifyDomainView>()
+  }
+
+  const viewByStoreId = new Map<string, ShopifyDomainView>()
+  for (const row of result.data ?? []) {
+    if (viewByStoreId.has(row.store_id)) {
+      continue
+    }
+
+    const canonical =
+      readStringFromRecord(row.metadata, "canonical_shop_domain") ??
+      readStringFromRecord(row.metadata, "shopify_canonical_domain")
+
+    viewByStoreId.set(row.store_id, {
+      displayDomain: row.shop_domain ?? null,
+      canonicalDomain: canonical,
+    })
+  }
+
+  return viewByStoreId
 }
 
 function toStateForProvider(input: {
@@ -1021,6 +1068,7 @@ export async function getConnectJourneyData() {
 
 export async function getStoresIndexData() {
   const journey = await getJourneyContext()
+  const shopifyDomainViews = await loadShopifyDomainViews(journey.organizationId)
   const primarySourceStatus = getPrimarySourceStatus({
     onboardingState: journey.state,
     shopifySourceState: journey.shopifySourceState,
@@ -1077,6 +1125,14 @@ export async function getStoresIndexData() {
         )
         return {
           ...store,
+          displayDomain:
+            store.platform === "shopify"
+              ? (shopifyDomainViews.get(store.id)?.displayDomain ?? store.domain)
+              : store.domain,
+          canonicalShopifyDomain:
+            store.platform === "shopify"
+              ? (shopifyDomainViews.get(store.id)?.canonicalDomain ?? store.domain)
+              : null,
           statusLabel: "First findings ready",
           statusTone: "text-primary",
           latestScanAt: journey.snapshot.scans[0]?.scannedAt ?? null,
@@ -1136,6 +1192,16 @@ export async function getStoresIndexData() {
         ? [
             {
               ...journey.sourceStore,
+              displayDomain:
+                journey.sourceStore.platform === "shopify"
+                  ? (shopifyDomainViews.get(journey.sourceStore.id)?.displayDomain ??
+                    journey.sourceStore.domain)
+                  : journey.sourceStore.domain,
+              canonicalShopifyDomain:
+                journey.sourceStore.platform === "shopify"
+                  ? (shopifyDomainViews.get(journey.sourceStore.id)?.canonicalDomain ??
+                    journey.sourceStore.domain)
+                  : null,
               statusLabel: "First scan running",
               statusTone: "text-primary",
               latestScanAt: null,
@@ -1170,6 +1236,14 @@ export async function getStoresIndexData() {
 
     return {
       ...store,
+      displayDomain:
+        store.platform === "shopify"
+          ? (shopifyDomainViews.get(store.id)?.displayDomain ?? store.domain)
+          : store.domain,
+      canonicalShopifyDomain:
+        store.platform === "shopify"
+          ? (shopifyDomainViews.get(store.id)?.canonicalDomain ?? store.domain)
+          : null,
       statusLabel: status.label,
       statusTone: status.tone,
       latestScanAt: latestScan?.scannedAt ?? null,
@@ -1194,6 +1268,7 @@ export async function getStoresIndexData() {
 
 export async function getStoreDetailData(storeId: string) {
   const journey = await getJourneyContext()
+  const shopifyDomainViews = await loadShopifyDomainViews(journey.organizationId)
 
   if (!isReadyState(journey.state) && !isPendingScanState(journey.state)) {
     return null
@@ -1246,6 +1321,14 @@ export async function getStoreDetailData(storeId: string) {
     stripeSourceState: journey.stripeSourceState,
     organization: journey.baseSnapshot.organization,
     store,
+    storeDisplayDomain:
+      store.platform === "shopify"
+        ? (shopifyDomainViews.get(store.id)?.displayDomain ?? store.domain)
+        : store.domain,
+    canonicalShopifyDomain:
+      store.platform === "shopify"
+        ? (shopifyDomainViews.get(store.id)?.canonicalDomain ?? store.domain)
+        : null,
     context,
     status:
       isPendingScanState(journey.state) && issues.length === 0

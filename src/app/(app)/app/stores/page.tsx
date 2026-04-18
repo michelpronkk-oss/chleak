@@ -63,7 +63,9 @@ export default async function StoresPage() {
                     <span className={`text-xs ${store.statusTone}`}>{store.statusLabel}</span>
                   </div>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    {store.domain ?? "Internal billing source"} | {store.activeIssueCount} active issues
+                    {store.platform === "shopify"
+                      ? `Canonical Shopify domain: ${store.domain ?? "unknown"}`
+                      : (store.domain ?? "Internal billing source")} | {store.activeIssueCount} active issues
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {store.topIssueTitle ? `Top issue: ${store.topIssueTitle}` : "No critical issue detected."}
@@ -79,12 +81,29 @@ export default async function StoresPage() {
                   </p>
                 </div>
 
-                <Link
-                  href={store.href}
-                  className="inline-flex items-center gap-1 text-sm text-primary transition-opacity hover:opacity-80"
-                >
-                  Open store <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                  <Link
+                    href={store.href}
+                    className="inline-flex items-center gap-1 text-sm text-primary transition-opacity hover:opacity-80"
+                  >
+                    Open store <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                  {store.platform === "shopify" ? (
+                    <form method="POST" action="/api/integrations/shopify/disconnect">
+                      <input
+                        type="hidden"
+                        name="next"
+                        value="/app/connect?provider=shopify&status=disconnected"
+                      />
+                      <button
+                        type="submit"
+                        className="rounded-lg border border-border/70 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        Disconnect
+                      </button>
+                    </form>
+                  ) : null}
+                </div>
               </article>
             ))}
           </div>

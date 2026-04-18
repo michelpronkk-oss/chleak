@@ -19,6 +19,8 @@ function toJsonPayload(input: unknown): Json {
 export async function persistShopifyIntegration(input: {
   organizationId: string
   shopDomain: string
+  preferredShopDomain?: string
+  canonicalShopDomain?: string
   shopName: string
   scopes: string[]
   accessToken: string
@@ -62,7 +64,7 @@ export async function persistShopifyIntegration(input: {
     store_id: storeResult.data.id,
     provider: "shopify",
     status: "connected",
-    shop_domain: input.shopDomain,
+    shop_domain: input.preferredShopDomain ?? input.shopDomain,
     scopes: input.scopes,
     installed_at: new Date().toISOString(),
     sync_status: "syncing",
@@ -70,6 +72,7 @@ export async function persistShopifyIntegration(input: {
     access_token_ref: "shopify_v1_ref_placeholder",
     metadata: {
       install_source: "oauth_callback",
+      canonical_shop_domain: input.canonicalShopDomain ?? input.shopDomain,
     },
     last_synced_at: null,
   }

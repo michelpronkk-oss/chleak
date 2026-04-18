@@ -125,6 +125,8 @@ export async function GET(request: Request) {
     const persistence = await persistShopifyIntegration({
       organizationId: storedState.organizationId,
       shopDomain: shopMeta.myshopifyDomain,
+      preferredShopDomain: normalizedShop,
+      canonicalShopDomain: shopMeta.myshopifyDomain,
       shopName: shopMeta.name,
       scopes: token.scopes,
       accessToken: token.accessToken,
@@ -175,7 +177,7 @@ export async function GET(request: Request) {
       SHOPIFY_SOURCE_STATE_COOKIE,
       serializeShopifySourceState({
         status: "syncing",
-        shopDomain: shopMeta.myshopifyDomain,
+        shopDomain: normalizedShop,
         message: "Installed and waiting for first sync",
       }),
       {

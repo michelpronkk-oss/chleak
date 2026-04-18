@@ -1,0 +1,3 @@
+git add --all
+git commit -m "Add Shopify disconnect flow and fix Shopify domain display"
+git push

@@ -42,6 +42,17 @@ export default async function StoreDetailPage({
         <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
           {data.context?.operationalArea ?? "Revenue monitoring source"} | {data.status.label}
         </p>
+        {data.store.platform === "shopify" ? (
+          <form method="POST" action="/api/integrations/shopify/disconnect">
+            <input type="hidden" name="next" value="/app/connect?provider=shopify&status=disconnected" />
+            <button
+              type="submit"
+              className="inline-flex items-center rounded-lg border border-border/70 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Disconnect Shopify
+            </button>
+          </form>
+        ) : null}
       </section>
 
       <section className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
@@ -51,6 +62,12 @@ export default async function StoreDetailPage({
             <div>
               <dt className="data-mono text-muted-foreground">Platform</dt>
               <dd className="mt-1 text-sm">{data.store.platform}</dd>
+            </div>
+            <div>
+              <dt className="data-mono text-muted-foreground">
+                {data.store.platform === "shopify" ? "Canonical Shopify domain" : "Domain"}
+              </dt>
+              <dd className="mt-1 text-sm">{data.store.domain ?? "Unknown"}</dd>
             </div>
             <div>
               <dt className="data-mono text-muted-foreground">Status</dt>
