@@ -16,6 +16,14 @@ import {
   getFixPlanHrefForIssue,
 } from "@/server/services/fix-plan-service"
 
+function formatImpactLabel(value: number) {
+  return value > 0 ? formatCompactCurrency(value) : "Impact pending"
+}
+
+function cleanPrimaryCopy(text: string) {
+  return text.replace(/^simulation:\s*/i, "")
+}
+
 export default async function DashboardOverviewPage() {
   const journey = await getDashboardJourneyData()
   const authOrgId =
@@ -187,7 +195,7 @@ export default async function DashboardOverviewPage() {
           <div className="rounded-xl border border-border/70 bg-background/35 p-4">
             <p className="text-xs text-muted-foreground">Estimated monthly impact</p>
             <p className="mt-1 text-3xl font-semibold tracking-tight text-destructive">
-              {formatCompactCurrency(primaryIssue.estimatedMonthlyRevenueImpact)}
+              {formatImpactLabel(primaryIssue.estimatedMonthlyRevenueImpact)}
             </p>
             <p className="mt-3 text-xs text-muted-foreground">
               First scan surfaced {firstSnapshot.summary.activeIssues} immediate issues.
@@ -196,7 +204,7 @@ export default async function DashboardOverviewPage() {
               href={primaryFixPlanHref}
               className="marketing-primary-cta mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
             >
-              Open fix plan
+              Review action brief
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -216,10 +224,10 @@ export default async function DashboardOverviewPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h3 className="text-sm font-semibold tracking-tight">{issue.title}</h3>
                   <p className="text-sm font-semibold text-destructive">
-                    {formatCompactCurrency(issue.estimatedMonthlyRevenueImpact)}
+                    {formatImpactLabel(issue.estimatedMonthlyRevenueImpact)}
                   </p>
                 </div>
-                <p className="mt-2 text-sm text-muted-foreground">{issue.recommendedAction}</p>
+                <p className="mt-2 text-sm text-muted-foreground">{cleanPrimaryCopy(issue.recommendedAction)}</p>
               </div>
             ))}
           </div>
@@ -229,7 +237,7 @@ export default async function DashboardOverviewPage() {
               href={primaryFixPlanHref}
               className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
             >
-              Fix this issue
+              Review action brief
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
             <Link
@@ -359,7 +367,7 @@ export default async function DashboardOverviewPage() {
           </div>
           <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-border/60 pt-4 text-xs">
             <span className="rounded-md border border-border/70 px-2 py-1 text-muted-foreground">
-              Highest impact: {formatCompactCurrency(primaryIssue.estimatedMonthlyRevenueImpact)}
+              Highest impact: {formatImpactLabel(primaryIssue.estimatedMonthlyRevenueImpact)}
             </span>
             <span className="rounded-md border border-border/70 px-2 py-1 text-muted-foreground">
               Monitored stores: {snapshot.summary.monitoredStores}
@@ -376,13 +384,13 @@ export default async function DashboardOverviewPage() {
             {primaryIssue.title}
           </h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            {primaryIssue.recommendedAction}
+            {cleanPrimaryCopy(primaryIssue.recommendedAction)}
           </p>
           <Link
             href={primaryFixPlanHref}
             className="marketing-primary-cta mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
           >
-            Open fix plan
+            Review action brief
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
           <p className="mt-3 text-xs text-muted-foreground">

@@ -14,6 +14,24 @@ export function RevenueOpportunityPanel({
 }: {
   opportunities: RevenueOpportunity[]
 }) {
+  const hasPositiveImpact = opportunities.some(
+    (opportunity) => opportunity.estimatedMonthlyRevenueImpact > 0
+  )
+
+  if (!opportunities.length || !hasPositiveImpact) {
+    return (
+      <section className="surface-card p-4 sm:p-5">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-semibold">Revenue Opportunity</h3>
+          <BarChart3 className="h-4 w-4 text-primary" />
+        </div>
+        <p className="mt-4 text-sm text-muted-foreground">
+          Opportunity ranking will appear once impacts are quantified from sustained commercial signal.
+        </p>
+      </section>
+    )
+  }
+
   const maxImpact = Math.max(
     ...opportunities.map((opportunity) => opportunity.estimatedMonthlyRevenueImpact)
   )

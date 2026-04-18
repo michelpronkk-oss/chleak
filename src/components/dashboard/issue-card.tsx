@@ -20,6 +20,30 @@ const confidenceBySeverity: Record<Issue["severity"], string> = {
   low: "Emerging signal",
 }
 
+function formatImpactLabel(value: number) {
+  if (value > 0) {
+    return formatCompactCurrency(value)
+  }
+
+  return "Impact pending"
+}
+
+function formatSourceLabel(source: string) {
+  if (source.startsWith("shopify_simulation")) {
+    return "shopify_monitoring"
+  }
+
+  if (source.startsWith("shopify_monitoring")) {
+    return "shopify_monitoring"
+  }
+
+  return source
+}
+
+function cleanPrimaryCopy(text: string) {
+  return text.replace(/^simulation:\s*/i, "")
+}
+
 export function IssueCard({
   issue,
   fixPlanHref,
@@ -37,7 +61,7 @@ export function IssueCard({
         <div className="space-y-1 text-left sm:text-right">
           <p className="data-mono text-muted-foreground">Monthly impact</p>
           <p className="text-xl font-semibold tracking-tight text-primary sm:text-2xl">
-            {formatCompactCurrency(issue.estimatedMonthlyRevenueImpact)}
+            {formatImpactLabel(issue.estimatedMonthlyRevenueImpact)}
           </p>
           <p className="text-xs text-muted-foreground">{confidenceBySeverity[issue.severity]}</p>
         </div>
@@ -58,17 +82,17 @@ export function IssueCard({
       <dl className="mt-4 grid gap-4 border-t border-border/70 pt-3.5 sm:mt-5 sm:gap-5 sm:pt-4 md:grid-cols-2">
         <div className="space-y-1.5">
           <dt className="data-mono text-muted-foreground">Why it matters</dt>
-          <dd className="text-sm text-foreground/90">{issue.whyItMatters}</dd>
+          <dd className="text-sm text-foreground/90">{cleanPrimaryCopy(issue.whyItMatters)}</dd>
         </div>
         <div className="space-y-1.5">
           <dt className="data-mono text-muted-foreground">Recommended action</dt>
-          <dd className="text-sm text-foreground/90">{issue.recommendedAction}</dd>
+          <dd className="text-sm text-foreground/90">{cleanPrimaryCopy(issue.recommendedAction)}</dd>
         </div>
         <div className="space-y-1.5">
           <dt className="data-mono text-muted-foreground">Source and detected</dt>
           <dd className="flex items-center gap-2 text-sm text-muted-foreground">
             <CircleDot className="h-3.5 w-3.5 text-primary" />
-            {issue.source} | {formatRelativeTimestamp(issue.detectedAt)}
+            {formatSourceLabel(issue.source)} | {formatRelativeTimestamp(issue.detectedAt)}
           </dd>
         </div>
         <div className="space-y-1.5">
@@ -86,7 +110,7 @@ export function IssueCard({
           href={fixPlanHref}
           className="inline-flex items-center gap-1 rounded-md border border-primary/35 bg-primary/10 px-2.5 py-1.5 text-primary transition-opacity hover:opacity-85"
         >
-          Open fix plan <ArrowRight className="h-3.5 w-3.5" />
+          Review action brief <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
     </article>
