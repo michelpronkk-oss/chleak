@@ -244,12 +244,8 @@ function deriveOnboardingStateFromSignals(input: {
   hasPlan: boolean
   signals: BackendSourceSignals | null
 }): OnboardingState {
-  if (input.cookieState === "demo") {
-    return "demo"
-  }
-
   if (!input.hasPlan) {
-    return "empty"
+    return input.cookieState === "demo" ? "demo" : "empty"
   }
 
   if (isConnectingState(input.cookieState)) {
