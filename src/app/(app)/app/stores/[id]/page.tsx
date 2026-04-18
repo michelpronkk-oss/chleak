@@ -65,10 +65,18 @@ export default async function StoreDetailPage({
             </div>
             <div>
               <dt className="data-mono text-muted-foreground">
-                {data.store.platform === "shopify" ? "Canonical Shopify domain" : "Domain"}
+                {data.store.platform === "shopify" ? "Shopify domain" : "Domain"}
               </dt>
-              <dd className="mt-1 text-sm">{data.store.domain ?? "Unknown"}</dd>
+              <dd className="mt-1 text-sm">{data.storeDisplayDomain ?? "Unknown"}</dd>
             </div>
+            {data.store.platform === "shopify" &&
+            data.canonicalShopifyDomain &&
+            data.canonicalShopifyDomain !== data.storeDisplayDomain ? (
+              <div>
+                <dt className="data-mono text-muted-foreground">Internal canonical domain</dt>
+                <dd className="mt-1 text-sm">{data.canonicalShopifyDomain}</dd>
+              </div>
+            ) : null}
             <div>
               <dt className="data-mono text-muted-foreground">Status</dt>
               <dd className={`mt-1 text-sm ${data.status.tone}`}>{data.status.label}</dd>

@@ -8,6 +8,7 @@ import {
   enqueueShopifyQueuedScan,
   persistShopifyIntegration,
 } from "@/server/services/shopify-persistence-service"
+import { processQueuedScanV1 } from "@/server/services/scan-processing-service"
 import {
   SHOPIFY_OAUTH_STATE_COOKIE,
   exchangeShopifyCodeForToken,
@@ -133,6 +134,7 @@ export async function GET(request: Request) {
     })
     console.info(`[shopify] persist integration success: organization=${storedState.organizationId}; shop=${shopMeta.myshopifyDomain}`)
 
+    let queuedScanId = persistence.scanId
     if (!persistence.scanId) {
       console.warn(
         `[shopify] scan missing after persistence: organization=${storedState.organizationId}; store_id=${persistence.storeId}; reason=retrying_scan_insert`
@@ -145,7 +147,29 @@ export async function GET(request: Request) {
         console.error(
           `[shopify] scan insert retry failed: organization=${storedState.organizationId}; store_id=${persistence.storeId}`
         )
+      } else {
+        queuedScanId = fallbackScanId
       }
+    }
+
+    if (queuedScanId) {
+      console.info(
+        `[shopify] automatic scan processing started: organization=${storedState.organizationId}; scan_id=${queuedScanId}`
+      )
+      const autoProcessResult = await processQueuedScanV1({ scanId: queuedScanId })
+      if (autoProcessResult.processed) {
+        console.info(
+          `[shopify] automatic scan processing succeeded: organization=${storedState.organizationId}; scan_id=${queuedScanId}; status=${autoProcessResult.status}`
+        )
+      } else {
+        console.error(
+          `[shopify] automatic scan processing failed: organization=${storedState.organizationId}; scan_id=${queuedScanId}; reason=${autoProcessResult.reason}`
+        )
+      }
+    } else {
+      console.error(
+        `[shopify] automatic scan processing skipped: organization=${storedState.organizationId}; reason=no_queued_scan_id`
+      )
     }
 
     console.info(`[shopify] webhook registration start: shop=${normalizedShop}`)

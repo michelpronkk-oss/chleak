@@ -64,9 +64,16 @@ export default async function StoresPage() {
                   </div>
                   <p className="mt-2 text-sm text-muted-foreground">
                     {store.platform === "shopify"
-                      ? `Canonical Shopify domain: ${store.domain ?? "unknown"}`
+                      ? `Shopify domain: ${store.displayDomain ?? "unknown"}`
                       : (store.domain ?? "Internal billing source")} | {store.activeIssueCount} active issues
                   </p>
+                  {store.platform === "shopify" &&
+                  store.canonicalShopifyDomain &&
+                  store.canonicalShopifyDomain !== store.displayDomain ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Internal canonical domain: {store.canonicalShopifyDomain}
+                    </p>
+                  ) : null}
                   <p className="mt-1 text-xs text-muted-foreground">
                     {store.topIssueTitle ? `Top issue: ${store.topIssueTitle}` : "No critical issue detected."}
                   </p>
