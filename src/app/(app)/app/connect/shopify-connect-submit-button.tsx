@@ -17,14 +17,17 @@ export function ShopifyConnectSubmitButton({
   return (
     <button
       type="submit"
-      disabled={disabled || isSubmitting}
+      disabled={disabled}
       onClick={() => {
+        if (disabled) {
+          return
+        }
+        console.info("[shopify-ui] connect submit clicked")
         setIsSubmitting(true)
-        window.setTimeout(() => setIsSubmitting(false), 6000)
       }}
       className={cn(
         "marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-transform hover:-translate-y-px sm:w-auto",
-        (disabled || isSubmitting) && "cursor-not-allowed opacity-50"
+        disabled && "cursor-not-allowed opacity-50"
       )}
     >
       {isSubmitting ? "Connecting Shopify..." : label}
@@ -36,4 +39,3 @@ export function ShopifyConnectSubmitButton({
     </button>
   )
 }
-
