@@ -173,28 +173,41 @@ export async function GET(request: Request) {
       )
     }
 
-    console.info(
-      `[shopify] webhook registration start: organization=${storedState.organizationId}; store_id=${persistence.storeId}; integration_id=${persistence.integrationId}; registration_shop=${shopMeta.myshopifyDomain}; display_shop=${storedState.shopDomain}`
-    )
-    const webhookResults = await registerShopifyWebhooks({
+    const webhookRegistration = await registerShopifyWebhooks({
       shopDomain: shopMeta.myshopifyDomain,
       accessToken: token.accessToken,
     })
-    const webhookFailure = webhookResults.some((result) => !result.success)
     console.info(
-      `[shopify] webhook registration done: organization=${storedState.organizationId}; store_id=${persistence.storeId}; integration_id=${persistence.integrationId}; registration_shop=${shopMeta.myshopifyDomain}; failure=${webhookFailure}; results=${JSON.stringify(webhookResults.map((r) => ({ topic: r.topic, success: r.success, userErrors: r.userErrors })))}`
+      `[shopify] webhook registration start: organization=${storedState.organizationId}; store_id=${persistence.storeId}; integration_id=${persistence.integrationId}; registration_shop=${webhookRegistration.shopDomain}; canonical_shop=${shopMeta.myshopifyDomain}; display_shop=${storedState.shopDomain}; access_token_present=${Boolean(token.accessToken)}; api_version=${webhookRegistration.apiVersion}; topics=${webhookRegistration.topics.join(",")}; callback_endpoint=${webhookRegistration.endpoint}`
+    )
+    const webhookFailureResults = webhookRegistration.results.filter((result) => !result.success)
+    const webhookFailure = webhookFailureResults.length > 0
+    console.info(
+      `[shopify] webhook registration done: organization=${storedState.organizationId}; store_id=${persistence.storeId}; integration_id=${persistence.integrationId}; registration_shop=${webhookRegistration.shopDomain}; failure=${webhookFailure}; results=${JSON.stringify(webhookRegistration.results.map((r) => ({ topic: r.topic, success: r.success, duplicate_detected: r.duplicateDetected, status_code: r.statusCode, user_errors: r.userErrors, webhook_id: r.webhookId, exception: r.exception, response_body: r.success ? null : r.responseBody })))}`
     )
 
     if (webhookFailure) {
+      const failureDetails = webhookFailureResults
+        .map(
+          (failure) =>
+            `topic=${failure.topic}; status=${failure.statusCode ?? "n/a"}; user_errors=${failure.userErrors.join(" | ") || "none"}; exception=${failure.exception ?? "none"}; response=${failure.responseBody ?? "none"}`
+        )
+        .join(" || ")
+      const persistedReason = `Webhook registration failed during Shopify OAuth callback. ${failureDetails}`.slice(0, 3000)
+      const uiMessage = `Webhook registration failed: ${failureDetails}`.slice(0, 800)
+
       await markShopifyIntegrationErrored({
         organizationId: storedState.organizationId,
         integrationId: persistence.integrationId,
         canonicalShopDomain: shopMeta.myshopifyDomain,
-        reason: "Webhook registration failed during Shopify OAuth callback.",
+        reason: persistedReason,
       })
+      console.error(
+        `[shopify] webhook registration failed persisted: organization=${storedState.organizationId}; store_id=${persistence.storeId}; integration_id=${persistence.integrationId}; reason=${failureDetails}`
+      )
       return withErrorState(redirectError("webhook_registration_failed"), {
         shopDomain: storedState.shopDomain,
-        message: "Webhook registration failed",
+        message: uiMessage,
       })
     }
 

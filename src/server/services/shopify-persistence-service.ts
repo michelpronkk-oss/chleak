@@ -16,6 +16,14 @@ function toJsonPayload(input: unknown): Json {
   }
 }
 
+function asRecord(input: unknown): Record<string, unknown> {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return {}
+  }
+
+  return input as Record<string, unknown>
+}
+
 export async function persistShopifyIntegration(input: {
   organizationId: string
   shopDomain: string
@@ -182,28 +190,45 @@ export async function markShopifyIntegrationErrored(input: {
     `[shopify] integration mark errored start: organization=${input.organizationId}; integration_id=${input.integrationId ?? "none"}; canonical_shop=${input.canonicalShopDomain ?? "none"}`
   )
 
-  let query = supabase
+  let selector = supabase
+    .from("store_integrations")
+    .select("id, metadata")
+    .eq("organization_id", input.organizationId)
+    .eq("provider", "shopify")
+
+  if (input.integrationId) {
+    selector = selector.eq("id", input.integrationId)
+  } else if (input.canonicalShopDomain) {
+    selector = selector
+      .contains("metadata", { canonical_shop_domain: input.canonicalShopDomain })
+      .limit(1)
+  } else {
+    throw new Error("Missing integration identity for Shopify error update.")
+  }
+
+  const existing = await selector.maybeSingle()
+
+  if (existing.error || !existing.data) {
+    throw new Error("Failed to resolve Shopify integration for error update.")
+  }
+
+  const metadata = asRecord(existing.data.metadata)
+  const nextMetadata = {
+    ...metadata,
+    last_error: input.reason,
+    webhook_registration_failed: true,
+    webhook_registration_failed_at: new Date().toISOString(),
+  }
+
+  const result = await supabase
     .from("store_integrations")
     .update({
       status: "degraded",
       sync_status: "errored",
       connection_health: "degraded",
-      metadata: {
-        last_error: input.reason,
-      },
+      metadata: nextMetadata as Json,
     })
-    .eq("organization_id", input.organizationId)
-    .eq("provider", "shopify")
-
-  if (input.integrationId) {
-    query = query.eq("id", input.integrationId)
-  } else if (input.canonicalShopDomain) {
-    query = query.contains("metadata", { canonical_shop_domain: input.canonicalShopDomain })
-  } else {
-    throw new Error("Missing integration identity for Shopify error update.")
-  }
-
-  const result = await query
+    .eq("id", existing.data.id)
 
   if (result.error) {
     throw new Error("Failed to mark Shopify integration as errored.")

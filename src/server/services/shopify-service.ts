@@ -11,6 +11,7 @@ interface ShopifyConfig {
 }
 
 export const SHOPIFY_OAUTH_STATE_COOKIE = "checkoutleak_shopify_oauth_state"
+const SHOPIFY_ADMIN_API_VERSION = "2024-10"
 
 interface ShopifyOauthStatePayload {
   nonce: string
@@ -198,7 +199,7 @@ export async function fetchShopDetails(input: {
   accessToken: string
 }) {
   const response = await fetch(
-    `https://${input.shopDomain}/admin/api/2024-10/graphql.json`,
+    `https://${input.shopDomain}/admin/api/${SHOPIFY_ADMIN_API_VERSION}/graphql.json`,
     {
       method: "POST",
       headers: {
@@ -250,73 +251,132 @@ export async function registerShopifyWebhooks(input: {
   const endpoint = `${config.appUrl}/api/webhooks/shopify`
   const topics = ["ORDERS_CREATE", "APP_UNINSTALLED"] as const
 
-  const results: Array<{ topic: string; success: boolean; userErrors: string[] }> = []
+  const results: Array<{
+    topic: string
+    success: boolean
+    duplicateDetected: boolean
+    userErrors: string[]
+    webhookId: string | null
+    statusCode: number | null
+    responseBody: string | null
+    exception: string | null
+  }> = []
 
   for (const topic of topics) {
-    const response = await fetch(
-      `https://${input.shopDomain}/admin/api/2024-10/graphql.json`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Shopify-Access-Token": input.accessToken,
-        },
-        body: JSON.stringify({
-          query: `
-            mutation CreateWebhook($topic: WebhookSubscriptionTopic!, $callbackUrl: URL!) {
-              webhookSubscriptionCreate(
-                topic: $topic
-                webhookSubscription: {
-                  callbackUrl: $callbackUrl
-                  format: JSON
-                }
-              ) {
-                webhookSubscription {
-                  id
-                }
-                userErrors {
-                  field
-                  message
+    try {
+      const response = await fetch(
+        `https://${input.shopDomain}/admin/api/${SHOPIFY_ADMIN_API_VERSION}/graphql.json`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Shopify-Access-Token": input.accessToken,
+          },
+          body: JSON.stringify({
+            query: `
+              mutation CreateWebhook($topic: WebhookSubscriptionTopic!, $callbackUrl: URL!) {
+                webhookSubscriptionCreate(
+                  topic: $topic
+                  webhookSubscription: {
+                    callbackUrl: $callbackUrl
+                    format: JSON
+                  }
+                ) {
+                  webhookSubscription {
+                    id
+                  }
+                  userErrors {
+                    field
+                    message
+                  }
                 }
               }
-            }
-          `,
-          variables: { topic, callbackUrl: endpoint },
-        }),
-        cache: "no-store",
-      }
-    )
+            `,
+            variables: { topic, callbackUrl: endpoint },
+          }),
+          cache: "no-store",
+        }
+      )
 
-    if (!response.ok) {
+      const responseBody = await response.text()
+      let payload: {
+        data?: {
+          webhookSubscriptionCreate?: {
+            webhookSubscription?: { id: string }
+            userErrors?: Array<{ message: string }>
+          }
+        }
+      } | null = null
+
+      try {
+        payload = JSON.parse(responseBody) as {
+          data?: {
+            webhookSubscriptionCreate?: {
+              webhookSubscription?: { id: string }
+              userErrors?: Array<{ message: string }>
+            }
+          }
+        }
+      } catch {
+        payload = null
+      }
+
+      if (!response.ok) {
+        results.push({
+          topic,
+          success: false,
+          duplicateDetected: false,
+          userErrors: [`Request failed with status ${response.status}`],
+          webhookId: null,
+          statusCode: response.status,
+          responseBody,
+          exception: null,
+        })
+        continue
+      }
+
+      const userErrors =
+        payload?.data?.webhookSubscriptionCreate?.userErrors?.map((item) => item.message) ??
+        []
+      const webhookId =
+        payload?.data?.webhookSubscriptionCreate?.webhookSubscription?.id ?? null
+      const duplicateDetected = userErrors.some((message) => {
+        const normalized = message.toLowerCase()
+        return normalized.includes("already") && normalized.includes("taken")
+      })
+
+      results.push({
+        topic,
+        success: Boolean(webhookId) || duplicateDetected,
+        duplicateDetected,
+        userErrors,
+        webhookId,
+        statusCode: response.status,
+        responseBody,
+        exception: null,
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
       results.push({
         topic,
         success: false,
-        userErrors: [`Request failed with status ${response.status}`],
+        duplicateDetected: false,
+        userErrors: ["Exception thrown while requesting Shopify webhook registration."],
+        webhookId: null,
+        statusCode: null,
+        responseBody: null,
+        exception: message,
       })
-      continue
     }
-
-    const payload = (await response.json()) as {
-      data?: {
-        webhookSubscriptionCreate?: {
-          webhookSubscription?: { id: string }
-          userErrors?: Array<{ message: string }>
-        }
-      }
-    }
-
-    const userErrors =
-      payload.data?.webhookSubscriptionCreate?.userErrors?.map((item) => item.message) ??
-      []
-
-    results.push({
-      topic,
-      success: Boolean(payload.data?.webhookSubscriptionCreate?.webhookSubscription),
-      userErrors,
-    })
   }
 
-  return results
+  return {
+    apiVersion: SHOPIFY_ADMIN_API_VERSION,
+    endpoint,
+    shopDomain: input.shopDomain,
+    topics: [...topics],
+    results,
+  }
 }
 
 export function verifyShopifyWebhook(input: {
