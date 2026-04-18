@@ -63,6 +63,22 @@ interface BackendSourceSignals {
 interface ShopifyDomainView {
   displayDomain: string | null
   canonicalDomain: string | null
+  status: string | null
+  connectionHealth: string | null
+  syncStatus: string | null
+  lastError: string | null
+}
+
+function isShopifySetupAttention(view: ShopifyDomainView | undefined) {
+  if (!view) {
+    return false
+  }
+
+  return (
+    view.status === "degraded" ||
+    view.connectionHealth === "degraded" ||
+    view.syncStatus === "errored"
+  )
 }
 
 function deriveCommercialAccessState(input: {
@@ -115,7 +131,7 @@ function deriveScanOutcomeForPrimarySource(input: {
     return "issues_found"
   }
 
-  return scans <= 1 ? "no_signal" : "clean"
+  return scans > 0 ? "no_signal" : null
 }
 
 async function loadBackendSourceSignals(
@@ -261,7 +277,9 @@ async function loadShopifyDomainViews(organizationId: string) {
   const admin = createSupabaseAdminClient()
   const result = await admin
     .from("store_integrations")
-    .select("store_id, shop_domain, metadata, installed_at, created_at")
+    .select(
+      "store_id, shop_domain, metadata, status, connection_health, sync_status, installed_at, created_at"
+    )
     .eq("organization_id", organizationId)
     .eq("provider", "shopify")
     .neq("status", "disconnected")
@@ -281,10 +299,15 @@ async function loadShopifyDomainViews(organizationId: string) {
     const canonical =
       readStringFromRecord(row.metadata, "canonical_shop_domain") ??
       readStringFromRecord(row.metadata, "shopify_canonical_domain")
+    const lastError = readStringFromRecord(row.metadata, "last_error")
 
     viewByStoreId.set(row.store_id, {
       displayDomain: row.shop_domain ?? null,
       canonicalDomain: canonical,
+      status: row.status ?? null,
+      connectionHealth: row.connection_health ?? null,
+      syncStatus: row.sync_status ?? null,
+      lastError,
     })
   }
 
@@ -974,6 +997,10 @@ export async function getAppShellData() {
 
 export async function getDashboardJourneyData() {
   const journey = await getJourneyContext()
+  const shopifyDomainViews = await loadShopifyDomainViews(journey.organizationId)
+  const setupAttentionView = Array.from(shopifyDomainViews.values()).find((view) =>
+    isShopifySetupAttention(view)
+  )
   const primaryOutcome = deriveScanOutcomeForPrimarySource({
     signals: journey.backendSignals,
   })
@@ -1001,6 +1028,17 @@ export async function getDashboardJourneyData() {
       organization: journey.baseSnapshot.organization,
       selectedPlan: journey.planState.plan,
       plans: mockPlanCatalog,
+    }
+  }
+
+  if (setupAttentionView) {
+    return {
+      mode: "integration_error" as const,
+      onboardingState: journey.state,
+      organization: journey.baseSnapshot.organization,
+      message:
+        setupAttentionView.lastError ??
+        "Shopify connected, but webhook registration needs attention. Review setup and retry.",
     }
   }
 
@@ -1038,7 +1076,7 @@ export async function getDashboardJourneyData() {
     }
   }
 
-  if (isFirstResultState(journey.state)) {
+  if (isFirstResultState(journey.state) && primaryOutcome === "issues_found") {
     return {
       mode: "first_results" as const,
       scanOutcome: "issues_found" as const,
@@ -1092,6 +1130,8 @@ export async function getConnectJourneyData() {
   const journey = await getJourneyContext()
   const shopifySetup = getShopifySetupState()
   const stripeSetup = getStripeSetupState()
+  const shopifyDomainViews = await loadShopifyDomainViews(journey.organizationId)
+  const primaryShopifyView = Array.from(shopifyDomainViews.values())[0]
 
   return {
     onboardingState: journey.state,
@@ -1104,6 +1144,12 @@ export async function getConnectJourneyData() {
     stripeConfigured: stripeSetup.configured,
     stripeSetupMissing: stripeSetup.missing,
     stripeWebhookConfigured: stripeSetup.webhookConfigured,
+    shopifySetupAttention: isShopifySetupAttention(primaryShopifyView),
+    shopifySetupAttentionMessage:
+      primaryShopifyView?.lastError ??
+      (primaryShopifyView?.syncStatus === "errored"
+        ? "Shopify connected, but webhook registration needs attention."
+        : null),
     organization: journey.baseSnapshot.organization,
   }
 }
@@ -1175,6 +1221,27 @@ export async function getStoresIndexData() {
             store.platform === "shopify"
               ? (shopifyDomainViews.get(store.id)?.canonicalDomain ?? store.domain)
               : null,
+          setupAttention:
+            store.platform === "shopify"
+              ? (() => {
+                  const view = shopifyDomainViews.get(store.id)
+                  if (!view) {
+                    return false
+                  }
+                  return (
+                    view.status === "degraded" ||
+                    view.connectionHealth === "degraded" ||
+                    view.syncStatus === "errored"
+                  )
+                })()
+              : false,
+          setupAttentionMessage:
+            store.platform === "shopify"
+              ? (shopifyDomainViews.get(store.id)?.lastError ??
+                (shopifyDomainViews.get(store.id)?.syncStatus === "errored"
+                  ? "Webhook registration needs attention."
+                  : null))
+              : null,
           statusLabel: "First findings ready",
           statusTone: "text-primary",
           latestScanAt: journey.snapshot.scans[0]?.scannedAt ?? null,
@@ -1244,6 +1311,27 @@ export async function getStoresIndexData() {
                   ? (shopifyDomainViews.get(journey.sourceStore.id)?.canonicalDomain ??
                     journey.sourceStore.domain)
                   : null,
+              setupAttention:
+                journey.sourceStore.platform === "shopify"
+                  ? (() => {
+                      const view = shopifyDomainViews.get(journey.sourceStore.id)
+                      if (!view) {
+                        return false
+                      }
+                      return (
+                        view.status === "degraded" ||
+                        view.connectionHealth === "degraded" ||
+                        view.syncStatus === "errored"
+                      )
+                    })()
+                  : false,
+              setupAttentionMessage:
+                journey.sourceStore.platform === "shopify"
+                  ? (shopifyDomainViews.get(journey.sourceStore.id)?.lastError ??
+                    (shopifyDomainViews.get(journey.sourceStore.id)?.syncStatus === "errored"
+                      ? "Webhook registration needs attention."
+                      : null))
+                  : null,
               statusLabel: "First scan running",
               statusTone: "text-primary",
               latestScanAt: null,
@@ -1286,8 +1374,53 @@ export async function getStoresIndexData() {
         store.platform === "shopify"
           ? (shopifyDomainViews.get(store.id)?.canonicalDomain ?? store.domain)
           : null,
-      statusLabel: status.label,
-      statusTone: status.tone,
+      setupAttention:
+        store.platform === "shopify"
+          ? (() => {
+              const view = shopifyDomainViews.get(store.id)
+              if (!view) {
+                return false
+              }
+              return (
+                view.status === "degraded" ||
+                view.connectionHealth === "degraded" ||
+                view.syncStatus === "errored"
+              )
+            })()
+          : false,
+      setupAttentionMessage:
+        store.platform === "shopify"
+          ? (shopifyDomainViews.get(store.id)?.lastError ??
+            (shopifyDomainViews.get(store.id)?.syncStatus === "errored"
+              ? "Webhook registration needs attention."
+              : null))
+          : null,
+      statusLabel:
+        store.platform === "shopify" &&
+        (() => {
+          const view = shopifyDomainViews.get(store.id)
+          return Boolean(
+            view &&
+              (view.status === "degraded" ||
+                view.connectionHealth === "degraded" ||
+                view.syncStatus === "errored")
+          )
+        })()
+          ? "Setup attention"
+          : status.label,
+      statusTone:
+        store.platform === "shopify" &&
+        (() => {
+          const view = shopifyDomainViews.get(store.id)
+          return Boolean(
+            view &&
+              (view.status === "degraded" ||
+                view.connectionHealth === "degraded" ||
+                view.syncStatus === "errored")
+          )
+        })()
+          ? "text-amber-300"
+          : status.tone,
       latestScanAt: latestScan?.scannedAt ?? null,
       activeIssueCount: storeIssues.length,
       estimatedLeakage,
@@ -1338,6 +1471,22 @@ export async function getStoreDetailData(storeId: string) {
   const latestScan = scans[0] ?? null
   const highestSeverity = getHighestSeverity(issues.map((i) => i.severity))
   const status = getStoreStatus({ issueCount: issues.length, highestSeverity })
+  const integrationView = shopifyDomainViews.get(storeId)
+  const setupAttention =
+    store.platform === "shopify" &&
+    Boolean(
+      integrationView &&
+        (integrationView.status === "degraded" ||
+          integrationView.connectionHealth === "degraded" ||
+          integrationView.syncStatus === "errored")
+    )
+  const setupAttentionMessage =
+    store.platform === "shopify"
+      ? (integrationView?.lastError ??
+        (integrationView?.syncStatus === "errored"
+          ? "Webhook registration needs attention."
+          : null))
+      : null
   const estimatedLeakage = issues.reduce(
     (total, issue) => total + issue.estimatedMonthlyRevenueImpact,
     0
@@ -1375,12 +1524,16 @@ export async function getStoreDetailData(storeId: string) {
     status:
       isPendingScanState(journey.state) && issues.length === 0
         ? { label: "First scan running", tone: "text-primary" }
-        : status,
+        : setupAttention
+          ? { label: "Setup attention", tone: "text-amber-300" }
+          : status,
     latestScan,
     issues,
     scans,
     estimatedLeakage,
     fixPlanLinks,
+    setupAttention,
+    setupAttentionMessage,
   }
 }
 

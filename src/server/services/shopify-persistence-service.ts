@@ -172,12 +172,17 @@ export async function enqueueShopifyQueuedScan(input: {
 
 export async function markShopifyIntegrationErrored(input: {
   organizationId: string
-  shopDomain: string
+  integrationId?: string
+  canonicalShopDomain?: string
   reason: string
 }) {
   const supabase = createSupabaseAdminClient()
 
-  const result = await supabase
+  console.info(
+    `[shopify] integration mark errored start: organization=${input.organizationId}; integration_id=${input.integrationId ?? "none"}; canonical_shop=${input.canonicalShopDomain ?? "none"}`
+  )
+
+  let query = supabase
     .from("store_integrations")
     .update({
       status: "degraded",
@@ -189,11 +194,24 @@ export async function markShopifyIntegrationErrored(input: {
     })
     .eq("organization_id", input.organizationId)
     .eq("provider", "shopify")
-    .eq("shop_domain", input.shopDomain)
+
+  if (input.integrationId) {
+    query = query.eq("id", input.integrationId)
+  } else if (input.canonicalShopDomain) {
+    query = query.contains("metadata", { canonical_shop_domain: input.canonicalShopDomain })
+  } else {
+    throw new Error("Missing integration identity for Shopify error update.")
+  }
+
+  const result = await query
 
   if (result.error) {
     throw new Error("Failed to mark Shopify integration as errored.")
   }
+
+  console.info(
+    `[shopify] integration mark errored success: organization=${input.organizationId}; integration_id=${input.integrationId ?? "none"}; canonical_shop=${input.canonicalShopDomain ?? "none"}`
+  )
 }
 
 export async function logShopifyWebhookEvent(input: {

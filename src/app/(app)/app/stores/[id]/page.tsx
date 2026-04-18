@@ -112,6 +112,9 @@ export default async function StoreDetailPage({
               ? `Most recent scan found ${data.latestScan.detectedIssuesCount} issues.`
               : "Run an initial scan to populate issue and opportunity signals."}
           </p>
+          {data.setupAttentionMessage ? (
+            <p className="mt-2 text-sm text-amber-300">{data.setupAttentionMessage}</p>
+          ) : null}
           <Link
             href="/app"
             className="mt-5 inline-flex items-center gap-2 text-sm text-primary transition-opacity hover:opacity-80"

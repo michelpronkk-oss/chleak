@@ -6,6 +6,7 @@ import {
 } from "@/server/services/onboarding-state-service"
 import {
   enqueueShopifyQueuedScan,
+  markShopifyIntegrationErrored,
   persistShopifyIntegration,
 } from "@/server/services/shopify-persistence-service"
 import { processQueuedScanV1 } from "@/server/services/scan-processing-service"
@@ -126,7 +127,7 @@ export async function GET(request: Request) {
     const persistence = await persistShopifyIntegration({
       organizationId: storedState.organizationId,
       shopDomain: shopMeta.myshopifyDomain,
-      preferredShopDomain: normalizedShop,
+      preferredShopDomain: storedState.shopDomain,
       canonicalShopDomain: shopMeta.myshopifyDomain,
       shopName: shopMeta.name,
       scopes: token.scopes,
@@ -172,17 +173,27 @@ export async function GET(request: Request) {
       )
     }
 
-    console.info(`[shopify] webhook registration start: shop=${normalizedShop}`)
+    console.info(
+      `[shopify] webhook registration start: organization=${storedState.organizationId}; store_id=${persistence.storeId}; integration_id=${persistence.integrationId}; registration_shop=${shopMeta.myshopifyDomain}; display_shop=${storedState.shopDomain}`
+    )
     const webhookResults = await registerShopifyWebhooks({
-      shopDomain: normalizedShop,
+      shopDomain: shopMeta.myshopifyDomain,
       accessToken: token.accessToken,
     })
     const webhookFailure = webhookResults.some((result) => !result.success)
-    console.info(`[shopify] webhook registration done: shop=${normalizedShop}; failure=${webhookFailure}; results=${JSON.stringify(webhookResults.map((r) => ({ success: r.success })))}`)
+    console.info(
+      `[shopify] webhook registration done: organization=${storedState.organizationId}; store_id=${persistence.storeId}; integration_id=${persistence.integrationId}; registration_shop=${shopMeta.myshopifyDomain}; failure=${webhookFailure}; results=${JSON.stringify(webhookResults.map((r) => ({ topic: r.topic, success: r.success, userErrors: r.userErrors })))}`
+    )
 
     if (webhookFailure) {
+      await markShopifyIntegrationErrored({
+        organizationId: storedState.organizationId,
+        integrationId: persistence.integrationId,
+        canonicalShopDomain: shopMeta.myshopifyDomain,
+        reason: "Webhook registration failed during Shopify OAuth callback.",
+      })
       return withErrorState(redirectError("webhook_registration_failed"), {
-        shopDomain: shopMeta.myshopifyDomain,
+        shopDomain: storedState.shopDomain,
         message: "Webhook registration failed",
       })
     }
@@ -201,7 +212,7 @@ export async function GET(request: Request) {
       SHOPIFY_SOURCE_STATE_COOKIE,
       serializeShopifySourceState({
         status: "syncing",
-        shopDomain: normalizedShop,
+        shopDomain: storedState.shopDomain,
         message: "Installed and waiting for first sync",
       }),
       {

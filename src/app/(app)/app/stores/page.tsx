@@ -77,6 +77,9 @@ export default async function StoresPage() {
                   <p className="mt-1 text-xs text-muted-foreground">
                     {store.topIssueTitle ? `Top issue: ${store.topIssueTitle}` : "No critical issue detected."}
                   </p>
+                  {store.setupAttentionMessage ? (
+                    <p className="mt-1 text-xs text-amber-300">{store.setupAttentionMessage}</p>
+                  ) : null}
                 </div>
 
                 <div className="grid gap-1 text-sm">

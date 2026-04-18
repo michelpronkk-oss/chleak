@@ -133,6 +133,21 @@ export default async function ConnectPage({
     : "Missing: Stripe connection configuration."
 
   const currentProgressStep = isReady ? 4 : isPendingShopify || isPendingStripe ? 3 : 2
+  const shopifyButtonLabel =
+    data.shopifySetupAttention
+      ? "Retry Shopify setup"
+      : data.shopifySourceState.status === "connected"
+        ? "Reconnect Shopify"
+        : data.shopifySourceState.status === "syncing"
+          ? "Reconnect Shopify"
+          : data.shopifySourceState.status === "errored"
+            ? "Retry Shopify setup"
+            : "Connect Shopify"
+  const shopifySetupMessage =
+    data.shopifySetupAttentionMessage ??
+    (data.shopifySetupAttention
+      ? "Shopify connected, but webhook registration needs attention. Retry setup."
+      : null)
 
   return (
     <div className="space-y-5 pb-24 lg:pb-4">
@@ -216,7 +231,7 @@ export default async function ConnectPage({
               disabled={!data.shopifyConfigured}
               className="marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
-              {data.shopifyConfigured ? "Connect Shopify" : "Shopify setup required"}
+              {data.shopifyConfigured ? shopifyButtonLabel : "Shopify setup required"}
               <ArrowRight className="h-3.5 w-3.5" />
             </button>
           </form>
@@ -237,6 +252,9 @@ export default async function ConnectPage({
             <p className="mt-3 font-mono text-[0.65rem] tracking-[0.06em] text-muted-foreground/45">
               {data.shopifySourceState.shopDomain}
             </p>
+          ) : null}
+          {shopifySetupMessage ? (
+            <p className="mt-2 text-xs text-amber-300">{shopifySetupMessage}</p>
           ) : null}
         </article>
 
