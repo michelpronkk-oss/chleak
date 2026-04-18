@@ -16,6 +16,8 @@ const statusMessage: Record<string, string> = {
   webhook_registration_failed:
     "Shopify connected, but webhook registration needs attention. Review setup and retry.",
   connected: "Source connected. CheckoutLeak is preparing your first scan.",
+  disconnected: "Shopify has been disconnected. Reconnect when ready.",
+  disconnect_failed: "Shopify disconnect failed. Retry in a moment.",
 }
 
 const errorStatuses = new Set([
@@ -27,6 +29,7 @@ const errorStatuses = new Set([
   "callback_declined",
   "state_mismatch",
   "webhook_registration_failed",
+  "disconnect_failed",
 ])
 
 function formatSourceStatus(status: string) {
@@ -217,6 +220,18 @@ export default async function ConnectPage({
               <ArrowRight className="h-3.5 w-3.5" />
             </button>
           </form>
+
+          {data.shopifySourceState.status !== "not_connected" ? (
+            <form method="POST" action="/api/integrations/shopify/disconnect" className="mt-2">
+              <input type="hidden" name="next" value="/app/connect?provider=shopify&status=disconnected" />
+              <button
+                type="submit"
+                className="inline-flex w-full items-center justify-center rounded-lg border border-border/60 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground sm:w-auto"
+              >
+                Disconnect Shopify
+              </button>
+            </form>
+          ) : null}
 
           {data.shopifySourceState.shopDomain ? (
             <p className="mt-3 font-mono text-[0.65rem] tracking-[0.06em] text-muted-foreground/45">
