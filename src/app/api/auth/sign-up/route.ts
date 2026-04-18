@@ -59,8 +59,11 @@ export async function POST(request: Request) {
   }
 
   const authOrigin = getAppOriginFromEnv() ?? url.origin
-  const callbackPath = new URL("/auth/callback", authOrigin)
+  const callbackPath = new URL("/auth/confirm", authOrigin)
   callbackPath.searchParams.set("next", postAuthDestinationFromPlan)
+  if (selectedPlan) {
+    callbackPath.searchParams.set("plan", selectedPlan)
+  }
 
   const supabase = await createSupabaseServerClient()
   const signUpResult = await supabase.auth.signUp({
