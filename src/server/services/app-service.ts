@@ -723,7 +723,7 @@ async function getJourneyContext() {
 
   const rawSnapshot =
     state === "demo"
-      ? getMockDashboardSnapshot()
+      ? await getMockDashboardSnapshot()
       : await getDashboardSnapshotForOrganization(organizationId)
   const baseSnapshot: DashboardSnapshot = {
     ...rawSnapshot,
