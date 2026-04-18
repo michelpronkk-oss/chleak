@@ -100,14 +100,21 @@ export async function GET(request: Request) {
   )
 
   try {
+    console.info(`[shopify] token exchange start: shop=${normalizedShop}`)
     const token = await exchangeShopifyCodeForToken({
       shopDomain: normalizedShop,
       code,
     })
+    console.info(`[shopify] token exchange success: shop=${normalizedShop}; scopes=${token.scopes.join(",")}`)
+
+    console.info(`[shopify] fetch shop details start: shop=${normalizedShop}`)
     const shopMeta = await fetchShopDetails({
       shopDomain: normalizedShop,
       accessToken: token.accessToken,
     })
+    console.info(`[shopify] fetch shop details success: myshopify_domain=${shopMeta.myshopifyDomain}; name=${shopMeta.name}`)
+
+    console.info(`[shopify] persist integration start: organization=${storedState.organizationId}; shop=${shopMeta.myshopifyDomain}`)
     await persistShopifyIntegration({
       organizationId: storedState.organizationId,
       shopDomain: shopMeta.myshopifyDomain,
@@ -115,13 +122,16 @@ export async function GET(request: Request) {
       scopes: token.scopes,
       accessToken: token.accessToken,
     })
+    console.info(`[shopify] persist integration success: organization=${storedState.organizationId}; shop=${shopMeta.myshopifyDomain}`)
 
+    console.info(`[shopify] webhook registration start: shop=${normalizedShop}`)
     const webhookResults = await registerShopifyWebhooks({
       shopDomain: normalizedShop,
       accessToken: token.accessToken,
     })
-
     const webhookFailure = webhookResults.some((result) => !result.success)
+    console.info(`[shopify] webhook registration done: shop=${normalizedShop}; failure=${webhookFailure}; results=${JSON.stringify(webhookResults.map((r) => ({ success: r.success })))}`)
+
     if (webhookFailure) {
       return withErrorState(redirectError("webhook_registration_failed"), {
         shopDomain: shopMeta.myshopifyDomain,
@@ -156,7 +166,9 @@ export async function GET(request: Request) {
     )
     response.cookies.delete(SHOPIFY_OAUTH_STATE_COOKIE)
     return response
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error(`[shopify] callback failed: shop=${normalizedShop}; organization=${storedState.organizationId}; error=${message}`)
     return withErrorState(redirectError("callback_failed"), {
       shopDomain: storedState.shopDomain,
       message: "Shopify callback processing failed",
