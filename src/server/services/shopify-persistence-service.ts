@@ -33,8 +33,7 @@ export async function persistShopifyIntegration(input: {
     active: true,
   }
 
-  // NOTE: onConflict:"organization_id" requires a unique constraint on stores.organization_id.
-  // If that constraint does not exist the upsert will error with code 42P10 (no unique/exclusion constraint).
+  // Requires: UNIQUE (organization_id, platform, domain) on stores.
   // NOTE: using service-role admin client — RLS is bypassed.
   console.info(
     `[shopify] store upsert start: organization=${input.organizationId}; payload=${JSON.stringify(storeInsert)}`
@@ -42,7 +41,7 @@ export async function persistShopifyIntegration(input: {
 
   const storeResult = await supabase
     .from("stores")
-    .upsert([storeInsert], { onConflict: "organization_id" })
+    .upsert([storeInsert], { onConflict: "organization_id,platform,domain" })
     .select("id")
     .single()
 
@@ -74,7 +73,7 @@ export async function persistShopifyIntegration(input: {
     last_synced_at: null,
   }
 
-  // NOTE: onConflict:"organization_id,store_id,provider" requires a composite unique constraint on those three columns.
+  // Requires: UNIQUE (organization_id, store_id, provider) on store_integrations.
   console.info(
     `[shopify] integration upsert start: organization=${input.organizationId}; store_id=${storeResult.data.id}; payload=${JSON.stringify({ ...integrationInsert, scopes: integrationInsert.scopes })}`
   )
