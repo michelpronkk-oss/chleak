@@ -85,11 +85,9 @@ export async function GET(request: Request) {
     })
   }
 
-  const nonceMismatch = storedState.nonce !== state
-  const shopMismatch = storedState.shopDomain !== normalizedShop
-  if (nonceMismatch || shopMismatch) {
+  if (storedState.nonce !== state) {
     console.error(
-      `[shopify] OAuth state mismatch: nonce_match=${!nonceMismatch}; shop_match=${!shopMismatch}; stored_shop="${storedState.shopDomain}"; received_shop="${normalizedShop}"; stored_nonce="${storedState.nonce}"; received_state="${state}"`
+      `[shopify] OAuth nonce mismatch: stored_nonce="${storedState.nonce}"; received_state="${state}"; stored_shop="${storedState.shopDomain}"; received_shop="${normalizedShop}"`
     )
     return withErrorState(redirectError("state_mismatch"), {
       shopDomain: storedState.shopDomain,
@@ -98,7 +96,7 @@ export async function GET(request: Request) {
   }
 
   console.info(
-    `[shopify] OAuth state verified: shop=${normalizedShop}; organization=${storedState.organizationId}`
+    `[shopify] OAuth state verified: stored_shop=${storedState.shopDomain}; callback_shop=${normalizedShop}; organization=${storedState.organizationId}`
   )
 
   try {

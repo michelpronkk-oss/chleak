@@ -73,7 +73,7 @@ export async function GET(request: Request) {
     })
 
     console.info(
-      `[shopify] OAuth install: shop=${shopDomain}; nonce=${payload.stateNonce}; organization=${organizationId}; redirecting to Shopify`
+      `[shopify] OAuth install: raw_input=${shop}; normalized_shop=${shopDomain}; authorize_url=${payload.installUrl}; nonce=${payload.stateNonce}; organization=${organizationId}`
     )
 
     const stateValue = serializeShopifyOauthState({
