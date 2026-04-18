@@ -247,7 +247,9 @@ export async function syncSubscriptionFromDodoWebhook(input: {
 
   const dodoCustomerId =
     readString(subscriptionRecord, ["customer_id", "customerId"]) ??
+    readString(asRecord(subscriptionRecord?.customer), ["customer_id", "id"]) ??
     readString(dataRecord, ["customer_id", "customerId"]) ??
+    readString(asRecord(dataRecord?.customer), ["customer_id", "id"]) ??
     readString(payloadRecord, ["customer_id", "customerId"])
 
   const planRaw =
@@ -346,12 +348,19 @@ export async function syncSubscriptionFromDodoWebhook(input: {
   }
 
   if (!effectivePlan) {
+    console.error(
+      `[billing] syncSubscription: missing_plan; event=${input.eventType}; organization=${effectiveOrganizationId}; planIdRaw=${planIdRaw ?? "none"}; planRaw=${planRaw ?? "none"}`
+    )
     return {
       applied: false,
       reason: "missing_plan",
       organizationId: effectiveOrganizationId,
     }
   }
+
+  console.info(
+    `[billing] syncSubscription: upserting; event=${input.eventType}; organization=${effectiveOrganizationId}; plan=${effectivePlan}; status=${effectiveStatus ?? "incomplete"}; subscriptionId=${dodoSubscriptionId ?? "none"}`
+  )
 
   const now = new Date()
   const fallbackStart = now.toISOString()
@@ -371,10 +380,17 @@ export async function syncSubscriptionFromDodoWebhook(input: {
     .upsert(payloadForWrite, { onConflict: "organization_id" })
 
   if (writeResult.error) {
+    console.error(
+      `[billing] syncSubscription: upsert failed; organization=${effectiveOrganizationId}; error=${writeResult.error.message}`
+    )
     throw new Error(
       `Failed to sync Dodo subscription state: ${writeResult.error.message}`
     )
   }
+
+  console.info(
+    `[billing] syncSubscription: upsert success; organization=${effectiveOrganizationId}; plan=${effectivePlan}`
+  )
 
   return {
     applied: true,

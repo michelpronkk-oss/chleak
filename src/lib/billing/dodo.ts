@@ -1,6 +1,5 @@
-import crypto from "node:crypto"
-
 import { z } from "zod"
+import { Webhook, WebhookVerificationError } from "standardwebhooks"
 
 const dodoCheckoutRequestSchema = z.object({
   planId: z.string().min(1),
@@ -101,60 +100,6 @@ function parseJsonSafely(input: string): unknown {
   }
 }
 
-function parseSignatureCandidates(signatureHeader: string): string[] {
-  const raw = signatureHeader.trim()
-  if (!raw) {
-    return []
-  }
-
-  const segments = raw.split(",").map((part) => part.trim())
-  const keyedValues = segments
-    .map((segment) => {
-      const index = segment.indexOf("=")
-      if (index < 1) {
-        return null
-      }
-      const key = segment.slice(0, index).trim().toLowerCase()
-      const value = segment.slice(index + 1).trim()
-      if (!value) {
-        return null
-      }
-      if (key === "sha256" || key === "v1" || key === "signature") {
-        return value
-      }
-      return null
-    })
-    .filter((value): value is string => Boolean(value))
-
-  if (keyedValues.length > 0) {
-    return keyedValues
-  }
-
-  const trimmed = raw.replace(/^sha256=/i, "").trim()
-  return trimmed ? [trimmed] : []
-}
-
-function toHexDigestCandidate(candidate: string): string | null {
-  const normalized = candidate.trim()
-  if (!normalized) {
-    return null
-  }
-
-  if (/^[a-fA-F0-9]{64,}$/.test(normalized)) {
-    return normalized.toLowerCase()
-  }
-
-  try {
-    const decoded = Buffer.from(normalized, "base64")
-    if (decoded.length > 0) {
-      return decoded.toString("hex").toLowerCase()
-    }
-  } catch {
-    // Ignore invalid base64 candidates.
-  }
-
-  return null
-}
 
 export async function createDodoCheckoutSession(input: DodoCheckoutRequest) {
   const validated = dodoCheckoutRequestSchema.parse(input)
@@ -219,56 +164,55 @@ export async function createDodoCheckoutSession(input: DodoCheckoutRequest) {
 
 export async function parseAndVerifyDodoWebhook(input: {
   rawBody: string
-  signature: string | null
+  webhookId: string | null
+  webhookTimestamp: string | null
+  webhookSignature: string | null
 }) {
   const config = getDodoConfig()
   const payload = JSON.parse(input.rawBody) as Record<string, unknown>
+  const eventType = typeof payload.type === "string" ? payload.type : "unknown"
 
   if (!config.webhookSecret) {
     return {
       verified: false,
-      reason:
-        "DODO_WEBHOOK_SECRET is not configured. Configure it before enabling webhook side-effects.",
-      eventType:
-        typeof payload.type === "string" ? payload.type : "unknown",
+      reason: "DODO_WEBHOOK_SECRET is not configured.",
+      eventType,
       payload,
     }
   }
 
-  if (!input.signature) {
+  if (!input.webhookId || !input.webhookTimestamp || !input.webhookSignature) {
     return {
       verified: false,
-      reason: `Missing signature header '${config.webhookSignatureHeader}'.`,
-      eventType:
-        typeof payload.type === "string" ? payload.type : "unknown",
+      reason: "Missing required webhook headers (webhook-id, webhook-timestamp, webhook-signature).",
+      eventType,
       payload,
     }
   }
 
-  const expected = crypto
-    .createHmac("sha256", config.webhookSecret)
-    .update(input.rawBody)
-    .digest("hex")
-  const expectedBuffer = Buffer.from(expected, "hex")
-  const signatureCandidates = parseSignatureCandidates(input.signature)
-  const signaturesMatch = signatureCandidates.some((candidate) => {
-    const candidateHex = toHexDigestCandidate(candidate)
-    if (!candidateHex) {
-      return false
+  try {
+    const wh = new Webhook(config.webhookSecret)
+    wh.verify(input.rawBody, {
+      "webhook-id": input.webhookId,
+      "webhook-timestamp": input.webhookTimestamp,
+      "webhook-signature": input.webhookSignature,
+    })
+    return {
+      verified: true,
+      reason: null,
+      eventType,
+      payload,
     }
-    const incomingBuffer = Buffer.from(candidateHex, "hex")
-    if (incomingBuffer.length !== expectedBuffer.length) {
-      return false
+  } catch (error) {
+    const reason =
+      error instanceof WebhookVerificationError
+        ? error.message
+        : "Webhook signature verification failed."
+    return {
+      verified: false,
+      reason,
+      eventType,
+      payload,
     }
-    return crypto.timingSafeEqual(expectedBuffer, incomingBuffer)
-  })
-
-  return {
-    verified: signaturesMatch,
-    reason: signaturesMatch
-      ? null
-      : "Webhook signature mismatch. Confirm hashing strategy against current Dodo docs before production use.",
-    eventType: typeof payload.type === "string" ? payload.type : "unknown",
-    payload,
   }
 }

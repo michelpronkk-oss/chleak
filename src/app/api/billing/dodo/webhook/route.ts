@@ -57,10 +57,9 @@ function resolveOrganizationId(payload: unknown) {
 
 export async function POST(request: Request) {
   const rawBody = await request.text()
-  const signature =
-    request.headers.get(
-      process.env.DODO_WEBHOOK_SIGNATURE_HEADER ?? "x-dodo-signature"
-    ) ?? request.headers.get("dodo-signature")
+  const webhookId = request.headers.get("webhook-id")
+  const webhookTimestamp = request.headers.get("webhook-timestamp")
+  const webhookSignature = request.headers.get("webhook-signature")
   const parsedPayload = parseJsonSafely(rawBody)
   const parsedRecord = asRecord(parsedPayload)
   const eventType =
@@ -70,7 +69,7 @@ export async function POST(request: Request) {
   const organizationId = resolveOrganizationId(parsedPayload)
 
   console.info(
-    `[billing] Dodo webhook received: event=${eventType}; organization=${organizationId ?? "unknown"}`
+    `[billing] Dodo webhook received: event=${eventType}; organization=${organizationId ?? "unknown"}; webhook-id=${webhookId ?? "none"}`
   )
   let loggedEventId: string | null = null
 
@@ -108,7 +107,9 @@ export async function POST(request: Request) {
   try {
     const webhook = await parseAndVerifyDodoWebhook({
       rawBody,
-      signature,
+      webhookId,
+      webhookTimestamp,
+      webhookSignature,
     })
 
     if (!webhook.verified) {
@@ -125,12 +126,20 @@ export async function POST(request: Request) {
       )
     }
 
+    console.info(
+      `[billing] Dodo webhook verified: event=${webhook.eventType}; organization=${organizationId ?? "unknown"}`
+    )
+
     const sync = await syncSubscriptionFromDodoWebhook({
       eventType: webhook.eventType,
       payload: webhook.payload,
     })
 
-    if (!sync.applied) {
+    if (sync.applied) {
+      console.info(
+        `[billing] Dodo subscription synced: event=${webhook.eventType}; organization=${sync.organizationId}; plan=${sync.plan}; status=${sync.status}`
+      )
+    } else {
       console.error(
         `[billing] Dodo webhook sync not applied: event=${webhook.eventType}; reason=${sync.reason}; organization=${sync.organizationId ?? "unknown"}`
       )
@@ -147,6 +156,10 @@ export async function POST(request: Request) {
       if (processedUpdate.error) {
         console.error(
           `[billing] Failed to mark webhook as processed: event_id=${loggedEventId}; reason=${processedUpdate.error.message}`
+        )
+      } else {
+        console.info(
+          `[billing] Webhook event marked processed: event_id=${loggedEventId}`
         )
       }
     }
