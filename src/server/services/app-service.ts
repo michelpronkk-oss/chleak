@@ -92,6 +92,32 @@ function deriveCommercialAccessState(input: {
   return "paid_connected" as const
 }
 
+function deriveScanOutcomeForPrimarySource(input: {
+  signals: BackendSourceSignals | null
+}): "no_signal" | "clean" | "issues_found" | null {
+  if (!input.signals || input.signals.providers.length === 0) {
+    return null
+  }
+
+  const provider = input.signals.primaryProvider ?? input.signals.providers[0]
+  if (!provider) {
+    return null
+  }
+
+  const scans = input.signals.scanCountByProvider[provider]
+  const issues = input.signals.issueCountByProvider[provider]
+
+  if (scans === 0) {
+    return null
+  }
+
+  if (issues > 0) {
+    return "issues_found"
+  }
+
+  return scans <= 1 ? "no_signal" : "clean"
+}
+
 async function loadBackendSourceSignals(
   organizationId: string
 ): Promise<BackendSourceSignals | null> {
@@ -948,6 +974,9 @@ export async function getAppShellData() {
 
 export async function getDashboardJourneyData() {
   const journey = await getJourneyContext()
+  const primaryOutcome = deriveScanOutcomeForPrimarySource({
+    signals: journey.backendSignals,
+  })
   const primarySourceStatus = getPrimarySourceStatus({
     onboardingState: journey.state,
     shopifySourceState: journey.shopifySourceState,
@@ -1001,6 +1030,18 @@ export async function getDashboardJourneyData() {
   if (isFirstResultState(journey.state)) {
     return {
       mode: "first_results" as const,
+      scanOutcome: "issues_found" as const,
+      onboardingState: journey.state,
+      organization: journey.baseSnapshot.organization,
+      sourceLabel: getSourceLabel(journey.state),
+      snapshot: journey.snapshot,
+    }
+  }
+
+  if (primaryOutcome === "no_signal") {
+    return {
+      mode: "no_signal" as const,
+      scanOutcome: "no_signal" as const,
       onboardingState: journey.state,
       organization: journey.baseSnapshot.organization,
       sourceLabel: getSourceLabel(journey.state),
@@ -1041,6 +1082,7 @@ export async function getDashboardJourneyData() {
 
   return {
     mode: "ready" as const,
+    scanOutcome: primaryOutcome ?? "clean",
     onboardingState: journey.state,
     snapshot: journey.snapshot,
   }

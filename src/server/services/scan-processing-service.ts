@@ -1,9 +1,11 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/shared"
+import type { Json } from "@/types/database"
 
 export type ScanProcessResult = {
   processed: boolean
   reason: string
   scanId: string | null
+  outcome?: "no_signal" | "clean" | "issues_found" | null
   organizationId?: string | null
   storeId?: string | null
   storePlatform?: string | null
@@ -12,6 +14,14 @@ export type ScanProcessResult = {
   completedAt?: string | null
   detectedIssuesCount?: number | null
   estimatedMonthlyLeakage?: number | null
+}
+
+function asRecord(input: unknown): Record<string, unknown> | null {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return null
+  }
+
+  return input as Record<string, unknown>
 }
 
 export async function processQueuedScanV1(input?: { scanId?: string | null }): Promise<ScanProcessResult> {
@@ -64,7 +74,7 @@ export async function processQueuedScanV1(input?: { scanId?: string | null }): P
       .maybeSingle(),
     admin
       .from("store_integrations")
-      .select("id, provider, status, sync_status, shop_domain")
+      .select("id, provider, status, sync_status, shop_domain, metadata")
       .eq("organization_id", queuedScan.organization_id)
       .eq("store_id", queuedScan.store_id)
       .neq("status", "disconnected")
@@ -82,6 +92,7 @@ export async function processQueuedScanV1(input?: { scanId?: string | null }): P
       processed: false,
       reason: "store_missing",
       scanId: queuedScan.id,
+      outcome: null,
       organizationId: queuedScan.organization_id,
       storeId: queuedScan.store_id,
     }
@@ -96,6 +107,7 @@ export async function processQueuedScanV1(input?: { scanId?: string | null }): P
       processed: false,
       reason: "integration_missing",
       scanId: queuedScan.id,
+      outcome: null,
       organizationId: queuedScan.organization_id,
       storeId: queuedScan.store_id,
     }
@@ -121,6 +133,7 @@ export async function processQueuedScanV1(input?: { scanId?: string | null }): P
       processed: false,
       reason: "running_update_failed",
       scanId: queuedScan.id,
+      outcome: null,
       organizationId: queuedScan.organization_id,
       storeId: queuedScan.store_id,
     }
@@ -131,6 +144,7 @@ export async function processQueuedScanV1(input?: { scanId?: string | null }): P
       processed: false,
       reason: "scan_not_queued_anymore",
       scanId: queuedScan.id,
+      outcome: null,
       organizationId: queuedScan.organization_id,
       storeId: queuedScan.store_id,
     }
@@ -165,10 +179,49 @@ export async function processQueuedScanV1(input?: { scanId?: string | null }): P
       processed: false,
       reason: "completion_failed",
       scanId: queuedScan.id,
+      outcome: null,
       organizationId: queuedScan.organization_id,
       storeId: queuedScan.store_id,
     }
   }
+
+  const completedCountResult = await admin
+    .from("scans")
+    .select("id", { head: true, count: "exact" })
+    .eq("organization_id", queuedScan.organization_id)
+    .eq("store_id", queuedScan.store_id)
+    .eq("status", "completed")
+
+  const completedCount = completedCountResult.count ?? 0
+  const outcome =
+    completionResult.data.detected_issues_count > 0 ||
+    completionResult.data.estimated_monthly_leakage > 0
+      ? "issues_found"
+      : completedCount <= 1
+        ? "no_signal"
+        : "clean"
+
+  const metadata = asRecord(integrationResult.data.metadata) ?? {}
+  const metadataUpdate = {
+    ...metadata,
+    scan_outcome: outcome,
+    scan_outcome_updated_at: new Date().toISOString(),
+  }
+
+  const integrationUpdate = await admin
+    .from("store_integrations")
+    .update({ metadata: metadataUpdate as Json })
+    .eq("id", integrationResult.data.id)
+
+  if (integrationUpdate.error) {
+    console.error(
+      `[scan-runner] outcome metadata update failed: scan_id=${queuedScan.id}; integration_id=${integrationResult.data.id}; reason=${integrationUpdate.error.message}`
+    )
+  }
+
+  console.info(
+    `[scan-runner] outcome classified: scan_id=${queuedScan.id}; outcome=${outcome}; completed_count=${completedCount}`
+  )
 
   console.info(
     `[scan-runner] completion state set: scan_id=${queuedScan.id}; payload=${JSON.stringify(completionPayload)}`
@@ -178,6 +231,7 @@ export async function processQueuedScanV1(input?: { scanId?: string | null }): P
     processed: true,
     reason: "processed",
     scanId: queuedScan.id,
+    outcome,
     organizationId: queuedScan.organization_id,
     storeId: queuedScan.store_id,
     storePlatform: storeResult.data.platform,

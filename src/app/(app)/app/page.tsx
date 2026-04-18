@@ -221,6 +221,43 @@ export default async function DashboardOverviewPage() {
     )
   }
 
+  if (journey.mode === "no_signal") {
+    return (
+      <div className="space-y-5 pb-24 lg:pb-4">
+        <section className="space-y-2">
+          <p className="data-mono text-primary">Monitoring Ready</p>
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
+            {journey.sourceLabel} source connected. No meaningful signal yet.
+          </h1>
+          <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
+            CheckoutLeak is connected and monitoring correctly. Leak analysis becomes meaningful once orders, checkouts, and billing activity accumulate.
+          </p>
+        </section>
+
+        <section className="surface-card p-5 sm:p-6 lg:p-7">
+          <p className="text-sm text-muted-foreground">
+            Current scan outcome: no signal. Keep the source connected and return after real commercial activity starts.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link
+              href="/app/stores"
+              className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
+            >
+              Open stores
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            <Link
+              href="/app/connect"
+              className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Manage source connection
+            </Link>
+          </div>
+        </section>
+      </div>
+    )
+  }
+
   const snapshot = journey.snapshot
   const primaryIssue = snapshot.summary.highestImpactIssue
   const fallbackFixPlanHref = getFallbackFixPlanHref()
@@ -340,4 +377,3 @@ export default async function DashboardOverviewPage() {
     </div>
   )
 }
-
