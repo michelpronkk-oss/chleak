@@ -6,7 +6,6 @@ import {
 } from "@/lib/billing/dodo"
 import { createSupabaseAdminClient } from "@/lib/supabase/shared"
 import type { BillingPlan, SubscriptionStatus } from "@/types/domain"
-import type { Json } from "@/types/database"
 
 function asRecord(input: unknown): Record<string, unknown> | null {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
@@ -29,14 +28,6 @@ function toIsoString(input: unknown): string | null {
   }
 
   return null
-}
-
-function asJson(input: unknown): Json {
-  try {
-    return JSON.parse(JSON.stringify(input)) as Json
-  } catch {
-    return { raw: String(input) }
-  }
 }
 
 function readString(source: Record<string, unknown> | null, keys: string[]) {
@@ -150,6 +141,14 @@ function mapSubscriptionStatus(input: {
 
   const eventType = input.eventType.toLowerCase()
   if (eventType === "subscription.active") {
+    return "active"
+  }
+  if (
+    eventType === "payment.succeeded" ||
+    eventType === "payment.success" ||
+    eventType === "invoice.payment_succeeded" ||
+    eventType === "invoice.paid"
+  ) {
     return "active"
   }
   if (eventType === "subscription.canceled" || eventType === "subscription.cancelled") {
@@ -266,18 +265,6 @@ export async function syncSubscriptionFromDodoWebhook(input: {
     toIsoString(payloadRecord?.current_period_end)
 
   const admin = createSupabaseAdminClient()
-  const loggedEvent = await admin.from("integration_webhook_events").insert({
-    organization_id: organizationId,
-    provider: "dodo",
-    source_domain: dodoSubscriptionId,
-    topic: input.eventType,
-    payload: asJson(input.payload),
-  })
-
-  if (loggedEvent.error) {
-    throw new Error("Failed to log Dodo webhook event.")
-  }
-
   const targetByOrganization = organizationId
     ? await admin
         .from("subscriptions")
