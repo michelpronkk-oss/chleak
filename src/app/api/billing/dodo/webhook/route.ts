@@ -72,26 +72,33 @@ export async function POST(request: Request) {
   console.info(
     `[billing] Dodo webhook received: event=${eventType}; organization=${organizationId ?? "unknown"}`
   )
+  let loggedEventId: string | null = null
 
   try {
     const admin = createSupabaseAdminClient()
-    const insertResult = await admin.from("integration_webhook_events").insert({
-      organization_id: organizationId,
-      provider: "dodo",
-      source_domain: null,
-      topic: eventType,
-      payload: asJson(
-        parsedPayload ?? {
-          raw_body: rawBody,
-          parse_error: "invalid_json",
-        }
-      ),
-    })
+    const insertResult = await admin
+      .from("integration_webhook_events")
+      .insert({
+        organization_id: organizationId,
+        provider: "dodo",
+        source_domain: null,
+        topic: eventType,
+        payload: asJson(
+          parsedPayload ?? {
+            raw_body: rawBody,
+            parse_error: "invalid_json",
+          }
+        ),
+      })
+      .select("id")
+      .single()
 
     if (insertResult.error) {
       console.error(
         `[billing] Dodo webhook event persist failed: ${insertResult.error.message}`
       )
+    } else {
+      loggedEventId = insertResult.data.id
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown"
@@ -122,6 +129,27 @@ export async function POST(request: Request) {
       eventType: webhook.eventType,
       payload: webhook.payload,
     })
+
+    if (!sync.applied) {
+      console.error(
+        `[billing] Dodo webhook sync not applied: event=${webhook.eventType}; reason=${sync.reason}; organization=${sync.organizationId ?? "unknown"}`
+      )
+    }
+
+    if (sync.applied && loggedEventId) {
+      const admin = createSupabaseAdminClient()
+      const processedAt = new Date().toISOString()
+      const processedUpdate = await admin
+        .from("integration_webhook_events")
+        .update({ processed_at: processedAt })
+        .eq("id", loggedEventId)
+
+      if (processedUpdate.error) {
+        console.error(
+          `[billing] Failed to mark webhook as processed: event_id=${loggedEventId}; reason=${processedUpdate.error.message}`
+        )
+      }
+    }
 
     return NextResponse.json({
       received: true,

@@ -45,6 +45,25 @@ function readString(source: Record<string, unknown> | null, keys: string[]) {
   return null
 }
 
+function readStringFromArrayItems(
+  input: unknown,
+  keys: string[]
+): string | null {
+  if (!Array.isArray(input)) {
+    return null
+  }
+
+  for (const item of input) {
+    const record = asRecord(item)
+    const value = readString(record, keys)
+    if (value) {
+      return value
+    }
+  }
+
+  return null
+}
+
 function resolvePlanIdEnv(plan: BillingPlan) {
   const candidates =
     plan === "starter"
@@ -238,7 +257,31 @@ export async function syncSubscriptionFromDodoWebhook(input: {
 
   const planIdRaw =
     readString(subscriptionRecord, ["plan_id", "product_id", "price_id"]) ??
+    readString(asRecord(subscriptionRecord?.product), ["id", "product_id"]) ??
+    readString(asRecord(subscriptionRecord?.plan), ["id", "plan_id", "product_id"]) ??
+    readStringFromArrayItems(subscriptionRecord?.product_cart, [
+      "product_id",
+      "plan_id",
+      "price_id",
+    ]) ??
+    readStringFromArrayItems(subscriptionRecord?.items, [
+      "product_id",
+      "plan_id",
+      "price_id",
+    ]) ??
     readString(dataRecord, ["plan_id", "product_id", "price_id"]) ??
+    readString(asRecord(dataRecord?.product), ["id", "product_id"]) ??
+    readString(asRecord(dataRecord?.plan), ["id", "plan_id", "product_id"]) ??
+    readStringFromArrayItems(dataRecord?.product_cart, [
+      "product_id",
+      "plan_id",
+      "price_id",
+    ]) ??
+    readStringFromArrayItems(dataRecord?.items, [
+      "product_id",
+      "plan_id",
+      "price_id",
+    ]) ??
     readString(payloadRecord, ["plan_id", "product_id", "price_id"])
 
   const plan = getPlanFromKnownValues(planRaw) ?? getPlanFromDodoId(planIdRaw)
@@ -328,7 +371,9 @@ export async function syncSubscriptionFromDodoWebhook(input: {
     .upsert(payloadForWrite, { onConflict: "organization_id" })
 
   if (writeResult.error) {
-    throw new Error("Failed to sync Dodo subscription state.")
+    throw new Error(
+      `Failed to sync Dodo subscription state: ${writeResult.error.message}`
+    )
   }
 
   return {
