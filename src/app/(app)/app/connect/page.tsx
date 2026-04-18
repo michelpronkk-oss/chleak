@@ -5,6 +5,7 @@ import { ArrowRight, Check, ChevronRight, CircleCheck, CircleDashed } from "luci
 import { ProcessingStagePanel } from "@/components/dashboard/processing-stage-panel"
 import { cn } from "@/lib/utils"
 import { getConnectJourneyData } from "@/server/services/app-service"
+import { PostOauthHandoff } from "./post-oauth-handoff"
 import { ShopifyConnectSubmitButton } from "./shopify-connect-submit-button"
 
 const statusMessage: Record<string, string> = {
@@ -152,6 +153,8 @@ export default async function ConnectPage({
       : null)
   const showShopifyProcessingHandoff =
     provider === "shopify" && (status === "connected" || isPendingShopify)
+  const showPostOauthHandoff =
+    provider === "shopify" && (status === "connected" || isPendingShopify || isReady)
 
   return (
     <div className="space-y-5 pb-24 lg:pb-4">
@@ -190,6 +193,13 @@ export default async function ConnectPage({
             "Checking signal readiness...",
             "Preparing monitoring baseline...",
           ]}
+        />
+      ) : null}
+      {showPostOauthHandoff ? (
+        <PostOauthHandoff
+          connected={status === "connected" || isPendingShopify || isReady}
+          scanRunning={isPendingShopify}
+          resultsReady={isReady}
         />
       ) : null}
 

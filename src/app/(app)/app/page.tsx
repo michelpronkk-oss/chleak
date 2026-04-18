@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react"
 
 import { DecisionBanner } from "@/components/dashboard/decision-banner"
 import { IssueCard } from "@/components/dashboard/issue-card"
+import { PendingScanLiveRefresh } from "@/components/dashboard/pending-scan-live-refresh"
 import { RevenueOpportunityPanel } from "@/components/dashboard/revenue-opportunity-panel"
 import { ScanActivity } from "@/components/dashboard/scan-activity"
 import { SuggestedActions } from "@/components/dashboard/suggested-actions"
@@ -136,6 +137,7 @@ export default async function DashboardOverviewPage() {
               Open stores
             </Link>
           </div>
+          <PendingScanLiveRefresh />
         </section>
       </div>
     )
