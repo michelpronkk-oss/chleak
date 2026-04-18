@@ -1,3 +1,4 @@
+import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
 import { createSupabaseServerClient } from "@/lib/supabase/server"
@@ -10,6 +11,7 @@ import {
   createShopifyInstallPayload,
   getShopifySetupState,
   normalizeShopDomain,
+  parseShopifyOauthState,
   serializeShopifyOauthState,
 } from "@/server/services/shopify-service"
 import {
@@ -21,12 +23,15 @@ export async function GET(request: Request) {
   const url = new URL(request.url)
   const shop = url.searchParams.get("shop")
 
+  console.info(`[shopify] install route hit: shop=${shop ?? "none"}`)
+
   const supabase = await createSupabaseServerClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
   if (!user) {
+    console.info(`[shopify] install early_return: reason=unauthenticated; shop=${shop ?? "none"}`)
     const signInUrl = new URL("/auth/sign-in", url.origin)
     signInUrl.searchParams.set("next", "/app/connect?provider=shopify")
     return NextResponse.redirect(signInUrl)
@@ -45,7 +50,9 @@ export async function GET(request: Request) {
       email: user.email ?? null,
       fullName,
     })
-  } catch {
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err)
+    console.error(`[shopify] install early_return: reason=workspace_error; shop=${shop ?? "none"}; user=${user.id}; error=${errMsg}`)
     return NextResponse.redirect(
       new URL("/app/connect?provider=shopify&status=callback_failed", url.origin)
     )
@@ -54,12 +61,14 @@ export async function GET(request: Request) {
 
   const setup = getShopifySetupState()
   if (!setup.configured) {
+    console.warn(`[shopify] install early_return: reason=not_configured; shop=${shop ?? "none"}; organization=${organizationId}`)
     return NextResponse.redirect(
       new URL("/app/connect?provider=shopify&status=setup_required", url.origin)
     )
   }
 
   if (!shop) {
+    console.warn(`[shopify] install early_return: reason=missing_shop; organization=${organizationId}`)
     return NextResponse.redirect(
       new URL("/app/connect?provider=shopify&status=invalid_shop", url.origin)
     )
@@ -67,6 +76,23 @@ export async function GET(request: Request) {
 
   try {
     const shopDomain = normalizeShopDomain(shop)
+
+    const cookieStore = await cookies()
+    const existingState = parseShopifyOauthState(
+      cookieStore.get(SHOPIFY_OAUTH_STATE_COOKIE)?.value
+    )
+    if (existingState) {
+      if (existingState.shopDomain !== shopDomain) {
+        console.warn(
+          `[shopify] install stale_state_overwrite: new_shop=${shopDomain}; stale_shop=${existingState.shopDomain}; stale_nonce_prefix=${existingState.nonce.slice(0, 8)}; organization=${organizationId}`
+        )
+      } else {
+        console.info(
+          `[shopify] install retry_same_shop: shop=${shopDomain}; stale_nonce_prefix=${existingState.nonce.slice(0, 8)}; organization=${organizationId}`
+        )
+      }
+    }
+
     const payload = createShopifyInstallPayload({
       shopDomain,
       organizationId,
@@ -114,11 +140,11 @@ export async function GET(request: Request) {
     })
 
     return response
-  } catch {
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err)
+    console.error(`[shopify] install early_return: reason=install_error; shop=${shop}; organization=${organizationId}; error=${errMsg}`)
     const fallback = new URL("/app/connect?provider=shopify&status=invalid_shop", url.origin)
     fallback.searchParams.set("shop", shop)
-    return NextResponse.redirect(
-      fallback
-    )
+    return NextResponse.redirect(fallback)
   }
 }

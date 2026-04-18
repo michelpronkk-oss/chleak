@@ -15,9 +15,14 @@ export async function createSupabaseServerClient() {
         return cookieStore.getAll()
       },
       setAll(nextCookies) {
-        nextCookies.forEach(({ name, value, options }) => {
-          cookieStore.set(name, value, options)
-        })
+        try {
+          nextCookies.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options)
+          })
+        } catch {
+          // Server Components cannot write cookies; the read above already succeeded.
+          // Route Handlers and Server Actions will not hit this branch.
+        }
       },
     },
   })

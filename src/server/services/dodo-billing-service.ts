@@ -313,7 +313,7 @@ export async function syncSubscriptionFromDodoWebhook(input: {
   const targetByOrganization = organizationId
     ? await admin
         .from("subscriptions")
-        .select("id, organization_id, plan, status")
+        .select("id, organization_id, plan, status, dodo_subscription_id")
         .eq("organization_id", organizationId)
         .maybeSingle()
     : null
@@ -326,7 +326,7 @@ export async function syncSubscriptionFromDodoWebhook(input: {
     !targetByOrganization?.data && dodoSubscriptionId
       ? await admin
           .from("subscriptions")
-          .select("id, organization_id, plan, status")
+          .select("id, organization_id, plan, status, dodo_subscription_id")
           .eq("dodo_subscription_id", dodoSubscriptionId)
           .maybeSingle()
       : null
@@ -335,12 +335,37 @@ export async function syncSubscriptionFromDodoWebhook(input: {
     throw new Error("Failed to query subscription by Dodo subscription id.")
   }
 
-  const existing = targetByOrganization?.data ?? targetBySubscriptionId?.data ?? null
+  // Fallback: resolve by customer_id when org_id is absent from event metadata and the
+  // incoming sub_id is new (e.g. subscription renewals that don't carry original checkout metadata).
+  const targetByCustomerId =
+    !targetByOrganization?.data && !targetBySubscriptionId?.data && dodoCustomerId
+      ? await admin
+          .from("subscriptions")
+          .select("id, organization_id, plan, status, dodo_subscription_id")
+          .eq("dodo_customer_id", dodoCustomerId)
+          .maybeSingle()
+      : null
+
+  if (targetByCustomerId?.error) {
+    console.warn(
+      `[billing] syncSubscription: customer_id lookup failed; event=${input.eventType}; customer=${dodoCustomerId}; error=${targetByCustomerId.error.message}`
+    )
+  }
+
+  const existing =
+    targetByOrganization?.data ??
+    targetBySubscriptionId?.data ??
+    targetByCustomerId?.data ??
+    null
   const effectiveOrganizationId = organizationId ?? existing?.organization_id ?? null
   const effectivePlan = plan ?? getPlanFromKnownValues(existing?.plan ?? null)
   const effectiveStatus = status ?? (existing?.status as SubscriptionStatus | null) ?? null
+  const storedSubscriptionId = (existing as { dodo_subscription_id?: string | null } | null)?.dodo_subscription_id ?? null
 
   if (!effectiveOrganizationId) {
+    console.error(
+      `[billing] syncSubscription: missing_organization; event=${input.eventType}; incoming_sub=${dodoSubscriptionId ?? "none"}; customer=${dodoCustomerId ?? "none"}; org_from_payload=${organizationId ?? "none"}`
+    )
     return {
       applied: false,
       reason: "missing_organization",
@@ -358,8 +383,38 @@ export async function syncSubscriptionFromDodoWebhook(input: {
     }
   }
 
+  // Guard: reject degradation events from a different subscription attempt when the stored
+  // subscription is already active. A failed checkout attempt must not overwrite a live subscription.
+  if (
+    storedSubscriptionId &&
+    dodoSubscriptionId &&
+    storedSubscriptionId !== dodoSubscriptionId
+  ) {
+    const isStoredActive =
+      existing?.status === "active" || existing?.status === "trialing"
+    const isIncomingDegradation =
+      effectiveStatus === "past_due" ||
+      effectiveStatus === "canceled" ||
+      effectiveStatus === "incomplete"
+
+    if (isStoredActive && isIncomingDegradation) {
+      console.info(
+        `[billing] syncSubscription: ignored; event=${input.eventType}; organization=${effectiveOrganizationId}; incoming_sub=${dodoSubscriptionId}; stored_sub=${storedSubscriptionId}; stored_status=${existing?.status ?? "unknown"}; incoming_status=${effectiveStatus ?? "unknown"}; reason=stale_failed_attempt`
+      )
+      return {
+        applied: false,
+        reason: "stale_failed_attempt",
+        organizationId: effectiveOrganizationId,
+      }
+    }
+
+    console.info(
+      `[billing] syncSubscription: sub_id_mismatch_allowed; event=${input.eventType}; organization=${effectiveOrganizationId}; incoming_sub=${dodoSubscriptionId}; stored_sub=${storedSubscriptionId}; stored_status=${existing?.status ?? "unknown"}; incoming_status=${effectiveStatus ?? "unknown"}`
+    )
+  }
+
   console.info(
-    `[billing] syncSubscription: upserting; event=${input.eventType}; organization=${effectiveOrganizationId}; plan=${effectivePlan}; status=${effectiveStatus ?? "incomplete"}; subscriptionId=${dodoSubscriptionId ?? "none"}`
+    `[billing] syncSubscription: upserting; event=${input.eventType}; organization=${effectiveOrganizationId}; plan=${effectivePlan}; status=${effectiveStatus ?? "incomplete"}; incoming_sub=${dodoSubscriptionId ?? "none"}; stored_sub=${storedSubscriptionId ?? "none"}`
   )
 
   const now = new Date()

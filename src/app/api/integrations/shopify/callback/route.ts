@@ -95,9 +95,15 @@ export async function GET(request: Request) {
     })
   }
 
-  console.info(
-    `[shopify] OAuth state verified: stored_shop=${storedState.shopDomain}; callback_shop=${normalizedShop}; organization=${storedState.organizationId}`
-  )
+  if (normalizedShop !== storedState.shopDomain) {
+    console.warn(
+      `[shopify] OAuth shop_domain_mismatch: stored_shop=${storedState.shopDomain}; callback_shop=${normalizedShop}; organization=${storedState.organizationId}; reason=proceeding_with_shopify_canonical_domain`
+    )
+  } else {
+    console.info(
+      `[shopify] OAuth shop_domain_verified: shop=${normalizedShop}; organization=${storedState.organizationId}`
+    )
+  }
 
   try {
     console.info(`[shopify] token exchange start: shop=${normalizedShop}`)
