@@ -160,6 +160,7 @@ async function loadBackendSourceSignals(
         .from("scans")
         .select("store_id")
         .eq("organization_id", organizationId)
+        .eq("status", "completed")
         .in("store_id", allStoreIds),
       admin
         .from("issues")

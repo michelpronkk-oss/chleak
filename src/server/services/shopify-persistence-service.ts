@@ -4,6 +4,7 @@ import type { Database, Json } from "@/types/database"
 type StoreInsert = Database["public"]["Tables"]["stores"]["Insert"]
 type StoreIntegrationInsert =
   Database["public"]["Tables"]["store_integrations"]["Insert"]
+type ScanInsert = Database["public"]["Tables"]["scans"]["Insert"]
 type IntegrationWebhookEventInsert =
   Database["public"]["Tables"]["integration_webhook_events"]["Insert"]
 
@@ -99,9 +100,40 @@ export async function persistShopifyIntegration(input: {
   // This placeholder shows where a secure token reference would be persisted.
   void input.accessToken
 
+  const scanInsert: ScanInsert = {
+    organization_id: input.organizationId,
+    store_id: storeResult.data.id,
+    status: "queued",
+    scanned_at: new Date().toISOString(),
+    detected_issues_count: 0,
+    estimated_monthly_leakage: 0,
+  }
+
+  console.info(
+    `[shopify] scan insert start: organization=${input.organizationId}; store_id=${storeResult.data.id}`
+  )
+
+  const scanResult = await supabase
+    .from("scans")
+    .insert(scanInsert)
+    .select("id")
+    .single()
+
+  if (scanResult.error || !scanResult.data) {
+    console.error(
+      `[shopify] scan insert failed: organization=${input.organizationId}; store_id=${storeResult.data.id}; error=${JSON.stringify({ code: scanResult.error?.code, message: scanResult.error?.message, details: scanResult.error?.details, hint: scanResult.error?.hint })}`
+    )
+    // Non-fatal: store and integration are persisted; scan can be created on next sync.
+  } else {
+    console.info(
+      `[shopify] scan insert success: organization=${input.organizationId}; store_id=${storeResult.data.id}; scan_id=${scanResult.data.id}`
+    )
+  }
+
   return {
     storeId: storeResult.data.id,
     integrationId: integrationResult.data.id,
+    scanId: scanResult.data?.id ?? null,
   }
 }
 
