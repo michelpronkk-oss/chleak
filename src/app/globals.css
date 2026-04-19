@@ -378,6 +378,167 @@
     background: var(--ink-300);
     border-color: var(--line-strong);
   }
+
+  .vault-page-intro {
+    @apply space-y-2;
+  }
+
+  .vault-page-intro-title {
+    @apply text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl;
+  }
+
+  .vault-page-intro-copy {
+    @apply max-w-3xl text-sm text-muted-foreground sm:text-base;
+  }
+
+  .vault-panel-shell {
+    border: 1px solid var(--line-default);
+    border-radius: var(--r-4);
+    background: var(--ink-100);
+    overflow: hidden;
+  }
+
+  .vault-panel-head {
+    @apply flex items-center justify-between gap-3 px-4 py-3 sm:px-5;
+    border-bottom: 1px solid var(--line-subtle);
+    background: var(--ink-100);
+  }
+
+  .vault-panel-title {
+    @apply text-[0.82rem] font-medium text-foreground;
+  }
+
+  .vault-panel-meta {
+    @apply mt-0.5 font-mono text-[0.66rem] tracking-[0.05em] text-muted-foreground;
+  }
+
+  .vault-metric-grid {
+    @apply grid gap-px;
+    grid-template-columns: 1.4fr 1fr;
+    background: var(--line-default);
+    border: 1px solid var(--line-default);
+    border-radius: var(--r-4);
+    overflow: hidden;
+  }
+
+  @media (min-width: 768px) {
+    .vault-metric-grid {
+      grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    }
+  }
+
+  .vault-metric-cell {
+    background: var(--ink-100);
+    @apply px-4 py-4 sm:px-5 sm:py-5;
+  }
+
+  .vault-metric-cell-primary {
+    background: linear-gradient(180deg, oklch(0.78 0.13 75 / 0.08), transparent 60%), var(--ink-100);
+    border-right: 1px solid var(--signal-line);
+  }
+
+  .vault-metric-key {
+    @apply font-mono text-[0.62rem] tracking-[0.08em] uppercase text-muted-foreground;
+  }
+
+  .vault-metric-value {
+    @apply mt-2 font-mono text-3xl font-semibold tracking-tight tabular-nums text-foreground sm:text-4xl;
+  }
+
+  .vault-metric-value-primary {
+    color: var(--signal);
+    @apply text-4xl sm:text-5xl;
+  }
+
+  .vault-metric-delta {
+    @apply mt-3 font-mono text-[0.7rem] tracking-[0.03em] text-muted-foreground;
+  }
+
+  .vault-dashboard-grid {
+    @apply grid gap-5;
+  }
+
+  @media (min-width: 1280px) {
+    .vault-dashboard-grid {
+      grid-template-columns: 1.55fr 1fr;
+    }
+  }
+
+  .vault-queue-row {
+    display: grid;
+    grid-template-columns: 4px 74px minmax(0, 1fr) auto auto;
+    gap: 12px;
+    align-items: center;
+    border-bottom: 1px solid var(--line-subtle);
+    background: var(--ink-100);
+  }
+
+  .vault-queue-row:last-child {
+    border-bottom: 0;
+  }
+
+  .vault-queue-stripe {
+    @apply h-full;
+  }
+
+  .vault-queue-severity {
+    @apply py-3;
+  }
+
+  .vault-settings-table {
+    border-top: 1px solid var(--line-subtle);
+  }
+
+  .vault-settings-row {
+    @apply grid gap-3 px-4 py-4 sm:grid-cols-[220px_1fr_auto] sm:items-center sm:px-5;
+    border-bottom: 1px solid var(--line-subtle);
+  }
+
+  .vault-settings-key {
+    @apply text-[0.82rem] font-medium text-foreground;
+  }
+
+  .vault-settings-desc {
+    @apply mt-1 text-xs text-muted-foreground;
+  }
+
+  .vault-billing-layout {
+    @apply grid gap-5;
+  }
+
+  @media (min-width: 1024px) {
+    .vault-billing-layout {
+      grid-template-columns: 220px minmax(0, 1fr);
+    }
+  }
+
+  .vault-side-nav {
+    @apply grid gap-1 text-[0.82rem];
+  }
+
+  .vault-side-nav-item {
+    @apply rounded-md px-2.5 py-1.5 text-muted-foreground transition-colors;
+  }
+
+  .vault-side-nav-item-active {
+    background: var(--ink-200);
+    color: var(--text-primary);
+  }
+
+  .vault-source-grid {
+    @apply grid gap-px rounded-lg border border-border/70;
+    background: var(--line-default);
+  }
+
+  @media (min-width: 1024px) {
+    .vault-source-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .vault-source-cell {
+    @apply bg-card p-5 sm:p-6;
+  }
 }
 
 @keyframes heroConsoleFloat {

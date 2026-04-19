@@ -73,20 +73,23 @@ export function AppShellClient({
     <div className="relative min-h-screen">
       <form id={signOutFormId} action="/api/auth/sign-out?next=/" method="POST" className="hidden" />
       {/* Desktop sidebar */}
-      <aside className="hidden w-64 flex-col border-r border-border/60 bg-sidebar/75 px-4 py-5 backdrop-blur lg:fixed lg:inset-y-0 lg:flex xl:w-72">
+      <aside className="hidden w-64 flex-col border-r border-border/60 bg-sidebar/60 px-4 py-5 backdrop-blur lg:fixed lg:inset-y-0 lg:flex xl:w-72">
         <div className="px-1">
           <CheckoutLeakLogo />
         </div>
 
+        <p className="mt-6 px-3 font-mono text-[0.62rem] tracking-[0.08em] uppercase text-muted-foreground/70">
+          Workspace
+        </p>
         <nav className="mt-7 space-y-0.5">
           {navigationItems.map((item) => (
             <Link
               key={item.label}
               href={item.href}
               className={cn(
-                "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[13px] transition-colors",
+                "relative flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] transition-colors",
                 isNavActive(pathname, item.href)
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  ? "bg-sidebar-accent/80 text-sidebar-accent-foreground font-medium before:absolute before:-left-2 before:top-2 before:bottom-2 before:w-[2px] before:rounded-full before:bg-primary"
                   : "text-muted-foreground hover:bg-sidebar-accent/40 hover:text-foreground"
               )}
             >
@@ -96,8 +99,8 @@ export function AppShellClient({
           ))}
         </nav>
 
-        <div className="mt-6 space-y-1 rounded-xl border border-border/55 bg-background/25 p-3">
-          <p className="px-1 font-mono text-[0.65rem] tracking-[0.1em] uppercase text-primary/55">
+        <div className="mt-6 space-y-1 rounded-lg border border-border/55 bg-background/25 p-3">
+          <p className="px-1 font-mono text-[0.62rem] tracking-[0.1em] uppercase text-muted-foreground/70">
             Live Monitors
           </p>
           {liveMonitors.length ? (

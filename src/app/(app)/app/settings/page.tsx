@@ -16,52 +16,73 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-5 pb-24 lg:pb-4">
-      <section className="space-y-2">
+      <section className="vault-page-intro">
         <p className="data-mono text-primary">Settings</p>
-        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
+        <h1 className="vault-page-intro-title">
           Account and Workspace Settings
         </h1>
-        <p className="text-sm text-muted-foreground sm:text-base">
+        <p className="vault-page-intro-copy">
           Manage operator profile, workspace defaults, and notification behavior.
         </p>
       </section>
 
-      <section id="profile" className="surface-card p-4 sm:p-5 lg:p-6 scroll-mt-24">
-        <p className="data-mono text-primary">Profile</p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div>
-            <p className="text-sm text-muted-foreground">Name</p>
-            <p className="mt-1 text-sm">{data.user.fullName}</p>
+      <section id="profile" className="vault-panel-shell scroll-mt-24">
+        <header className="vault-panel-head">
+          <p className="vault-panel-title">Operator profile</p>
+          <p className="vault-panel-meta">Identity and role</p>
+        </header>
+        <div className="vault-settings-table">
+          <div className="vault-settings-row">
+            <div>
+              <p className="vault-settings-key">Name</p>
+              <p className="vault-settings-desc">Display name in workspace and activity log.</p>
+            </div>
+            <p className="text-sm">{data.user.fullName}</p>
+            <button className="rounded-md border border-border/70 px-3 py-1.5 text-xs text-muted-foreground">Edit</button>
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Email</p>
-            <p className="mt-1 text-sm">{data.user.email}</p>
+          <div className="vault-settings-row">
+            <div>
+              <p className="vault-settings-key">Email</p>
+              <p className="vault-settings-desc">Primary login and notifications destination.</p>
+            </div>
+            <p className="text-sm">{data.user.email}</p>
+            <button className="rounded-md border border-border/70 px-3 py-1.5 text-xs text-muted-foreground">Change</button>
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Role</p>
-            <p className="mt-1 text-sm">{data.user.roleLabel}</p>
+          <div className="vault-settings-row">
+            <div>
+              <p className="vault-settings-key">Role</p>
+              <p className="vault-settings-desc">Workspace permissions level.</p>
+            </div>
+            <p className="text-sm">{data.user.roleLabel}</p>
+            <span className="font-mono text-[0.66rem] tracking-[0.06em] text-muted-foreground">fixed</span>
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Timezone</p>
-            <p className="mt-1 text-sm">{data.user.timezone}</p>
+          <div className="vault-settings-row">
+            <div>
+              <p className="vault-settings-key">Timezone</p>
+              <p className="vault-settings-desc">Used for digest scheduling and timestamps.</p>
+            </div>
+            <p className="text-sm">{data.user.timezone}</p>
+            <button className="rounded-md border border-border/70 px-3 py-1.5 text-xs text-muted-foreground">Update</button>
           </div>
         </div>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[1.35fr_1fr]">
-        <article className="surface-card p-4 sm:p-5 lg:p-6">
-          <p className="data-mono text-primary">Workspace Context</p>
-          <div className="mt-4 space-y-3">
+      <section className="vault-panel-shell">
+        <header className="vault-panel-head">
+          <p className="vault-panel-title">Workspace controls</p>
+          <p className="vault-panel-meta">{data.organization.name}</p>
+        </header>
+        <div className="vault-settings-table">
+          <div className="vault-settings-row">
             <div>
-              <p className="text-sm text-muted-foreground">Organization</p>
-              <p className="mt-1 text-sm">{data.organization.name}</p>
+              <p className="vault-settings-key">Connected stores</p>
+              <p className="vault-settings-desc">Sources available for monitoring.</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Connected stores</p>
               {data.connectedStores.length ? (
-                <ul className="mt-2 space-y-2">
+                <ul className="space-y-2">
                   {data.connectedStores.map((store) => (
-                    <li key={store.id} className="flex items-center justify-between rounded-lg border border-border/70 bg-background/35 px-3 py-2">
+                    <li key={store.id} className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/25 px-3 py-2">
                       <span className="text-sm">{store.name}</span>
                       <Link
                         href={store.href}
@@ -73,52 +94,66 @@ export default async function SettingsPage() {
                   ))}
                 </ul>
               ) : (
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   No connected sources yet. Complete onboarding to populate workspace context.
                 </p>
               )}
             </div>
+            <Link
+              href="/app/connect"
+              className="rounded-md border border-border/70 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Manage
+            </Link>
           </div>
-        </article>
-
-        <article className="surface-card p-4 sm:p-5 lg:p-6">
-          <p className="data-mono text-primary">Notifications</p>
-          <dl className="mt-4 space-y-3 text-sm">
-            <div className="flex items-center justify-between">
-              <dt className="text-muted-foreground">Issue alerts</dt>
-              <dd>{data.notificationPreferences.issueAlerts}</dd>
+          <div className="vault-settings-row">
+            <div>
+              <p className="vault-settings-key">Issue alerts</p>
+              <p className="vault-settings-desc">Critical notification routing.</p>
             </div>
-            <div className="flex items-center justify-between">
-              <dt className="text-muted-foreground">Weekly digest</dt>
-              <dd>{data.notificationPreferences.weeklyDigestDay}</dd>
+            <p className="text-sm">{data.notificationPreferences.issueAlerts}</p>
+            <button className="rounded-md border border-border/70 px-3 py-1.5 text-xs text-muted-foreground">Edit</button>
+          </div>
+          <div className="vault-settings-row">
+            <div>
+              <p className="vault-settings-key">Weekly digest</p>
+              <p className="vault-settings-desc">Digest schedule for workspace reporting.</p>
             </div>
-            <div className="flex items-center justify-between">
-              <dt className="text-muted-foreground">Billing alerts</dt>
-              <dd>{data.notificationPreferences.billingAlerts ? "Enabled" : "Disabled"}</dd>
+            <p className="text-sm">{data.notificationPreferences.weeklyDigestDay}</p>
+            <button className="rounded-md border border-border/70 px-3 py-1.5 text-xs text-muted-foreground">Edit</button>
+          </div>
+          <div className="vault-settings-row">
+            <div>
+              <p className="vault-settings-key">Billing alerts</p>
+              <p className="vault-settings-desc">Payment and subscription state notices.</p>
             </div>
-          </dl>
-          <Link
-            href="/app/billing"
-            className="mt-5 inline-flex items-center gap-1 text-sm text-primary transition-opacity hover:opacity-80"
-          >
-            Open billing settings <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </article>
+            <p className="text-sm">{data.notificationPreferences.billingAlerts ? "Enabled" : "Disabled"}</p>
+            <Link
+              href="/app/billing"
+              className="inline-flex items-center gap-1 rounded-md border border-border/70 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Billing <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </div>
       </section>
 
-      <section className="surface-card p-4 sm:p-5 lg:p-6">
-        <p className="data-mono text-primary">Account Controls</p>
-        <div className="mt-4 flex flex-wrap gap-3">
+      <section className="vault-panel-shell">
+        <header className="vault-panel-head">
+          <p className="vault-panel-title">Account controls</p>
+          <p className="vault-panel-meta">Export and session actions</p>
+        </header>
+        <div className="flex flex-wrap gap-3 px-4 py-4 sm:px-5">
           <button
             type="button"
-            className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            className="rounded-md border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             Export workspace settings
           </button>
           <form action="/api/auth/sign-out?next=/" method="POST">
             <button
               type="submit"
-              className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-2.5 text-sm text-destructive transition-opacity hover:opacity-85"
+              className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-2.5 text-sm text-destructive transition-opacity hover:opacity-85"
             >
               Sign out
             </button>

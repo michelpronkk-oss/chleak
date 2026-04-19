@@ -156,12 +156,12 @@ export default async function ConnectPage({
   return (
     <div className="space-y-5 pb-24 lg:pb-4">
       {/* Page header */}
-      <section className="space-y-1">
+      <section className="vault-page-intro">
         <p className="data-mono text-primary">Workspace Setup</p>
-        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
+        <h1 className="vault-page-intro-title">
           Connect your first revenue source
         </h1>
-        <p className="max-w-xl text-sm text-muted-foreground sm:text-base">
+        <p className="vault-page-intro-copy">
           CheckoutLeak needs one data source to begin detecting leakage. Connect Shopify for checkout signals or Stripe for billing recovery analysis.
         </p>
         <WorkspaceProgressSteps currentStep={currentProgressStep} />
@@ -171,7 +171,7 @@ export default async function ConnectPage({
       {showStatusMessage ? (
         <section
           className={cn(
-            "surface-card border p-4",
+            "vault-panel-shell border p-4",
             statusIsError
               ? "border-destructive/40 bg-destructive/[0.06]"
               : "border-primary/30 bg-primary/[0.06]"
@@ -189,9 +189,9 @@ export default async function ConnectPage({
       ) : null}
 
       {/* Source cards */}
-      <section className="grid gap-4 lg:grid-cols-2">
+      <section className="vault-source-grid">
         {/* Shopify */}
-        <article className="surface-card p-5 sm:p-6">
+        <article className="vault-source-cell">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="font-mono text-[0.68rem] tracking-[0.1em] uppercase text-primary/60">
@@ -266,7 +266,7 @@ export default async function ConnectPage({
         </article>
 
         {/* Stripe */}
-        <article className="surface-card p-5 sm:p-6">
+        <article className="vault-source-cell">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="font-mono text-[0.68rem] tracking-[0.1em] uppercase text-primary/60">
@@ -330,7 +330,7 @@ export default async function ConnectPage({
       </section>
 
       {/* Tertiary actions */}
-      <section className="surface-card p-4 sm:p-5">
+      <section className="vault-panel-shell p-4 sm:p-5">
         <p className="text-sm text-muted-foreground">
           Initial scans complete in minutes. CheckoutLeak then opens your first issue queue ranked by revenue impact.
         </p>

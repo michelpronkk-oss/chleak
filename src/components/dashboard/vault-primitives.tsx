@@ -45,6 +45,13 @@ const urgencyLabels: Record<SuggestedAction["urgency"], string> = {
   watch: "Watch",
 }
 
+const severityShortLabel: Record<IssueSeverity, string> = {
+  critical: "Crit",
+  high: "High",
+  medium: "Med",
+  low: "Low",
+}
+
 export function cleanPrimaryCopy(text: string) {
   return text.replace(/^simulation:\s*/i, "")
 }
@@ -57,6 +64,10 @@ export function formatSourceLabel(source: string) {
 
 export function formatImpactLabel(value: number) {
   return value > 0 ? formatCompactCurrency(value) : "Impact pending"
+}
+
+export function formatSeverityShortLabel(severity: IssueSeverity) {
+  return severityShortLabel[severity]
 }
 
 export function getSeverityConfidence(severity: IssueSeverity) {
@@ -172,6 +183,68 @@ export function QueueEventRow({
         >
           {amount}
         </p>
+      </div>
+    </article>
+  )
+}
+
+export function VaultPanel({
+  title,
+  meta,
+  cta,
+  children,
+  className,
+}: {
+  title: string
+  meta?: string
+  cta?: ReactNode
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <section className={cn("vault-panel-shell", className)}>
+      <header className="vault-panel-head">
+        <div className="min-w-0">
+          <p className="vault-panel-title">{title}</p>
+          {meta ? <p className="vault-panel-meta">{meta}</p> : null}
+        </div>
+        {cta ? <div>{cta}</div> : null}
+      </header>
+      <div>{children}</div>
+    </section>
+  )
+}
+
+export function RankedQueueRow({
+  severity,
+  title,
+  meta,
+  amount,
+  age,
+}: {
+  severity: IssueSeverity
+  title: string
+  meta: string
+  amount: string
+  age?: string
+}) {
+  return (
+    <article className="vault-queue-row">
+      <div className={cn("vault-queue-stripe", severityStripeStyles[severity])} />
+      <div className="vault-queue-severity">
+        <SeverityPill severity={severity} className="w-[3.75rem] justify-center px-0 py-0.5" />
+      </div>
+      <div className="min-w-0 py-3">
+        <p className="truncate text-sm text-foreground">{title}</p>
+        <p className="mt-1 font-mono text-[0.66rem] tracking-[0.05em] text-muted-foreground">{meta}</p>
+      </div>
+      <div className="py-3 text-right">
+        {age ? (
+          <p className="font-mono text-[0.66rem] tracking-[0.05em] text-muted-foreground">{age}</p>
+        ) : null}
+      </div>
+      <div className="py-3 pr-3 text-right">
+        <p className="font-mono text-[0.82rem] tracking-[0.03em] text-signal tabular-nums">{amount}</p>
       </div>
     </article>
   )

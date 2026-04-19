@@ -2,22 +2,19 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { ArrowRight } from "lucide-react"
 
-import { DecisionBanner } from "@/components/dashboard/decision-banner"
-import { IssueCard } from "@/components/dashboard/issue-card"
 import { PendingScanLiveRefresh } from "@/components/dashboard/pending-scan-live-refresh"
-import { RevenueOpportunityPanel } from "@/components/dashboard/revenue-opportunity-panel"
-import { ScanActivity } from "@/components/dashboard/scan-activity"
-import { SuggestedActions } from "@/components/dashboard/suggested-actions"
 import {
   MetaPill,
   QueueEventRow,
+  RankedQueueRow,
   SeverityPill,
+  VaultPanel,
   cleanPrimaryCopy,
   formatImpactLabel,
   formatSourceLabel,
 } from "@/components/dashboard/vault-primitives"
 import { ProcessingStagePanel } from "@/components/dashboard/processing-stage-panel"
-import { formatCompactCurrency } from "@/lib/format"
+import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
 import { getDashboardJourneyData } from "@/server/services/app-service"
 import {
   getFallbackFixPlanHref,
@@ -252,7 +249,7 @@ export default async function DashboardOverviewPage() {
             {journey.sourceLabel} source connected. Monitoring is active.
           </h1>
           <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-            First scan complete — insufficient signal for leakage analysis. Monitoring continues.
+            First scan complete, insufficient signal for leakage analysis. Monitoring continues.
           </p>
         </section>
 
@@ -363,116 +360,182 @@ export default async function DashboardOverviewPage() {
   const fallbackFixPlanHref = getFallbackFixPlanHref()
   const primaryFixPlanHref =
     getFixPlanHrefForIssue(primaryIssue.id) ?? fallbackFixPlanHref
-
-  const actionQueue = snapshot.suggestedActions.map((action) => {
-    const fixPlanHref = action.fixPlanId
-      ? `/app/fix-plans/${action.fixPlanId}`
-      : (getFixPlanHrefForIssue(action.issueIds[0]) ?? fallbackFixPlanHref)
-
-    return {
-      ...action,
-      fixPlanHref,
-    }
-  })
+  const rankedIssues = [...snapshot.issues].sort(
+    (a, b) => b.estimatedMonthlyRevenueImpact - a.estimatedMonthlyRevenueImpact
+  )
+  const topMove = snapshot.suggestedActions[0]
+  const topMoveHref = topMove
+    ? topMove.fixPlanId
+      ? `/app/fix-plans/${topMove.fixPlanId}`
+      : (getFixPlanHrefForIssue(topMove.issueIds[0]) ?? fallbackFixPlanHref)
+    : primaryFixPlanHref
+  const recoveredWindow = snapshot.revenueOpportunities.reduce(
+    (total, item) => total + item.estimatedMonthlyRevenueImpact,
+    0
+  )
+  const latestScanAt =
+    snapshot.scans
+      .map((scan) => scan.scannedAt)
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null
 
   return (
     <div className="space-y-5 pb-24 lg:pb-2">
-      <section className="space-y-2">
-        <p className="data-mono text-primary">Revenue Intelligence</p>
-        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
-          {snapshot.organization.name}
-        </h1>
-        <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-          Prioritized leak detection across checkout, payment setup, and billing recovery flows.
+      <section className="vault-page-intro">
+        <p className="data-mono text-primary">Revenue Workspace</p>
+        <h1 className="vault-page-intro-title">Revenue at risk | last 30 days</h1>
+        <p className="font-mono text-[0.68rem] tracking-[0.05em] text-muted-foreground">
+          Rolling window | ranked by exposure | latest scan{" "}
+          {latestScanAt ? formatRelativeTimestamp(latestScanAt) : "pending"}
+        </p>
+        <p className="vault-page-intro-copy">
+          {snapshot.organization.name} operator queue with explicit next move, source health, and supporting evidence.
         </p>
       </section>
 
-      <DecisionBanner issue={primaryIssue} fixPlanHref={primaryFixPlanHref} />
-
-      <section className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
-        <article className="surface-card p-4 sm:p-5 lg:p-6">
-          <p className="data-mono text-muted-foreground">Command Summary</p>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="text-sm text-muted-foreground">Revenue at risk · 30d</p>
-              <p className="mt-1 font-mono text-3xl font-semibold tracking-tight text-signal tabular-nums">
-                {formatCompactCurrency(snapshot.summary.estimatedMonthlyLeakage)}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Active findings</p>
-              <p className="mt-1 text-3xl font-semibold tracking-tight">
-                {snapshot.summary.activeIssues}
-              </p>
-            </div>
-          </div>
-          <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-border/60 pt-4 text-xs">
-            <MetaPill>
-              Highest impact: {formatImpactLabel(primaryIssue.estimatedMonthlyRevenueImpact)}
-            </MetaPill>
-            <MetaPill>
-              Monitored stores: {snapshot.summary.monitoredStores}
-            </MetaPill>
-            <MetaPill className="text-primary">Confidence weighted prioritization enabled</MetaPill>
+      <section className="vault-metric-grid">
+        <article className="vault-metric-cell vault-metric-cell-primary">
+          <p className="vault-metric-key">Revenue at risk</p>
+          <p className="vault-metric-value vault-metric-value-primary">
+            {formatCompactCurrency(snapshot.summary.estimatedMonthlyLeakage)}
+          </p>
+          <p className="vault-metric-delta">
+            Top finding {formatImpactLabel(primaryIssue.estimatedMonthlyRevenueImpact)}
+          </p>
+        </article>
+        <article className="vault-metric-cell">
+          <p className="vault-metric-key">Open findings</p>
+          <p className="vault-metric-value">{snapshot.summary.activeIssues}</p>
+          <div className="vault-metric-delta flex flex-wrap gap-2">
+            <SeverityPill severity="critical" className="w-auto px-2 py-0.5" />
+            <SeverityPill severity="high" className="w-auto px-2 py-0.5" />
           </div>
         </article>
-
-        <article className="surface-card p-4 sm:p-5 lg:p-6">
-          <p className="data-mono text-primary">Next Operator Move</p>
-          <h3 className="mt-2 text-lg font-semibold tracking-tight">
-            {primaryIssue.title}
-          </h3>
-          <div className="mt-2">
-            <SeverityPill severity={primaryIssue.severity} />
-          </div>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {cleanPrimaryCopy(primaryIssue.recommendedAction)}
+        <article className="vault-metric-cell">
+          <p className="vault-metric-key">Recovered potential</p>
+          <p className="vault-metric-value">{formatCompactCurrency(recoveredWindow)}</p>
+          <p className="vault-metric-delta">From ranked fix opportunities</p>
+        </article>
+        <article className="vault-metric-cell">
+          <p className="vault-metric-key">Sources</p>
+          <p className="vault-metric-value">
+            {snapshot.summary.monitoredStores}
+            <span className="ml-1 text-xl text-muted-foreground">live</span>
           </p>
-          <Link
-            href={primaryFixPlanHref}
-            className="marketing-primary-cta mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
-          >
-            Review action brief
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Direct execution path for the highest impact leak.
-          </p>
+          <p className="vault-metric-delta">Coverage tracked in workspace</p>
         </article>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[1.7fr,1fr]">
+      <section className="vault-dashboard-grid">
         <div className="space-y-5">
-          <SuggestedActions actions={actionQueue} />
+          <VaultPanel
+            title={`Leak queue | ${rankedIssues.length} open`}
+            meta="Sorted by exposure"
+            cta={<MetaPill>{snapshot.summary.monitoredStores} sources</MetaPill>}
+          >
+            {rankedIssues.length ? (
+              rankedIssues.map((issue) => (
+                <RankedQueueRow
+                  key={issue.id}
+                  severity={issue.severity}
+                  title={issue.title}
+                  meta={`${formatSourceLabel(issue.source)} | ${cleanPrimaryCopy(issue.recommendedAction)}`}
+                  amount={formatImpactLabel(issue.estimatedMonthlyRevenueImpact)}
+                  age={formatRelativeTimestamp(issue.detectedAt)}
+                />
+              ))
+            ) : (
+              <div className="px-5 py-8 text-sm text-muted-foreground">No findings. Monitoring active.</div>
+            )}
+          </VaultPanel>
 
-          <section className="surface-card space-y-4 p-4 sm:p-5">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold">Findings</h2>
-              <p className="data-mono text-muted-foreground">
-                {snapshot.issues.length} items
-              </p>
-            </div>
-            <div className="space-y-4">
-              {snapshot.issues.length ? (
-                snapshot.issues.map((issue) => (
-                  <IssueCard
-                    key={issue.id}
-                    issue={issue}
-                    fixPlanHref={getFixPlanHrefForIssue(issue.id) ?? fallbackFixPlanHref}
-                  />
+          <VaultPanel
+            title="Evidence | latest events"
+            meta={latestScanAt ? `Last scan ${formatRelativeTimestamp(latestScanAt)}` : "Awaiting scans"}
+          >
+            <div className="space-y-1.5 px-4 py-3 font-mono text-[0.68rem] tracking-[0.03em] text-muted-foreground sm:px-5">
+              {snapshot.scans.length ? (
+                snapshot.scans.slice(0, 6).map((scan) => (
+                  <p key={scan.id}>
+                    {formatRelativeTimestamp(scan.scannedAt)} | scan {scan.id.slice(-4)} | {scan.detectedIssuesCount} findings |{" "}
+                    {formatCompactCurrency(scan.estimatedMonthlyLeakage)}
+                  </p>
                 ))
               ) : (
-                <div className="surface-card border-dashed p-8 text-center text-sm text-muted-foreground">
-                  No findings. Monitoring active.
-                </div>
+                <p>No evidence lines yet. First scan will populate this region.</p>
               )}
             </div>
-          </section>
+          </VaultPanel>
         </div>
 
         <div className="space-y-5">
-          <RevenueOpportunityPanel opportunities={snapshot.revenueOpportunities} />
-          <ScanActivity scans={snapshot.scans} />
+          <section className="vault-panel-shell border-[color:var(--signal-line)] bg-[linear-gradient(180deg,var(--signal-dim),var(--ink-100)_60%)] p-5 sm:p-6">
+            <p className="vault-metric-key text-[color:var(--signal)]">Recommended next move</p>
+            <h2 className="mt-2 text-lg font-semibold tracking-tight text-foreground">
+              {topMove?.title ?? primaryIssue.title}
+            </h2>
+            <p className="mt-2 text-sm leading-[1.65] text-muted-foreground">
+              {topMove?.description ?? cleanPrimaryCopy(primaryIssue.recommendedAction)}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <SeverityPill severity={primaryIssue.severity} />
+              <MetaPill>{formatImpactLabel(primaryIssue.estimatedMonthlyRevenueImpact)}</MetaPill>
+            </div>
+            <Link
+              href={topMoveHref}
+              className="marketing-primary-cta mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
+            >
+              Open fix path
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </section>
+
+          <VaultPanel
+            title="Source health"
+            meta={latestScanAt ? `Scan ${formatRelativeTimestamp(latestScanAt)}` : "No scan data"}
+          >
+            <div className="divide-y divide-border/60">
+              {snapshot.stores.map((store) => {
+                const storeIssues = rankedIssues.filter((issue) => issue.storeId === store.id).length
+                return (
+                  <div key={store.id} className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3 sm:px-5">
+                    <span
+                      className={`h-2 w-2 rounded-full ${storeIssues ? "bg-[color:var(--sev-high)]" : "bg-[color:var(--ok)]"}`}
+                    />
+                    <div>
+                      <p className="font-mono text-[0.74rem] tracking-[0.04em] text-foreground">{store.name}</p>
+                      <p className="font-mono text-[0.64rem] tracking-[0.04em] text-muted-foreground">
+                        {store.platform} | {storeIssues} open
+                      </p>
+                    </div>
+                    <p className="font-mono text-[0.66rem] tracking-[0.04em] text-muted-foreground">
+                      {store.timezone}
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+          </VaultPanel>
+
+          <VaultPanel title="Severity key" meta="Decision language">
+            <div className="space-y-2.5 px-4 py-3 text-xs text-muted-foreground sm:px-5">
+              <div className="grid grid-cols-[68px_1fr] items-center gap-2">
+                <SeverityPill severity="critical" className="w-[4rem] justify-center px-0 py-0.5" />
+                <span>Leaking now and compounding</span>
+              </div>
+              <div className="grid grid-cols-[68px_1fr] items-center gap-2">
+                <SeverityPill severity="high" className="w-[4rem] justify-center px-0 py-0.5" />
+                <span>Active loss and immediate queue item</span>
+              </div>
+              <div className="grid grid-cols-[68px_1fr] items-center gap-2">
+                <SeverityPill severity="medium" className="w-[4rem] justify-center px-0 py-0.5" />
+                <span>Confirmed leak, schedule this week</span>
+              </div>
+              <div className="grid grid-cols-[68px_1fr] items-center gap-2">
+                <SeverityPill severity="low" className="w-[4rem] justify-center px-0 py-0.5" />
+                <span>Watch list only</span>
+              </div>
+            </div>
+          </VaultPanel>
         </div>
       </section>
     </div>
