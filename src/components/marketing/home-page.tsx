@@ -104,24 +104,14 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
   return (
     <div className="relative" style={{ overflowX: "clip" }}>
       {/* Hero */}
-      <section className="relative mx-auto flex min-h-[calc(100svh-3.25rem)] w-full max-w-6xl flex-col px-5 pt-[calc(env(safe-area-inset-top)+2.75rem)] min-[390px]:pt-[calc(env(safe-area-inset-top)+3rem)] sm:block sm:min-h-0 sm:px-8 sm:pb-20 sm:pt-16 lg:pb-24 lg:pt-20">
-        {/* Desktop hero bloom */}
+      <section className="relative mx-auto flex min-h-[calc(100svh-1rem)] w-full max-w-6xl flex-col px-5 pt-[calc(env(safe-area-inset-top)+2.75rem)] min-[390px]:pt-[calc(env(safe-area-inset-top)+3rem)] sm:block sm:min-h-0 sm:px-8 sm:pb-20 sm:pt-16 lg:pb-24 lg:pt-20">
+        {/* Desktop hero bloom — near-invisible ambient depth, desktop only */}
         <div
           aria-hidden
-          className="pointer-events-none absolute left-1/2 top-0 hidden h-[560px] w-[1200px] -translate-x-1/2 blur-[120px] lg:block"
+          className="pointer-events-none absolute left-1/2 top-0 hidden h-[480px] w-[1000px] -translate-x-1/2 blur-[130px] lg:block"
           style={{
             background:
-              "radial-gradient(70% 50% at 50% 0%, oklch(0.78 0.13 75 / 0.03), transparent 100%)",
-          }}
-        />
-
-        {/* Mobile hero bloom */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-[420px] blur-[90px] lg:hidden"
-          style={{
-            background:
-              "radial-gradient(80% 55% at 50% 0%, oklch(0.78 0.13 75 / 0.045), transparent 100%)",
+              "radial-gradient(70% 50% at 50% 0%, oklch(0.78 0.13 75 / 0.025), transparent 100%)",
           }}
         />
 
@@ -181,7 +171,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
         </div>
 
         {/* Support strip — compositional anchor at the fold, mobile only */}
-        <div className="pb-5 pt-6 sm:hidden">
+        <div className="pb-9 pt-6 sm:hidden">
           <MobileHeroSupportStrip />
         </div>
       </section>
@@ -423,14 +413,22 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
         <FadeIn delay={0.06}>
           <div
             className="relative overflow-hidden rounded-xl px-5 py-8 text-center sm:px-10 sm:py-11 lg:px-12 lg:py-12"
-            style={{ border: "1px solid oklch(0.3776 0.0204 254.66 / 0.4)" }}
+            style={{ border: "1px solid color-mix(in oklab, var(--signal-line) 55%, var(--line-default) 45%)" }}
           >
+            <div
+              aria-hidden
+              className="absolute inset-x-0 top-0 h-px rounded-t-xl"
+              style={{
+                background:
+                  "linear-gradient(to right, transparent, oklch(0.78 0.13 75 / 0.22), transparent)",
+              }}
+            />
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0 -z-10"
               style={{
                 background:
-                  "radial-gradient(ellipse at 50% 0%, oklch(0.78 0.13 75 / 0.04), transparent 70%)",
+                  "radial-gradient(ellipse at 50% 0%, oklch(0.78 0.13 75 / 0.045), transparent 65%)",
               }}
             />
 

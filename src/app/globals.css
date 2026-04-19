@@ -274,7 +274,7 @@
   body {
     @apply bg-background text-foreground;
     background-image:
-      radial-gradient(1100px 680px at 88% -12%, oklch(0.78 0.13 75 / 0.055), transparent 62%),
+      radial-gradient(1100px 680px at 88% -12%, oklch(0.78 0.13 75 / 0.028), transparent 62%),
       linear-gradient(180deg, oklch(0.11 0.006 250 / 0.22), transparent 50%);
   }
   html {
@@ -312,8 +312,8 @@
   .vault-button-primary,
   .marketing-primary-cta {
     @apply border bg-foreground text-background transition-colors;
-    border-color: color-mix(in oklab, var(--text-primary) 85%, transparent);
-    box-shadow: none;
+    border-color: color-mix(in oklab, var(--signal) 20%, var(--text-primary) 80%);
+    box-shadow: 0 0 22px oklch(0.78 0.13 75 / 0.11), 0 1px 4px oklch(0 0 0 / 0.3);
   }
 
   .vault-button-primary:hover,
@@ -333,7 +333,7 @@
 
   .vault-kicker-pill {
     @apply inline-flex items-center gap-2 rounded-md border px-2.5 py-1 font-mono text-[0.64rem] tracking-[0.08em] uppercase;
-    border-color: var(--line-default);
+    border-color: color-mix(in oklab, var(--signal-line) 55%, var(--line-default) 45%);
     background: var(--ink-100);
     color: var(--text-tertiary);
   }
