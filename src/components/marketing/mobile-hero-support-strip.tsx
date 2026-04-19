@@ -3,41 +3,62 @@
 import { useEffect, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 
-const supportStates = ["Checkout friction", "Payment method gaps", "Billing recovery"]
+const supportStates = [
+  { label: "Checkout friction", status: "High priority" },
+  { label: "Payment method gaps", status: "Coverage gap" },
+  { label: "Billing recovery", status: "Recovery gap" },
+]
 
 export function MobileHeroSupportStrip() {
   const [activeIndex, setActiveIndex] = useState(0)
   const prefersReducedMotion = useReducedMotion()
+  const visibleStates = [0, 1, 2].map((offset) => {
+    return supportStates[(activeIndex + offset) % supportStates.length]
+  })
 
   useEffect(() => {
     const interval = window.setInterval(() => {
       setActiveIndex((current) => (current + 1) % supportStates.length)
-    }, 3200)
+    }, 3000)
 
     return () => window.clearInterval(interval)
   }, [])
 
   return (
-    <div className="mx-auto w-full max-w-sm rounded-lg border border-border/55 bg-card/28 px-3.5 py-2.5">
-      <p className="font-mono text-[0.55rem] tracking-[0.08em] uppercase text-muted-foreground/48">
-        Signal focus
-      </p>
-      <div className="mt-1.5 h-5 overflow-hidden">
-        <AnimatePresence mode="wait">
-          <motion.p
-            key={supportStates[activeIndex]}
-            initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 5 }}
+    <div className="mx-auto w-full max-w-sm">
+      <div className="h-[5.6rem] overflow-hidden">
+        <AnimatePresence initial={false} mode="wait">
+          <motion.div
+            key={activeIndex}
+            initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0.85, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -5 }}
-            transition={{ duration: 0.42, ease: [0.22, 0.61, 0.36, 1] }}
-            className="font-mono text-[0.7rem] tracking-[0.05em] uppercase text-primary/80"
+            exit={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0.8, y: -10 }}
+            transition={{ duration: 0.55, ease: [0.22, 0.61, 0.36, 1] }}
+            className="space-y-2"
           >
-            {supportStates[activeIndex]}
-          </motion.p>
+            {visibleStates.map((state, index) => (
+              <div
+                key={`${state.label}-${index}`}
+                className={[
+                  "flex items-center justify-between rounded-md border px-3 py-1.5",
+                  index === 0
+                    ? "border-border/35 bg-card/18 opacity-70"
+                    : index === 1
+                      ? "border-border/45 bg-card/24 opacity-85"
+                      : "border-primary/25 bg-card/32",
+                ].join(" ")}
+              >
+                <span className="font-mono text-[0.58rem] tracking-[0.08em] uppercase text-foreground/90">
+                  {state.label}
+                </span>
+                <span className="font-mono text-[0.56rem] tracking-[0.06em] uppercase text-primary/75">
+                  {state.status}
+                </span>
+              </div>
+            ))}
+          </motion.div>
         </AnimatePresence>
       </div>
-      <p className="mt-1 text-[0.69rem] text-muted-foreground/62">Ranked by impact</p>
     </div>
   )
 }
-

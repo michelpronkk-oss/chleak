@@ -201,7 +201,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                 </div>
               )}
 
-              <div className="mx-auto mt-6 sm:hidden">
+              <div className="mx-auto mt-7 sm:hidden">
                 <MobileHeroSupportStrip />
               </div>
             </div>
