@@ -96,6 +96,11 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
   const isApproved = accessState === "approved"
   const isPending = accessState === "pending"
   const showRequestForm = accessState === "unknown"
+  const mobileHeroStateLabel = isApproved
+    ? "Access active"
+    : isPending
+      ? "Under review"
+      : "Private intake"
   const mobileOrderedPlans = [
     ...pricingPlans.filter((p) => p.recommended),
     ...pricingPlans.filter((p) => !p.recommended),
@@ -114,7 +119,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
       />
 
       {/* Hero */}
-      <section className="relative mx-auto min-h-[88svh] w-full max-w-6xl px-5 pb-14 pt-6 sm:min-h-0 sm:px-8 sm:pb-20 sm:pt-16 lg:pb-24 lg:pt-20">
+      <section className="relative mx-auto min-h-[88svh] w-full max-w-6xl px-5 pb-12 pt-6 sm:min-h-0 sm:px-8 sm:pb-20 sm:pt-16 lg:pb-24 lg:pt-20">
         <div
           aria-hidden
           className="pointer-events-none absolute left-1/2 top-[-34px] hidden h-[640px] w-[1280px] -translate-x-1/2 blur-[96px] lg:block"
@@ -200,6 +205,17 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                 </div>
               )}
 
+              <div className="mx-auto mt-4 w-full max-w-sm sm:hidden">
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-border/55 bg-card/28 px-3 py-2">
+                  <span className="font-mono text-[0.58rem] tracking-[0.08em] uppercase text-primary/70">
+                    {mobileHeroStateLabel}
+                  </span>
+                  <span className="font-mono text-[0.56rem] tracking-[0.07em] uppercase text-muted-foreground/45">
+                    Shopify + Stripe
+                  </span>
+                  <span className="font-mono text-[0.58rem] text-primary/82">Ranked</span>
+                </div>
+              </div>
             </div>
           </FadeIn>
         </div>
