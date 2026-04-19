@@ -115,12 +115,14 @@ export default async function SettingsPage() {
           >
             Export workspace settings
           </button>
-          <Link
-            href="/api/auth/sign-out?next=/"
-            className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-2.5 text-sm text-destructive transition-opacity hover:opacity-85"
-          >
-            Sign out
-          </Link>
+          <form action="/api/auth/sign-out?next=/" method="POST">
+            <button
+              type="submit"
+              className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-2.5 text-sm text-destructive transition-opacity hover:opacity-85"
+            >
+              Sign out
+            </button>
+          </form>
         </div>
       </section>
     </div>

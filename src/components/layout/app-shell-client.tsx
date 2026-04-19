@@ -67,9 +67,11 @@ export function AppShellClient({
   liveMonitors,
 }: AppShellClientProps) {
   const pathname = usePathname()
+  const signOutFormId = "app-shell-signout-form"
 
   return (
     <div className="relative min-h-screen">
+      <form id={signOutFormId} action="/api/auth/sign-out?next=/" method="POST" className="hidden" />
       {/* Desktop sidebar */}
       <aside className="hidden w-64 flex-col border-r border-border/60 bg-sidebar/75 px-4 py-5 backdrop-blur lg:fixed lg:inset-y-0 lg:flex xl:w-72">
         <div className="px-1">
@@ -194,7 +196,7 @@ export function AppShellClient({
                   <DropdownMenuItem
                     className="py-2"
                     variant="destructive"
-                    render={<Link href="/api/auth/sign-out?next=/" />}
+                    render={<button type="submit" form={signOutFormId} />}
                   >
                     <LogOut className="h-4 w-4" />
                     Sign out

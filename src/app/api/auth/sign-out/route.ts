@@ -59,10 +59,16 @@ async function signOut(request: Request) {
 }
 
 export async function GET(request: Request) {
-  return signOut(request)
+  const url = new URL(request.url)
+  return NextResponse.json(
+    {
+      message: "Use POST to sign out.",
+      next: sanitizeNextPath(url.searchParams.get("next"), "/"),
+    },
+    { status: 405 }
+  )
 }
 
 export async function POST(request: Request) {
   return signOut(request)
 }
-
