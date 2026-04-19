@@ -5,6 +5,7 @@ import { RequestAccessFullForm } from "@/components/marketing/request-access-ful
 
 export const metadata: Metadata = {
   title: "Request Access",
+  robots: { index: false, follow: false },
 }
 
 export default async function RequestAccessPage({

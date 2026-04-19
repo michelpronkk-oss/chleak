@@ -132,7 +132,7 @@ export default async function BillingPage({
           </p>
           <Link
             href="/contact#demo"
-            className="mt-4 inline-flex items-center gap-1 text-sm text-primary transition-opacity hover:opacity-80"
+            className="vault-link mt-4 inline-flex items-center gap-1 text-sm"
           >
             Request production billing setup
             <ArrowRight className="h-3.5 w-3.5" />
@@ -170,10 +170,10 @@ export default async function BillingPage({
           </p>
           <div className="vault-side-nav">
             <span className="vault-side-nav-item vault-side-nav-item-active">Plan and billing</span>
-            <span className="vault-side-nav-item">Payment method</span>
-            <span className="vault-side-nav-item">Invoices</span>
-            <span className="vault-side-nav-item">Team</span>
-            <span className="vault-side-nav-item">Notifications</span>
+            <span className="vault-side-nav-item opacity-35 cursor-default select-none">Payment method</span>
+            <span className="vault-side-nav-item opacity-35 cursor-default select-none">Invoices</span>
+            <span className="vault-side-nav-item opacity-35 cursor-default select-none">Team</span>
+            <span className="vault-side-nav-item opacity-35 cursor-default select-none">Notifications</span>
           </div>
         </nav>
 
@@ -195,19 +195,9 @@ export default async function BillingPage({
               <p className="mt-3 text-sm text-muted-foreground">
                 Monitoring for {data.monitoredStores} connected sources.
               </p>
-              <div className="mt-5 flex flex-wrap gap-3">
-                <Link
-                  href="/app/billing?intent=choose-plan"
-                  className="marketing-primary-cta rounded-md px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
-                >
-                  Change plan
-                </Link>
-                <button
-                  type="button"
-                  className="rounded-md border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Update seat count
-                </button>
+              <div className="mt-5 flex flex-wrap items-center gap-4">
+                <span className="font-mono text-[0.66rem] tracking-[0.06em] text-muted-foreground">Change plan — not active</span>
+                <span className="font-mono text-[0.66rem] tracking-[0.06em] text-muted-foreground">Update seat count — not active</span>
               </div>
             </div>
           </section>

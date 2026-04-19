@@ -1,4 +1,15 @@
+import type { Metadata } from "next"
+
 import { MarketingPageLayout, PageSection } from "@/components/marketing/page-layout"
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description:
+    "CheckoutLeak privacy policy: what information is collected, how it is used, and how it is protected.",
+  alternates: {
+    canonical: "/privacy",
+  },
+}
 
 export default function PrivacyPage() {
   return (

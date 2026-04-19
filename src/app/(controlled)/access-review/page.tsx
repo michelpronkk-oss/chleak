@@ -1,19 +1,34 @@
+import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
 import { getAccessApprovalState } from "@/lib/auth/access"
+import { PUBLIC_ACCESS_EMAIL_COOKIE } from "@/lib/auth/public-access"
 import { getServerSession } from "@/lib/auth/session"
 
 export default async function AccessReviewPage() {
   const session = await getServerSession()
 
-  if (!session) {
-    redirect("/auth/sign-in")
+  // Resolve identity: authenticated session takes precedence, then public cookie
+  let email: string | null = session?.user?.email ?? null
+
+  if (!email) {
+    const cookieStore = await cookies()
+    const raw = cookieStore.get(PUBLIC_ACCESS_EMAIL_COOKIE)?.value ?? null
+    if (raw && raw.includes("@")) {
+      email = raw.trim().toLowerCase()
+    }
   }
 
-  const approvalState = await getAccessApprovalState(session.user.email)
+  // No identity at all — send to request access
+  if (!email) {
+    redirect("/request-access")
+  }
+
+  const approvalState = await getAccessApprovalState(email)
 
   if (approvalState === "approved") {
-    redirect("/app")
+    // Authenticated users go straight in; unauthenticated approved users sign in first
+    redirect(session ? "/app" : "/auth/sign-in")
   }
 
   if (approvalState === "none") {

@@ -1,5 +1,11 @@
+import type { Metadata } from "next"
+
 import { MarketingFooter } from "@/components/layout/marketing-footer"
 import { MarketingHeader } from "@/components/layout/marketing-header"
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+}
 
 export default function ControlledLayout({
   children,

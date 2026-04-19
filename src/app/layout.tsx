@@ -27,13 +27,46 @@ const instrumentSerif = Instrument_Serif({
   style: ["normal", "italic"],
 });
 
+const siteUrl = "https://checkoutleak.com";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
     default: "CheckoutLeak",
     template: "%s | CheckoutLeak",
   },
   description:
     "CheckoutLeak detects lost revenue in Shopify and Stripe checkout, payment setup, and failed billing flows.",
+  openGraph: {
+    siteName: "CheckoutLeak",
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
+  },
+};
+
+const organizationSchema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "CheckoutLeak",
+  url: siteUrl,
+  logo: `${siteUrl}/logo.png`,
+  description: "Revenue leak detection for Shopify and Stripe checkout and billing flows.",
+  contactPoint: {
+    "@type": "ContactPoint",
+    email: "support@checkoutleak.com",
+    contactType: "customer support",
+  },
 };
 
 export default function RootLayout({
@@ -48,6 +81,10 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-screen bg-background text-foreground antialiased">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
         {children}
       </body>
     </html>

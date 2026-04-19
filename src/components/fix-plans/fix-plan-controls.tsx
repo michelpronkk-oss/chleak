@@ -34,7 +34,7 @@ export function FixPlanControls({
     <section className="surface-card p-4 sm:p-5 lg:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="data-mono text-primary">Action Controls</p>
+          <p className="data-mono text-muted-foreground">Action Controls</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Update execution status as the team completes this fix.
           </p>

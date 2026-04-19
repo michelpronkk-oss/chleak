@@ -1,4 +1,15 @@
+import type { Metadata } from "next"
+
 import { MarketingPageLayout, PageSection } from "@/components/marketing/page-layout"
+
+export const metadata: Metadata = {
+  title: "Terms of Use",
+  description:
+    "Terms of use governing access to CheckoutLeak, including subscription, billing, acceptable use, and service conditions.",
+  alternates: {
+    canonical: "/terms",
+  },
+}
 
 export default function TermsPage() {
   return (

@@ -150,16 +150,22 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                   Open app <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               ) : isPending ? (
-                <div className="mx-auto text-center">
-                  <p className="font-mono text-[0.6rem] tracking-[0.08em] uppercase text-muted-foreground/70">
-                    Access request
-                  </p>
-                  <p className="mt-2 text-[0.93rem] font-medium text-foreground">
-                    Your request is under review.
-                  </p>
-                  <p className="mx-auto mt-2 max-w-[30ch] text-[0.84rem] leading-[1.65] text-muted-foreground">
-                    We review every submission and reach out directly when there is a fit.
-                  </p>
+                <div className="mx-auto w-full max-w-sm">
+                  <div className="rounded-xl border border-border/60 bg-card/50 px-5 py-5 text-left">
+                    <p className="font-mono text-[0.62rem] tracking-[0.08em] uppercase text-muted-foreground/55">
+                      Access request
+                    </p>
+                    <p className="mt-3 text-[0.94rem] font-semibold tracking-[-0.01em] text-foreground">
+                      Your request is under review.
+                    </p>
+                    <p className="mt-2 text-[0.82rem] leading-[1.65] text-muted-foreground">
+                      We review every submission and reach out directly when there is a fit.
+                    </p>
+                    <div className="mt-4 h-px bg-border/40" />
+                    <p className="mt-3 font-mono text-[0.58rem] tracking-[0.08em] uppercase text-muted-foreground/40">
+                      Reviewed manually / no automated response
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="mx-auto w-full max-w-sm sm:max-w-md">
@@ -413,24 +419,32 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
         <FadeIn delay={0.06}>
           <div
             className="relative overflow-hidden rounded-xl px-5 py-8 text-center sm:px-10 sm:py-11 lg:px-12 lg:py-12"
-            style={{ border: "1px solid color-mix(in oklab, var(--signal-line) 55%, var(--line-default) 45%)" }}
+            style={{
+              border: isPending
+                ? "1px solid var(--line-default)"
+                : "1px solid color-mix(in oklab, var(--signal-line) 55%, var(--line-default) 45%)",
+            }}
           >
-            <div
-              aria-hidden
-              className="absolute inset-x-0 top-0 h-px rounded-t-xl"
-              style={{
-                background:
-                  "linear-gradient(to right, transparent, oklch(0.78 0.13 75 / 0.22), transparent)",
-              }}
-            />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 -z-10"
-              style={{
-                background:
-                  "radial-gradient(ellipse at 50% 0%, oklch(0.78 0.13 75 / 0.045), transparent 65%)",
-              }}
-            />
+            {!isPending ? (
+              <>
+                <div
+                  aria-hidden
+                  className="absolute inset-x-0 top-0 h-px rounded-t-xl"
+                  style={{
+                    background:
+                      "linear-gradient(to right, transparent, oklch(0.78 0.13 75 / 0.22), transparent)",
+                  }}
+                />
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 -z-10"
+                  style={{
+                    background:
+                      "radial-gradient(ellipse at 50% 0%, oklch(0.78 0.13 75 / 0.045), transparent 65%)",
+                  }}
+                />
+              </>
+            ) : null}
 
             {isApproved ? (
               <>

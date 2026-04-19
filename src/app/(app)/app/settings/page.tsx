@@ -38,7 +38,7 @@ export default async function SettingsPage() {
               <p className="vault-settings-desc">Display name in workspace and activity log.</p>
             </div>
             <p className="text-sm">{data.user.fullName}</p>
-            <button className="rounded-md border border-border/70 px-3 py-1.5 text-xs text-muted-foreground">Edit</button>
+            <span className="font-mono text-[0.66rem] tracking-[0.06em] text-muted-foreground">not active</span>
           </div>
           <div className="vault-settings-row">
             <div>
@@ -46,7 +46,7 @@ export default async function SettingsPage() {
               <p className="vault-settings-desc">Primary login and notifications destination.</p>
             </div>
             <p className="text-sm">{data.user.email}</p>
-            <button className="rounded-md border border-border/70 px-3 py-1.5 text-xs text-muted-foreground">Change</button>
+            <span className="font-mono text-[0.66rem] tracking-[0.06em] text-muted-foreground">not active</span>
           </div>
           <div className="vault-settings-row">
             <div>
@@ -62,7 +62,7 @@ export default async function SettingsPage() {
               <p className="vault-settings-desc">Used for digest scheduling and timestamps.</p>
             </div>
             <p className="text-sm">{data.user.timezone}</p>
-            <button className="rounded-md border border-border/70 px-3 py-1.5 text-xs text-muted-foreground">Update</button>
+            <span className="font-mono text-[0.66rem] tracking-[0.06em] text-muted-foreground">not active</span>
           </div>
         </div>
       </section>
@@ -112,7 +112,7 @@ export default async function SettingsPage() {
               <p className="vault-settings-desc">Critical notification routing.</p>
             </div>
             <p className="text-sm">{data.notificationPreferences.issueAlerts}</p>
-            <button className="rounded-md border border-border/70 px-3 py-1.5 text-xs text-muted-foreground">Edit</button>
+            <span className="font-mono text-[0.66rem] tracking-[0.06em] text-muted-foreground">not active</span>
           </div>
           <div className="vault-settings-row">
             <div>
@@ -120,7 +120,7 @@ export default async function SettingsPage() {
               <p className="vault-settings-desc">Digest schedule for workspace reporting.</p>
             </div>
             <p className="text-sm">{data.notificationPreferences.weeklyDigestDay}</p>
-            <button className="rounded-md border border-border/70 px-3 py-1.5 text-xs text-muted-foreground">Edit</button>
+            <span className="font-mono text-[0.66rem] tracking-[0.06em] text-muted-foreground">not active</span>
           </div>
           <div className="vault-settings-row">
             <div>
@@ -144,12 +144,9 @@ export default async function SettingsPage() {
           <p className="vault-panel-meta">Export and session actions</p>
         </header>
         <div className="flex flex-wrap gap-3 px-4 py-4 sm:px-5">
-          <button
-            type="button"
-            className="rounded-md border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Export workspace settings
-          </button>
+          <span className="font-mono text-[0.66rem] tracking-[0.06em] text-muted-foreground">
+            Export workspace settings — not active
+          </span>
           <form action="/api/auth/sign-out?next=/" method="POST">
             <button
               type="submit"

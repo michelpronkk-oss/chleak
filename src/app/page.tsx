@@ -1,8 +1,41 @@
+import type { Metadata } from "next"
+import { redirect } from "next/navigation"
+
 import { MarketingFooter } from "@/components/layout/marketing-footer"
 import { MarketingHeader } from "@/components/layout/marketing-header"
 import MarketingHomePage from "@/components/marketing/home-page"
 import { getPublicAccessState } from "@/lib/auth/public-access"
-import { redirect } from "next/navigation"
+
+export const metadata: Metadata = {
+  title: {
+    absolute: "CheckoutLeak — Revenue Leak Detection for Shopify and Stripe",
+  },
+  description:
+    "Detect lost revenue in Shopify checkout and Stripe billing flows. CheckoutLeak scans for payment friction, coverage gaps, and billing recovery failures, and delivers ranked actions by monthly impact.",
+  openGraph: {
+    title: "CheckoutLeak — Revenue Leak Detection for Shopify and Stripe",
+    description:
+      "Detect lost revenue in Shopify checkout and Stripe billing flows. CheckoutLeak scans for payment friction, coverage gaps, and billing recovery failures, and delivers ranked actions by monthly impact.",
+    url: "/",
+    type: "website",
+  },
+  twitter: {
+    title: "CheckoutLeak — Revenue Leak Detection for Shopify and Stripe",
+    description:
+      "Detect lost revenue in Shopify checkout and Stripe billing flows. Ranked recovery actions by monthly impact.",
+  },
+  alternates: {
+    canonical: "/",
+  },
+}
+
+const websiteSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "CheckoutLeak",
+  url: "https://checkoutleak.com",
+  description: "Revenue leak detection for Shopify and Stripe checkout and billing flows.",
+}
 
 export default async function HomePage({
   searchParams,
@@ -20,6 +53,10 @@ export default async function HomePage({
 
   return (
     <div className="relative min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+      />
       <MarketingHeader accessState={accessState} className="hidden md:block" />
       <main>
         {showAccessNotice ? (

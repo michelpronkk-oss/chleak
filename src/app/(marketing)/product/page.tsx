@@ -1,7 +1,49 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 
 import { MarketingPageLayout, PageSection } from "@/components/marketing/page-layout"
+
+export const metadata: Metadata = {
+  title: "Revenue Intelligence for Checkout and Billing Operators",
+  description:
+    "CheckoutLeak connects to Shopify and Stripe, detects revenue leakage across checkout steps, payment methods, and billing recovery, and ranks each issue by monthly dollar impact.",
+  openGraph: {
+    title: "Revenue Intelligence for Checkout and Billing Operators | CheckoutLeak",
+    description:
+      "CheckoutLeak connects to Shopify and Stripe, detects revenue leakage across checkout steps, payment methods, and billing recovery, and ranks each issue by monthly dollar impact.",
+    url: "/product",
+    type: "website",
+  },
+  twitter: {
+    title: "Revenue Intelligence for Checkout and Billing Operators | CheckoutLeak",
+    description:
+      "Detect revenue leakage across checkout steps, payment methods, and billing recovery. Ranked by monthly impact.",
+  },
+  alternates: {
+    canonical: "/product",
+  },
+}
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: "https://checkoutleak.com" },
+    { "@type": "ListItem", position: 2, name: "Product", item: "https://checkoutleak.com/product" },
+  ],
+}
+
+const softwareSchema = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "CheckoutLeak",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  description:
+    "Revenue intelligence platform for checkout and billing operators. Detects and quantifies lost revenue in Shopify and Stripe flows.",
+  url: "https://checkoutleak.com/product",
+}
 
 const detectionSurfaces = [
   {
@@ -60,7 +102,16 @@ const outcomes = [
 
 export default function ProductPage() {
   return (
-    <MarketingPageLayout
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }}
+      />
+      <MarketingPageLayout
       eyebrow="Product"
       title="A revenue intelligence system for checkout and billing operators"
       description="CheckoutLeak converts fragmented commerce signals into ranked revenue recovery decisions for Shopify and Stripe teams."
@@ -197,5 +248,6 @@ export default function ProductPage() {
         </div>
       </section>
     </MarketingPageLayout>
+    </>
   )
 }

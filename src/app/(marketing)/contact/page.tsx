@@ -1,8 +1,44 @@
+import type { Metadata } from "next"
+
 import { MarketingPageLayout, PageSection } from "@/components/marketing/page-layout"
+
+export const metadata: Metadata = {
+  title: "Contact",
+  description:
+    "Contact CheckoutLeak for product support, integration guidance, or a demo focused on your Shopify and Stripe revenue operations.",
+  openGraph: {
+    title: "Contact | CheckoutLeak",
+    description:
+      "Contact CheckoutLeak for product support, integration guidance, or a demo focused on your Shopify and Stripe revenue operations.",
+    url: "/contact",
+    type: "website",
+  },
+  twitter: {
+    title: "Contact | CheckoutLeak",
+    description: "Contact CheckoutLeak for support, integration guidance, or a product demo.",
+  },
+  alternates: {
+    canonical: "/contact",
+  },
+}
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: "https://checkoutleak.com" },
+    { "@type": "ListItem", position: 2, name: "Contact", item: "https://checkoutleak.com/contact" },
+  ],
+}
 
 export default function ContactPage() {
   return (
-    <MarketingPageLayout
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      <MarketingPageLayout
       eyebrow="Contact"
       title="Contact CheckoutLeak"
       description="Reach us for support, product questions, or a focused demo tailored to your checkout and billing stack."
@@ -53,5 +89,6 @@ export default function ContactPage() {
         </p>
       </PageSection>
     </MarketingPageLayout>
+    </>
   )
 }
