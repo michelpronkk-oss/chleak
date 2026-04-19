@@ -151,7 +151,20 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                 </Link>
               ) : isPending ? (
                 <div className="mx-auto w-full max-w-sm">
-                  <div className="rounded-xl border border-border/60 bg-card/50 px-5 py-5 text-left">
+                  <div
+                    className="relative overflow-hidden rounded-xl bg-card/50 px-5 py-5 text-left"
+                    style={{
+                      border: "1px solid color-mix(in oklab, var(--signal-line) 22%, var(--line-default) 78%)",
+                    }}
+                  >
+                    <div
+                      aria-hidden
+                      className="absolute inset-x-0 top-0 h-px rounded-t-xl"
+                      style={{
+                        background:
+                          "linear-gradient(to right, transparent, oklch(0.78 0.13 75 / 0.18), transparent)",
+                      }}
+                    />
                     <p className="font-mono text-[0.62rem] tracking-[0.08em] uppercase text-muted-foreground/55">
                       Access request
                     </p>

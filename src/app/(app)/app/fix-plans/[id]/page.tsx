@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { ArrowLeft, ArrowRight, CircleDot } from "lucide-react"
@@ -36,6 +37,17 @@ const statusLabel: Record<FixPlan["status"], string> = {
   open: "Open",
   in_progress: "In progress",
   resolved: "Resolved",
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}): Promise<Metadata> {
+  const { id } = await params
+  const fixPlan = await getFixPlanById(id)
+  if (!fixPlan) return { title: "Fix Plan" }
+  return { title: fixPlan.title }
 }
 
 export default async function FixPlanPage({

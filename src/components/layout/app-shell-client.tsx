@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation"
 import {
   AlertTriangle,
   ArrowUpRight,
-  Command,
   CreditCard,
   LayoutDashboard,
   LogOut,
@@ -143,11 +142,6 @@ export function AppShellClient({
               <CheckoutLeakLogo />
             </div>
 
-            <div className="hidden items-center gap-2 rounded-lg border border-border/55 bg-card/55 px-3 py-2 text-xs text-muted-foreground md:flex">
-              <Command className="h-3 w-3" />
-              Search issue, scan, or store
-            </div>
-
             <div className="flex items-center gap-2 text-xs text-muted-foreground sm:gap-2.5">
               {activeIssueCount > 0 && (
                 <span className="hidden items-center gap-1.5 rounded-md border border-border/55 px-2.5 py-1.5 sm:flex">
@@ -210,7 +204,7 @@ export function AppShellClient({
           </div>
         </header>
 
-        <main className="dashboard-grid min-h-[calc(100vh-3.5rem)] px-4 py-5 pb-24 sm:min-h-[calc(100vh-4rem)] sm:px-6 sm:py-6 lg:px-8 lg:py-7 lg:pb-8">
+        <main className="min-h-[calc(100vh-3.5rem)] px-4 py-5 pb-24 sm:min-h-[calc(100vh-4rem)] sm:px-6 sm:py-6 lg:px-8 lg:py-7 lg:pb-8">
           <div className="mx-auto max-w-7xl">{children}</div>
         </main>
       </div>

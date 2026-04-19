@@ -1,6 +1,11 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { ArrowLeft, ArrowRight } from "lucide-react"
+
+export const metadata: Metadata = {
+  title: "Store Detail",
+}
 
 import { MetaPill, RankedQueueRow, SeverityPill, VaultPanel } from "@/components/dashboard/vault-primitives"
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"

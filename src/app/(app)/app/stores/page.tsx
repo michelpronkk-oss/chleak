@@ -1,6 +1,11 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { ArrowRight, CircleDot } from "lucide-react"
+
+export const metadata: Metadata = {
+  title: "Stores",
+}
 
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
 import { getStoresIndexData } from "@/server/services/app-service"

@@ -1,6 +1,11 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { ArrowRight, CheckCircle2 } from "lucide-react"
+
+export const metadata: Metadata = {
+  title: "Billing",
+}
 
 import { sanitizeNextPath } from "@/lib/auth/navigation"
 import { formatCompactCurrency } from "@/lib/format"
@@ -163,99 +168,80 @@ export default async function BillingPage({
         ) : null}
       </section>
 
-      <section className="vault-billing-layout">
-        <nav className="vault-panel-shell h-fit p-3">
-          <p className="px-2.5 pb-2 font-mono text-[0.62rem] tracking-[0.08em] uppercase text-muted-foreground">
-            Billing sections
-          </p>
-          <div className="vault-side-nav">
-            <span className="vault-side-nav-item vault-side-nav-item-active">Plan and billing</span>
-            <span className="vault-side-nav-item opacity-35 cursor-default select-none">Payment method</span>
-            <span className="vault-side-nav-item opacity-35 cursor-default select-none">Invoices</span>
-            <span className="vault-side-nav-item opacity-35 cursor-default select-none">Team</span>
-            <span className="vault-side-nav-item opacity-35 cursor-default select-none">Notifications</span>
+      <div className="space-y-5">
+        <section className="vault-panel-shell">
+          <header className="vault-panel-head">
+            <p className="vault-panel-title">Plan</p>
+            <p className="vault-panel-meta">Status {billingStatusLabel}</p>
+          </header>
+          <div className="px-4 py-4 sm:px-5">
+            <h2 className="text-2xl font-semibold tracking-tight capitalize">{data.subscription?.plan}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {data.subscription?.billingCycle} billing | {data.subscription?.seats} operator seats
+            </p>
+            <p className="mt-4 text-3xl font-semibold tracking-tight text-primary">
+              {formatCompactCurrency(data.subscription?.amount ?? 0)}
+              <span className="ml-1 text-base text-muted-foreground">/month</span>
+            </p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Monitoring for {data.monitoredStores} connected sources.
+            </p>
           </div>
-        </nav>
+        </section>
 
-        <div className="space-y-5">
-          <section className="vault-panel-shell">
-            <header className="vault-panel-head">
-              <p className="vault-panel-title">Plan</p>
-              <p className="vault-panel-meta">Status {billingStatusLabel}</p>
-            </header>
-            <div className="px-4 py-4 sm:px-5">
-              <h2 className="text-2xl font-semibold tracking-tight capitalize">{data.subscription?.plan}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {data.subscription?.billingCycle} billing | {data.subscription?.seats} operator seats
-              </p>
-              <p className="mt-4 text-3xl font-semibold tracking-tight text-primary">
-                {formatCompactCurrency(data.subscription?.amount ?? 0)}
-                <span className="ml-1 text-base text-muted-foreground">/month</span>
-              </p>
-              <p className="mt-3 text-sm text-muted-foreground">
-                Monitoring for {data.monitoredStores} connected sources.
-              </p>
-              <div className="mt-5 flex flex-wrap items-center gap-4">
-                <span className="font-mono text-[0.66rem] tracking-[0.06em] text-muted-foreground">Change plan — not active</span>
-                <span className="font-mono text-[0.66rem] tracking-[0.06em] text-muted-foreground">Update seat count — not active</span>
-              </div>
-            </div>
-          </section>
+        <section className="vault-panel-shell">
+          <header className="vault-panel-head">
+            <p className="vault-panel-title">Billing health</p>
+            <p className="vault-panel-meta">Webhook synced</p>
+          </header>
+          <ul className="space-y-3 px-4 py-4 text-sm sm:px-5">
+            <li className="flex items-start gap-2 text-muted-foreground">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />
+              Subscription state synced from Dodo webhooks.
+            </li>
+            <li className="flex items-start gap-2 text-muted-foreground">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />
+              Next invoice date:{" "}
+              {data.subscription?.nextInvoiceDate
+                ? new Date(data.subscription.nextInvoiceDate).toLocaleDateString("en-US")
+                : "Pending"}
+            </li>
+            <li className="flex items-start gap-2 text-muted-foreground">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />
+              Leakage currently monitored: {formatCompactCurrency(data.estimatedLeakage)} / month.
+            </li>
+          </ul>
+        </section>
 
-          <section className="vault-panel-shell">
-            <header className="vault-panel-head">
-              <p className="vault-panel-title">Billing health</p>
-              <p className="vault-panel-meta">Webhook synced</p>
-            </header>
-            <ul className="space-y-3 px-4 py-4 text-sm sm:px-5">
-              <li className="flex items-start gap-2 text-muted-foreground">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />
-                Subscription state synced from Dodo webhooks.
-              </li>
-              <li className="flex items-start gap-2 text-muted-foreground">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />
-                Next invoice date:{" "}
-                {data.subscription?.nextInvoiceDate
-                  ? new Date(data.subscription.nextInvoiceDate).toLocaleDateString("en-US")
-                  : "Pending"}
-              </li>
-              <li className="flex items-start gap-2 text-muted-foreground">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />
-                Leakage currently monitored: {formatCompactCurrency(data.estimatedLeakage)} / month.
-              </li>
-            </ul>
-          </section>
-
-          <section className="vault-panel-shell">
-            <header className="vault-panel-head">
-              <p className="vault-panel-title">Commercial summary</p>
-              <p className="vault-panel-meta">{data.organization.name}</p>
-            </header>
-            <div className="grid gap-4 px-4 py-4 sm:grid-cols-3 sm:px-5">
-              <div className="rounded-md border border-border/70 bg-background/35 p-4">
-                <p className="text-sm text-muted-foreground">Organization</p>
-                <p className="mt-1 text-sm">{data.organization.name}</p>
-              </div>
-              <div className="rounded-md border border-border/70 bg-background/35 p-4">
-                <p className="text-sm text-muted-foreground">Active issues</p>
-                <p className="mt-1 text-sm">{data.activeIssueCount}</p>
-              </div>
-              <div className="rounded-md border border-border/70 bg-background/35 p-4">
-                <p className="text-sm text-muted-foreground">Plan fit</p>
-                <p className="mt-1 text-sm">Growth tier aligns with current source footprint.</p>
-              </div>
+        <section className="vault-panel-shell">
+          <header className="vault-panel-head">
+            <p className="vault-panel-title">Commercial summary</p>
+            <p className="vault-panel-meta">{data.organization.name}</p>
+          </header>
+          <div className="grid gap-4 px-4 py-4 sm:grid-cols-3 sm:px-5">
+            <div className="rounded-md border border-border/70 bg-background/35 p-4">
+              <p className="text-sm text-muted-foreground">Organization</p>
+              <p className="mt-1 text-sm">{data.organization.name}</p>
             </div>
-            <div className="px-4 pb-4 sm:px-5">
-              <Link
-                href="/app/settings"
-                className="vault-link inline-flex items-center gap-1 text-sm"
-              >
-                Open workspace settings <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
+            <div className="rounded-md border border-border/70 bg-background/35 p-4">
+              <p className="text-sm text-muted-foreground">Active issues</p>
+              <p className="mt-1 text-sm">{data.activeIssueCount}</p>
             </div>
-          </section>
-        </div>
-      </section>
+            <div className="rounded-md border border-border/70 bg-background/35 p-4">
+              <p className="text-sm text-muted-foreground">Plan fit</p>
+              <p className="mt-1 text-sm">Growth tier aligns with current source footprint.</p>
+            </div>
+          </div>
+          <div className="px-4 pb-4 sm:px-5">
+            <Link
+              href="/app/settings"
+              className="vault-link inline-flex items-center gap-1 text-sm"
+            >
+              Open workspace settings <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </section>
+      </div>
     </div>
   )
 }

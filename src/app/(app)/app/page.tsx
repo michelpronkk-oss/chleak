@@ -1,6 +1,11 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { ArrowRight } from "lucide-react"
+
+export const metadata: Metadata = {
+  title: "Overview",
+}
 
 import { PendingScanLiveRefresh } from "@/components/dashboard/pending-scan-live-refresh"
 import {

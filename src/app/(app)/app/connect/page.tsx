@@ -1,6 +1,11 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { ArrowRight, Check, ChevronRight, CircleCheck, CircleDashed } from "lucide-react"
+
+export const metadata: Metadata = {
+  title: "Connect Source",
+}
 
 import { cn } from "@/lib/utils"
 import { getConnectJourneyData } from "@/server/services/app-service"

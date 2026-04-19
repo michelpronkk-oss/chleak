@@ -1,6 +1,11 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { ArrowRight } from "lucide-react"
+
+export const metadata: Metadata = {
+  title: "Settings",
+}
 
 import { getSettingsData } from "@/server/services/app-service"
 
@@ -38,7 +43,6 @@ export default async function SettingsPage() {
               <p className="vault-settings-desc">Display name in workspace and activity log.</p>
             </div>
             <p className="text-sm">{data.user.fullName}</p>
-            <span className="font-mono text-[0.66rem] tracking-[0.06em] text-muted-foreground">not active</span>
           </div>
           <div className="vault-settings-row">
             <div>
@@ -46,7 +50,6 @@ export default async function SettingsPage() {
               <p className="vault-settings-desc">Primary login and notifications destination.</p>
             </div>
             <p className="text-sm">{data.user.email}</p>
-            <span className="font-mono text-[0.66rem] tracking-[0.06em] text-muted-foreground">not active</span>
           </div>
           <div className="vault-settings-row">
             <div>
@@ -62,7 +65,6 @@ export default async function SettingsPage() {
               <p className="vault-settings-desc">Used for digest scheduling and timestamps.</p>
             </div>
             <p className="text-sm">{data.user.timezone}</p>
-            <span className="font-mono text-[0.66rem] tracking-[0.06em] text-muted-foreground">not active</span>
           </div>
         </div>
       </section>
@@ -112,7 +114,6 @@ export default async function SettingsPage() {
               <p className="vault-settings-desc">Critical notification routing.</p>
             </div>
             <p className="text-sm">{data.notificationPreferences.issueAlerts}</p>
-            <span className="font-mono text-[0.66rem] tracking-[0.06em] text-muted-foreground">not active</span>
           </div>
           <div className="vault-settings-row">
             <div>
@@ -120,7 +121,6 @@ export default async function SettingsPage() {
               <p className="vault-settings-desc">Digest schedule for workspace reporting.</p>
             </div>
             <p className="text-sm">{data.notificationPreferences.weeklyDigestDay}</p>
-            <span className="font-mono text-[0.66rem] tracking-[0.06em] text-muted-foreground">not active</span>
           </div>
           <div className="vault-settings-row">
             <div>
@@ -141,12 +141,9 @@ export default async function SettingsPage() {
       <section className="vault-panel-shell">
         <header className="vault-panel-head">
           <p className="vault-panel-title">Account controls</p>
-          <p className="vault-panel-meta">Export and session actions</p>
+          <p className="vault-panel-meta">Session</p>
         </header>
-        <div className="flex flex-wrap gap-3 px-4 py-4 sm:px-5">
-          <span className="font-mono text-[0.66rem] tracking-[0.06em] text-muted-foreground">
-            Export workspace settings — not active
-          </span>
+        <div className="px-4 py-4 sm:px-5">
           <form action="/api/auth/sign-out?next=/" method="POST">
             <button
               type="submit"
