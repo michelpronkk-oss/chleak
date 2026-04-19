@@ -1,3 +1,4 @@
+import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 
@@ -9,18 +10,18 @@ import type { PublicAccessState } from "@/lib/auth/public-access"
 const signals = [
   {
     label: "Checkout completion variance",
-    finding: "+6.2 pts leakage at shipping step",
-    impact: "$28.7k / mo",
+    finding: "Shipping step friction on mobile checkout traffic",
+    impact: "High priority",
   },
   {
     label: "Wallet method mismatch",
-    finding: "iOS high-intent traffic without Apple Pay",
-    impact: "$12.4k / mo",
+    finding: "iOS high-intent sessions without wallet coverage",
+    impact: "Coverage gap",
   },
   {
     label: "Failed renewal recovery",
-    finding: "No smart retry on soft declines",
-    impact: "$17.8k / mo",
+    finding: "Recoverable renewal failures without smart retries",
+    impact: "Recovery gap",
   },
 ]
 
@@ -109,7 +110,7 @@ function getPricingCta(input: { accessState: PublicAccessState; planId: string }
 function getHeroSupportCopy(accessState: PublicAccessState) {
   if (accessState === "approved") {
     return {
-      eyebrow: "Operator signal layer",
+      eyebrow: "What shows up first",
       title: "Workspace access is active",
       body: "Open the app to review prioritized leakage signals and operator actions.",
     }
@@ -117,14 +118,14 @@ function getHeroSupportCopy(accessState: PublicAccessState) {
 
   if (accessState === "pending") {
     return {
-      eyebrow: "Operator signal layer",
+      eyebrow: "What shows up first",
       title: "Review queue in progress",
       body: "Access review is active. We will follow up directly once a decision is finalized.",
     }
   }
 
   return {
-    eyebrow: "Operator signal layer",
+    eyebrow: "What shows up first",
     title: "What gets surfaced first",
     body: "Initial intelligence highlights checkout friction, payment method gaps, and billing recovery leakage.",
   }
@@ -153,7 +154,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
       />
 
       {/* Hero */}
-      <section className="relative mx-auto min-h-[88svh] w-full max-w-6xl px-5 pb-14 pt-8 sm:min-h-0 sm:px-8 sm:pb-20 sm:pt-16 lg:pb-24 lg:pt-20">
+      <section className="relative mx-auto min-h-[88svh] w-full max-w-6xl px-5 pb-14 pt-6 sm:min-h-0 sm:px-8 sm:pb-20 sm:pt-16 lg:pb-24 lg:pt-20">
         <div
           aria-hidden
           className="pointer-events-none absolute left-1/2 top-[-34px] hidden h-[640px] w-[1280px] -translate-x-1/2 blur-[96px] lg:block"
@@ -164,6 +165,24 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
         />
 
         <div className="relative mx-auto max-w-2xl text-center">
+          <FadeIn delay={0.02}>
+            <div className="mb-5 sm:hidden">
+              <div className="inline-flex items-center gap-2.5 rounded-full border border-border/55 bg-card/25 px-3 py-1.5">
+                <Image
+                  src="/logo.png"
+                  alt="CheckoutLeak"
+                  width={18}
+                  height={18}
+                  className="rounded-sm object-contain"
+                  priority
+                />
+                <p className="text-[0.7rem] font-medium tracking-[0.06em] text-foreground/92">
+                  Checkout<span className="text-primary/75">Leak</span>
+                </p>
+              </div>
+            </div>
+          </FadeIn>
+
           <FadeIn delay={0.04}>
             <p className="mb-4 font-mono text-[0.65rem] tracking-[0.14em] uppercase text-primary/60 sm:mb-5 sm:text-[0.7rem]">
               Private operator intelligence
@@ -261,12 +280,12 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
       >
         <FadeIn delay={0.06}>
           <div className="mb-6 sm:mb-8">
-            <Eyebrow>Sample findings</Eyebrow>
+            <Eyebrow>Sample signal snapshot</Eyebrow>
             <h2 className="text-[1.45rem] font-semibold leading-[1.13] tracking-[-0.03em] sm:text-[1.85rem] lg:text-[2.15rem]">
-              Three material leaks surfaced in one scan.
+              Example signal ranking from one scan.
             </h2>
             <p className="mt-2.5 max-w-[40ch] text-[0.88rem] leading-[1.72] text-muted-foreground sm:mt-3 sm:max-w-[50ch] sm:text-[0.95rem] sm:leading-[1.8]">
-              One account. First scan. Total monthly exposure: $58.9k across checkout, wallet coverage, and billing recovery.
+              Illustrative output showing how checkout and billing signals are prioritized for operator action.
             </p>
           </div>
 
@@ -318,18 +337,18 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
       >
         <FadeIn delay={0.06}>
           <div className="mb-7 sm:mb-10">
-            <Eyebrow>Issue intelligence</Eyebrow>
+            <Eyebrow>What gets detected</Eyebrow>
             <h2 className="text-[1.55rem] font-semibold leading-[1.13] tracking-[-0.03em] sm:text-[2.05rem] lg:text-[2.35rem]">
-              What gets detected.
-              <br className="sm:hidden" /> What you get back.
+              What gets detected first.
+              <br className="sm:hidden" /> What teams receive back.
             </h2>
             <p className="mt-3 max-w-[34ch] text-[0.9rem] leading-[1.72] text-muted-foreground sm:mt-4 sm:max-w-[40ch] sm:text-[0.97rem] sm:leading-[1.85]">
               Every issue surfaces with root cause, financial impact, and a specific next action. Ranked by recovery opportunity.
             </p>
           </div>
 
-          {/* Detection categories: 2x2 on mobile, 2-col on sm+ */}
-          <div className="grid grid-cols-2 gap-3 sm:gap-0 sm:border-y sm:border-border/50">
+          {/* Detection categories: 1-col on mobile, 2-col on sm+ */}
+          <div className="grid grid-cols-1 gap-3 sm:gap-0 sm:border-y sm:border-border/50 sm:grid-cols-2">
             {detectionCategories.map((item, index) => (
               <article
                 key={item.index}
@@ -356,7 +375,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
           </div>
 
           {/* Mechanism points */}
-          <div className="mt-6 grid gap-3.5 sm:mt-10 sm:grid-cols-3 sm:gap-6">
+          <div className="mt-6 hidden gap-3.5 sm:mt-10 sm:grid sm:grid-cols-3 sm:gap-6">
             {mechanismPoints.map((item) => (
               <div key={item.title} className="border-l border-border/50 pl-4 sm:pl-5">
                 <p className="text-[0.88rem] font-medium text-foreground sm:text-[0.93rem]">
