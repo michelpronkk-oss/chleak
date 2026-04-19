@@ -5,6 +5,7 @@ import { MarketingFooter } from "@/components/layout/marketing-footer"
 import { MarketingHeader } from "@/components/layout/marketing-header"
 import MarketingHomePage from "@/components/marketing/home-page"
 import { getPublicAccessState } from "@/lib/auth/public-access"
+import { getServerSession } from "@/lib/auth/session"
 
 export const metadata: Metadata = {
   title: {
@@ -42,7 +43,11 @@ export default async function HomePage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const accessState = await getPublicAccessState()
+  const [accessState, session] = await Promise.all([
+    getPublicAccessState(),
+    getServerSession(),
+  ])
+  const isAuthenticated = session !== null
   const params = await searchParams
   const code = Array.isArray(params.code) ? params.code[0] : params.code
   if (typeof code === "string" && code.length > 0) {
@@ -66,7 +71,7 @@ export default async function HomePage({
             </div>
           </div>
         ) : null}
-        <MarketingHomePage accessState={accessState} />
+        <MarketingHomePage accessState={accessState} isAuthenticated={isAuthenticated} />
       </main>
       <MarketingFooter />
     </div>

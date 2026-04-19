@@ -6,6 +6,16 @@ export const metadata: Metadata = {
   title: "Terms of Use",
   description:
     "Terms of use governing access to CheckoutLeak, including subscription, billing, acceptable use, and service conditions.",
+  openGraph: {
+    title: "Terms of Use | CheckoutLeak",
+    description: "Terms of use governing access to CheckoutLeak, including subscription, billing, acceptable use, and service conditions.",
+    url: "/terms",
+    type: "website",
+  },
+  twitter: {
+    title: "Terms of Use | CheckoutLeak",
+    description: "Terms of use governing access to CheckoutLeak, including subscription, billing, acceptable use, and service conditions.",
+  },
   alternates: {
     canonical: "/terms",
   },

@@ -8,6 +8,41 @@ export const metadata: Metadata = {
 }
 
 import { getSettingsData } from "@/server/services/app-service"
+import { updateOperatorProfile, updateWorkspaceSettings } from "./actions"
+
+const timezones = [
+  "UTC",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Toronto",
+  "America/Vancouver",
+  "Europe/London",
+  "Europe/Amsterdam",
+  "Europe/Berlin",
+  "Europe/Paris",
+  "Europe/Stockholm",
+  "Asia/Tokyo",
+  "Asia/Singapore",
+  "Asia/Dubai",
+  "Australia/Sydney",
+]
+
+const alertOptions = [
+  { value: "immediate", label: "Immediate" },
+  { value: "daily", label: "Daily digest" },
+  { value: "weekly", label: "Weekly only" },
+  { value: "disabled", label: "Disabled" },
+]
+
+const digestDays = [
+  { value: "monday", label: "Monday" },
+  { value: "tuesday", label: "Tuesday" },
+  { value: "wednesday", label: "Wednesday" },
+  { value: "thursday", label: "Thursday" },
+  { value: "friday", label: "Friday" },
+]
 
 export default async function SettingsPage() {
   const data = await getSettingsData()
@@ -31,44 +66,73 @@ export default async function SettingsPage() {
         </p>
       </section>
 
+      {/* Operator profile */}
       <section id="profile" className="vault-panel-shell scroll-mt-24">
         <header className="vault-panel-head">
           <p className="vault-panel-title">Operator profile</p>
           <p className="vault-panel-meta">Identity and role</p>
         </header>
-        <div className="vault-settings-table">
-          <div className="vault-settings-row">
-            <div>
-              <p className="vault-settings-key">Name</p>
-              <p className="vault-settings-desc">Display name in workspace and activity log.</p>
+        <form action={updateOperatorProfile}>
+          <div className="vault-settings-table">
+            <div className="vault-settings-row">
+              <div>
+                <label htmlFor="display_name" className="vault-settings-key">Name</label>
+                <p className="vault-settings-desc">Display name in workspace and activity log.</p>
+              </div>
+              <input
+                id="display_name"
+                name="display_name"
+                defaultValue={data.user.savedDisplayName}
+                placeholder={data.user.fullName}
+                className="vault-input rounded-md px-3 py-2 text-sm outline-none w-full max-w-xs"
+                autoComplete="off"
+              />
             </div>
-            <p className="text-sm">{data.user.fullName}</p>
-          </div>
-          <div className="vault-settings-row">
-            <div>
-              <p className="vault-settings-key">Email</p>
-              <p className="vault-settings-desc">Primary login and notifications destination.</p>
+            <div className="vault-settings-row">
+              <div>
+                <p className="vault-settings-key">Email</p>
+                <p className="vault-settings-desc">Primary login and notifications destination.</p>
+              </div>
+              <p className="text-sm">{data.user.email}</p>
+              <span className="font-mono text-[0.66rem] tracking-[0.06em] text-muted-foreground">fixed</span>
             </div>
-            <p className="text-sm">{data.user.email}</p>
-          </div>
-          <div className="vault-settings-row">
-            <div>
-              <p className="vault-settings-key">Role</p>
-              <p className="vault-settings-desc">Workspace permissions level.</p>
+            <div className="vault-settings-row">
+              <div>
+                <p className="vault-settings-key">Role</p>
+                <p className="vault-settings-desc">Workspace permissions level.</p>
+              </div>
+              <p className="text-sm">{data.user.roleLabel}</p>
+              <span className="font-mono text-[0.66rem] tracking-[0.06em] text-muted-foreground">fixed</span>
             </div>
-            <p className="text-sm">{data.user.roleLabel}</p>
-            <span className="font-mono text-[0.66rem] tracking-[0.06em] text-muted-foreground">fixed</span>
-          </div>
-          <div className="vault-settings-row">
-            <div>
-              <p className="vault-settings-key">Timezone</p>
-              <p className="vault-settings-desc">Used for digest scheduling and timestamps.</p>
+            <div className="vault-settings-row">
+              <div>
+                <label htmlFor="timezone" className="vault-settings-key">Timezone</label>
+                <p className="vault-settings-desc">Used for digest scheduling and timestamps.</p>
+              </div>
+              <select
+                id="timezone"
+                name="timezone"
+                defaultValue={data.user.savedTimezone}
+                className="vault-input rounded-md px-3 py-2 text-sm outline-none w-full max-w-xs"
+              >
+                {timezones.map((tz) => (
+                  <option key={tz} value={tz}>{tz}</option>
+                ))}
+              </select>
             </div>
-            <p className="text-sm">{data.user.timezone}</p>
           </div>
-        </div>
+          <div className="border-t border-border/60 px-4 py-3 sm:px-5">
+            <button
+              type="submit"
+              className="rounded-md border border-border/70 bg-background/40 px-4 py-2 text-sm text-foreground transition-colors hover:bg-background/70"
+            >
+              Save profile
+            </button>
+          </div>
+        </form>
       </section>
 
+      {/* Workspace controls */}
       <section className="vault-panel-shell">
         <header className="vault-panel-head">
           <p className="vault-panel-title">Workspace controls</p>
@@ -108,34 +172,80 @@ export default async function SettingsPage() {
               Manage
             </Link>
           </div>
-          <div className="vault-settings-row">
-            <div>
-              <p className="vault-settings-key">Issue alerts</p>
-              <p className="vault-settings-desc">Critical notification routing.</p>
-            </div>
-            <p className="text-sm">{data.notificationPreferences.issueAlerts}</p>
-          </div>
-          <div className="vault-settings-row">
-            <div>
-              <p className="vault-settings-key">Weekly digest</p>
-              <p className="vault-settings-desc">Digest schedule for workspace reporting.</p>
-            </div>
-            <p className="text-sm">{data.notificationPreferences.weeklyDigestDay}</p>
-          </div>
-          <div className="vault-settings-row">
-            <div>
-              <p className="vault-settings-key">Billing alerts</p>
-              <p className="vault-settings-desc">Payment and subscription state notices.</p>
-            </div>
-            <p className="text-sm">{data.notificationPreferences.billingAlerts ? "Enabled" : "Disabled"}</p>
-            <Link
-              href="/app/billing"
-              className="inline-flex items-center gap-1 rounded-md border border-border/70 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Billing <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
         </div>
+        <form action={updateWorkspaceSettings}>
+          <div className="vault-settings-table border-t-0">
+            <div className="vault-settings-row">
+              <div>
+                <label htmlFor="issue_alerts" className="vault-settings-key">Issue alerts</label>
+                <p className="vault-settings-desc">Critical notification routing.</p>
+              </div>
+              <select
+                id="issue_alerts"
+                name="issue_alerts"
+                defaultValue={data.notificationPreferences.issueAlerts}
+                className="vault-input rounded-md px-3 py-2 text-sm outline-none w-full max-w-xs"
+              >
+                {alertOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="vault-settings-row">
+              <div>
+                <label htmlFor="weekly_digest_day" className="vault-settings-key">Weekly digest</label>
+                <p className="vault-settings-desc">Digest schedule for workspace reporting.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <select
+                  id="weekly_digest_day"
+                  name="weekly_digest_day"
+                  defaultValue={data.notificationPreferences.weeklyDigestDay}
+                  className="vault-input rounded-md px-3 py-2 text-sm outline-none w-full max-w-xs"
+                >
+                  {digestDays.map((day) => (
+                    <option key={day.value} value={day.value}>{day.label}</option>
+                  ))}
+                </select>
+                <input
+                  type="hidden"
+                  name="digest_enabled"
+                  value={data.notificationPreferences.digestEnabled ? "true" : "false"}
+                />
+              </div>
+            </div>
+            <div className="vault-settings-row">
+              <div>
+                <p className="vault-settings-key">Billing alerts</p>
+                <p className="vault-settings-desc">Payment and subscription state notices.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="hidden"
+                  name="billing_alerts_enabled"
+                  value={data.notificationPreferences.billingAlerts ? "true" : "false"}
+                />
+                <p className="text-sm text-muted-foreground">
+                  {data.notificationPreferences.billingAlerts ? "Enabled" : "Disabled"}
+                </p>
+                <Link
+                  href="/app/billing"
+                  className="inline-flex items-center gap-1 rounded-md border border-border/70 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Billing <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-border/60 px-4 py-3 sm:px-5">
+            <button
+              type="submit"
+              className="rounded-md border border-border/70 bg-background/40 px-4 py-2 text-sm text-foreground transition-colors hover:bg-background/70"
+            >
+              Save workspace settings
+            </button>
+          </div>
+        </form>
       </section>
 
       <section className="vault-panel-shell">
@@ -157,4 +267,3 @@ export default async function SettingsPage() {
     </div>
   )
 }
-

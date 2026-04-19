@@ -2,6 +2,7 @@ import Link from "next/link"
 
 import { CheckoutLeakLogo } from "@/components/brand/logo"
 import { getPublicAccessState, type PublicAccessState } from "@/lib/auth/public-access"
+import { getServerSession } from "@/lib/auth/session"
 import { cn } from "@/lib/utils"
 
 const navLinks = [
@@ -15,15 +16,25 @@ interface MarketingHeaderProps {
 }
 
 export async function MarketingHeader({ className, accessState }: MarketingHeaderProps) {
-  const resolvedAccessState = accessState ?? (await getPublicAccessState())
+  const [resolvedAccessState, session] = await Promise.all([
+    accessState ? Promise.resolve(accessState) : getPublicAccessState(),
+    getServerSession(),
+  ])
+  const isAuthenticated = session !== null
 
   const cta =
     resolvedAccessState === "approved"
-      ? {
-          label: "Open app",
-          href: "/api/app/access?next=/app&intent=app&source=header_open_app",
-          tone: "marketing-primary-cta",
-        }
+      ? isAuthenticated
+        ? {
+            label: "Open app",
+            href: "/api/app/access?next=/app&intent=app&source=header_open_app",
+            tone: "marketing-primary-cta",
+          }
+        : {
+            label: "Sign in",
+            href: "/auth/sign-in",
+            tone: "marketing-primary-cta",
+          }
       : resolvedAccessState === "pending"
         ? {
             label: "Under review",

@@ -66,10 +66,18 @@ function SectionRule() {
 
 interface MarketingHomePageProps {
   accessState: PublicAccessState
+  isAuthenticated: boolean
 }
 
-function getPricingCta(input: { accessState: PublicAccessState; planId: string }) {
+function getPricingCta(input: { accessState: PublicAccessState; isAuthenticated: boolean; planId: string }) {
   if (input.accessState === "approved") {
+    if (!input.isAuthenticated) {
+      return {
+        label: "Sign in",
+        href: "/auth/sign-in",
+        primary: true,
+      }
+    }
     return {
       label: "Open app",
       href: "/api/app/access?next=/app&intent=app&source=pricing_open_app",
@@ -92,7 +100,7 @@ function getPricingCta(input: { accessState: PublicAccessState; planId: string }
   }
 }
 
-export default async function MarketingHomePage({ accessState }: MarketingHomePageProps) {
+export default async function MarketingHomePage({ accessState, isAuthenticated }: MarketingHomePageProps) {
   const isApproved = accessState === "approved"
   const isPending = accessState === "pending"
   const showRequestForm = accessState === "unknown"
@@ -144,10 +152,10 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
             <div className="mx-auto mt-6 sm:mt-8">
               {isApproved ? (
                 <Link
-                  href="/api/app/access?next=/app&intent=app&source=hero_open_app"
+                  href={isAuthenticated ? "/api/app/access?next=/app&intent=app&source=hero_open_app" : "/auth/sign-in"}
                   className="marketing-primary-cta inline-flex items-center gap-2 rounded-md px-6 py-3 text-sm font-medium"
                 >
-                  Open app <ArrowRight className="h-3.5 w-3.5" />
+                  {isAuthenticated ? "Open app" : "Sign in"} <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               ) : isPending ? (
                 <div className="mx-auto w-full max-w-sm">
@@ -326,9 +334,9 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:gap-4">
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-3">
             {mobileOrderedPlans.map((plan) => {
-              const cta = getPricingCta({ accessState, planId: plan.id })
+              const cta = getPricingCta({ accessState, isAuthenticated, planId: plan.id })
 
               return (
                 <div
@@ -463,17 +471,19 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
               <>
                 <Eyebrow>Your account</Eyebrow>
                 <h2 className="mx-auto max-w-[20ch] text-[1.55rem] font-semibold leading-[1.13] tracking-[-0.03em] sm:max-w-none sm:text-[2.05rem] lg:text-[2.35rem]">
-                  Your access is active.
+                  {isAuthenticated ? "Your access is active." : "Your access is approved."}
                 </h2>
                 <p className="mx-auto mt-3 max-w-[28ch] text-[0.88rem] leading-[1.68] text-muted-foreground sm:mt-4 sm:max-w-[36ch] sm:text-[0.97rem] sm:leading-[1.85]">
-                  Open the workspace to connect a source and run your first scan.
+                  {isAuthenticated
+                    ? "Open the workspace to connect a source and run your first scan."
+                    : "Sign in to access your workspace and start monitoring."}
                 </p>
                 <div className="mt-6">
                   <Link
-                    href="/api/app/access?next=/app&intent=app&source=closing_open_app"
+                    href={isAuthenticated ? "/api/app/access?next=/app&intent=app&source=closing_open_app" : "/auth/sign-in"}
                     className="marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium sm:w-auto sm:px-6 sm:py-3"
                   >
-                    Open app <ArrowRight className="h-3.5 w-3.5" />
+                    {isAuthenticated ? "Open app" : "Sign in"} <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
                 </div>
               </>

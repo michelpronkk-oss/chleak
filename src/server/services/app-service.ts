@@ -1642,15 +1642,42 @@ export async function getSettingsData() {
       }
     : null
 
+  const admin = createSupabaseAdminClient()
+  const orgId = journey.baseSnapshot.organization.id
+  const userId = journey.shellUser.id
+
+  const [profileResult, wsResult] = await Promise.all([
+    admin.from("operator_profiles").select("display_name, timezone").eq("user_id", userId).maybeSingle(),
+    admin.from("workspace_settings").select("issue_alerts, weekly_digest_day, billing_alerts_enabled, digest_enabled").eq("org_id", orgId).maybeSingle(),
+  ])
+
+  const profile = profileResult.data
+  const ws = wsResult.data
+
+  const notificationPreferences = {
+    issueAlerts: ws?.issue_alerts ?? mockNotificationPreferences.issueAlerts,
+    weeklyDigestDay: ws?.weekly_digest_day ?? mockNotificationPreferences.weeklyDigestDay,
+    billingAlerts: ws?.billing_alerts_enabled ?? mockNotificationPreferences.billingAlerts,
+    digestEnabled: ws?.digest_enabled ?? true,
+  }
+
+  const user = {
+    ...journey.shellUser,
+    fullName: profile?.display_name ?? journey.shellUser.fullName,
+    timezone: profile?.timezone ?? journey.shellUser.timezone,
+    savedDisplayName: profile?.display_name ?? "",
+    savedTimezone: profile?.timezone ?? journey.shellUser.timezone ?? "UTC",
+  }
+
   return {
     onboardingState: journey.state,
     commercialAccessState: journey.commercialAccessState,
     hasPlan: journey.hasPlan,
     shopifySourceState: journey.shopifySourceState,
     stripeSourceState: journey.stripeSourceState,
-    user: journey.shellUser,
+    user,
     organization: journey.baseSnapshot.organization,
-    notificationPreferences: mockNotificationPreferences,
+    notificationPreferences,
     subscription,
     connectedStores: stores.stores.map((store) => ({
       id: store.id,

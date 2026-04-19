@@ -6,6 +6,16 @@ export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
     "CheckoutLeak privacy policy: what information is collected, how it is used, and how it is protected.",
+  openGraph: {
+    title: "Privacy Policy | CheckoutLeak",
+    description: "CheckoutLeak privacy policy: what information is collected, how it is used, and how it is protected.",
+    url: "/privacy",
+    type: "website",
+  },
+  twitter: {
+    title: "Privacy Policy | CheckoutLeak",
+    description: "CheckoutLeak privacy policy: what information is collected, how it is used, and how it is protected.",
+  },
   alternates: {
     canonical: "/privacy",
   },
