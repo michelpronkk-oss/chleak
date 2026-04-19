@@ -1,8 +1,10 @@
 import { Resend } from "resend"
 
 import {
+  buildAccessApprovalTemplate,
   buildIssueDetectedTemplate,
   buildWeeklySummaryTemplate,
+  type AccessApprovalTemplateInput,
   type IssueDetectedTemplateInput,
   type WeeklySummaryTemplateInput,
 } from "./templates"
@@ -49,6 +51,17 @@ async function sendEmail({
     status: "sent" as const,
     id: response.data?.id ?? null,
   }
+}
+
+interface SendAccessApprovalEmailInput extends SendEmailBaseInput, AccessApprovalTemplateInput {}
+
+export async function sendAccessApprovalEmail(input: SendAccessApprovalEmailInput) {
+  const template = buildAccessApprovalTemplate(input)
+  return sendEmail({
+    to: input.to,
+    subject: template.subject,
+    html: template.html,
+  })
 }
 
 interface SendTransactionalIssueEmailInput

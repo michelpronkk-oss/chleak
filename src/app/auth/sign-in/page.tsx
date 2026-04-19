@@ -1,29 +1,28 @@
-import { AccessPanel } from "@/components/auth/access-panel"
-import { sanitizeNextPath } from "@/lib/auth/navigation"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 
+import { sanitizeNextPath } from "@/lib/auth/navigation"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
+
 const errorMessage: Record<string, string> = {
-  missing_fields: "Enter both email and password to continue.",
-  invalid_credentials: "Email or password is incorrect.",
-  callback_missing: "Verification callback was incomplete. Please try again.",
-  callback_failed: "We could not complete sign in from your verification link.",
+  missing_email: "Enter your approved email to continue.",
+  under_review: "Your request is still under review.",
+  not_approved: "This email is not approved for workspace access.",
+  rate_limited: "A sign-in link was just sent. Please wait and check your inbox.",
+  send_failed: "We could not send a sign-in link right now. Please try again.",
+  callback_missing: "Sign-in callback was incomplete. Please request a new link.",
+  callback_failed: "We could not complete sign-in from that link. Request a new one.",
   workspace_setup_failed:
-    "Your account was verified, but workspace setup failed. Contact support.",
+    "Your identity was verified, but workspace setup failed. Contact support.",
+  password_disabled: "Password sign-in is disabled. Use your approved email sign-in link.",
 }
 
 const stateMessage: Record<string, string> = {
-  check_email:
-    "Check your inbox to verify your account. After confirmation, sign in to continue.",
+  check_email: "Check your inbox for your secure sign-in link.",
 }
 
-const planLabel: Record<"starter" | "growth" | "pro", string> = {
-  starter: "Starter",
-  growth: "Growth",
-  pro: "Pro",
-}
+type BillingPlan = "starter" | "growth" | "pro"
 
-function parsePlan(raw: string | undefined) {
+function parsePlan(raw: string | undefined): BillingPlan | null {
   if (raw === "starter" || raw === "growth" || raw === "pro") {
     return raw
   }
@@ -39,18 +38,16 @@ export default async function SignInPage({
   const params = await searchParams
   const nextRaw = Array.isArray(params.next) ? params.next[0] : params.next
   const emailRaw = Array.isArray(params.email) ? params.email[0] : params.email
-  const error = Array.isArray(params.error) ? params.error[0] : params.error
-  const state = Array.isArray(params.state) ? params.state[0] : params.state
+  const errorRaw = Array.isArray(params.error) ? params.error[0] : params.error
+  const stateRaw = Array.isArray(params.state) ? params.state[0] : params.state
   const planRaw = Array.isArray(params.plan) ? params.plan[0] : params.plan
+
   const next = sanitizeNextPath(nextRaw, "/app")
+  const email = typeof emailRaw === "string" ? emailRaw.trim().toLowerCase() : ""
   const selectedPlan = parsePlan(planRaw)
-  const errorText = error ? errorMessage[error] : null
-  const stateText = state ? stateMessage[state] : null
-  const planText = selectedPlan ? `Selected plan: ${planLabel[selectedPlan]}` : null
-  const infoText = stateText ?? planText
-  const secondaryHref = selectedPlan
-    ? `/auth/sign-up?next=${encodeURIComponent(next)}&plan=${selectedPlan}`
-    : `/auth/sign-up?next=${encodeURIComponent(next)}`
+  const errorText = errorRaw ? errorMessage[errorRaw] : null
+  const stateText = stateRaw ? stateMessage[stateRaw] : null
+  const message = errorText ?? stateText
 
   const supabase = await createSupabaseServerClient()
   const {
@@ -58,63 +55,66 @@ export default async function SignInPage({
   } = await supabase.auth.getUser()
 
   if (user) {
-    console.info(`[auth] sign-in page session detection: authenticated=true; redirect=${next}`)
     redirect(next)
   }
 
-  console.info("[auth] sign-in page session detection: authenticated=false")
-
   return (
-    <AccessPanel
-      mode="sign-in"
-      next={next}
-      plan={selectedPlan}
-      infoMessage={infoText}
-      errorMessage={errorText}
-      secondaryPrefix="No account?"
-      secondaryLabel="Create one"
-      secondaryHref={secondaryHref}
-    >
-      <form method="POST" action="/api/auth/sign-in" className="space-y-4">
-        <input type="hidden" name="next" value={next} />
-        {selectedPlan ? <input type="hidden" name="plan" value={selectedPlan} /> : null}
-        <div className="space-y-2">
-          <label htmlFor="email" className="block text-xs text-muted-foreground">
-            Work email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            defaultValue={emailRaw ?? ""}
-            required
-            autoComplete="email"
-            className="w-full rounded-lg border border-border/60 bg-background/40 px-3.5 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground/45 focus:border-primary/50"
-            placeholder="you@brand.com"
-          />
+    <div className="w-full max-w-[430px]">
+      <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-card/65 px-6 py-7 shadow-[0_24px_64px_rgba(0,0,0,0.32)] backdrop-blur-sm sm:px-7 sm:py-8">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-24"
+          style={{
+            background:
+              "radial-gradient(ellipse at top, rgba(70,225,215,0.07), transparent 70%)",
+          }}
+        />
+
+        <div className="relative">
+          <p className="font-mono text-[0.65rem] tracking-[0.14em] uppercase text-primary/55">
+            Access approved
+          </p>
+          <h1 className="mt-3 text-xl font-semibold tracking-[-0.02em] text-foreground sm:text-2xl">
+            Enter your workspace
+          </h1>
+          <p className="mt-2 text-sm leading-[1.7] text-muted-foreground">
+            Sign in with your approved email to enter the private CheckoutLeak workspace.
+          </p>
+
+          {message ? (
+            <div className="mt-5 rounded-lg border border-border/50 bg-background/45 px-3.5 py-2.5 text-sm text-muted-foreground">
+              {message}
+            </div>
+          ) : null}
+
+          <form method="POST" action="/api/auth/magic-link" className="mt-6 space-y-4">
+            <input type="hidden" name="next" value={next} />
+            {selectedPlan ? <input type="hidden" name="plan" value={selectedPlan} /> : null}
+            <div className="space-y-2">
+              <label htmlFor="email" className="block text-xs text-muted-foreground">
+                Approved work email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                defaultValue={email}
+                required
+                autoComplete="email"
+                className="w-full rounded-lg border border-border/60 bg-background/40 px-3.5 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground/45 focus:border-primary/50"
+                placeholder="you@brand.com"
+              />
+            </div>
+            <button
+              type="submit"
+              className="marketing-primary-cta mt-1 inline-flex w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold transition-transform hover:-translate-y-px"
+            >
+              Email me a sign-in link
+            </button>
+          </form>
         </div>
-        <div className="space-y-2">
-          <label htmlFor="password" className="block text-xs text-muted-foreground">
-            Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            minLength={8}
-            autoComplete="current-password"
-            className="w-full rounded-lg border border-border/60 bg-background/40 px-3.5 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground/45 focus:border-primary/50"
-            placeholder="Your password"
-          />
-        </div>
-        <button
-          type="submit"
-          className="marketing-primary-cta mt-1 inline-flex w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold transition-transform hover:-translate-y-px"
-        >
-          Enter workspace
-        </button>
-      </form>
-    </AccessPanel>
+      </div>
+    </div>
   )
 }
+

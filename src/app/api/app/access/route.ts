@@ -1,19 +1,10 @@
 import { NextResponse } from "next/server"
 
+import { getAccessApprovalState } from "@/lib/auth/access"
 import { sanitizeNextPath } from "@/lib/auth/navigation"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { ensureWorkspaceForUser } from "@/server/services/account-bootstrap-service"
-import {
-  getPlanEntitlement,
-  getPlanStateForOrganization,
-} from "@/server/services/plan-state-service"
 
-type AuthEntryMode = "sign-in" | "sign-up"
 type BillingPlan = "starter" | "growth" | "pro"
-
-function parseAuthEntryMode(raw: string | null): AuthEntryMode {
-  return raw === "sign-in" ? "sign-in" : "sign-up"
-}
 
 function parsePlan(raw: string | null): BillingPlan | null {
   if (raw === "starter" || raw === "growth" || raw === "pro") {
@@ -25,10 +16,11 @@ function parsePlan(raw: string | null): BillingPlan | null {
 
 export async function GET(request: Request) {
   const url = new URL(request.url)
-  const next = sanitizeNextPath(url.searchParams.get("next"), "/app/billing")
+  const next = sanitizeNextPath(url.searchParams.get("next"), "/app")
   const plan = parsePlan(url.searchParams.get("plan"))
   const intent = url.searchParams.get("intent")
-  const authMode = parseAuthEntryMode(url.searchParams.get("auth"))
+  const emailRaw = url.searchParams.get("email")
+  const email = emailRaw ? emailRaw.trim().toLowerCase() : ""
 
   const nextUrl = new URL(next, url.origin)
   if (intent) {
@@ -43,43 +35,52 @@ export async function GET(request: Request) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
-    const authRedirect = new URL(`/auth/${authMode}`, url.origin)
-    authRedirect.searchParams.set("next", `${nextUrl.pathname}${nextUrl.search}`)
-    if (plan) {
-      authRedirect.searchParams.set("plan", plan)
+  const nextPathWithQuery = `${nextUrl.pathname}${nextUrl.search}`
+
+  if (user?.email) {
+    const approvalState = await getAccessApprovalState(user.email)
+
+    if (approvalState === "approved") {
+      return NextResponse.redirect(nextUrl)
     }
-    return NextResponse.redirect(authRedirect)
+
+    if (approvalState === "pending" || approvalState === "rejected") {
+      return NextResponse.redirect(new URL("/access-review", url.origin))
+    }
+
+    const requestAccessUrl = new URL("/request-access", url.origin)
+    requestAccessUrl.searchParams.set("email", user.email)
+    return NextResponse.redirect(requestAccessUrl)
   }
 
-  if (plan) {
-    const metadata = user.user_metadata as Record<string, unknown> | null
-    const fullName =
-      typeof metadata?.full_name === "string" && metadata.full_name.trim().length > 0
-        ? metadata.full_name.trim()
-        : null
+  if (email) {
+    const approvalState = await getAccessApprovalState(email)
 
-    try {
-      const workspace = await ensureWorkspaceForUser({
-        userId: user.id,
-        email: user.email ?? null,
-        fullName,
-      })
-      const planState = await getPlanStateForOrganization(workspace.organizationId)
-      const entitlement = getPlanEntitlement(planState)
-
-      if (entitlement.hasActiveAccess) {
-        return NextResponse.redirect(new URL("/app", url.origin))
-      }
-    } catch {
-      const fallback = new URL("/app/billing", url.origin)
-      fallback.searchParams.set("intent", "workspace_setup_failed")
+    if (approvalState === "approved") {
+      const authRedirect = new URL("/auth/sign-in", url.origin)
+      authRedirect.searchParams.set("next", nextPathWithQuery)
+      authRedirect.searchParams.set("email", email)
       if (plan) {
-        fallback.searchParams.set("plan", plan)
+        authRedirect.searchParams.set("plan", plan)
       }
-      return NextResponse.redirect(fallback)
+      return NextResponse.redirect(authRedirect)
     }
+
+    const requestAccessUrl = new URL("/request-access", url.origin)
+    requestAccessUrl.searchParams.set("email", email)
+    if (approvalState === "pending") {
+      requestAccessUrl.searchParams.set("state", "under_review")
+    }
+    return NextResponse.redirect(requestAccessUrl)
   }
 
-  return NextResponse.redirect(nextUrl)
+  const authRedirect = new URL("/auth/sign-in", url.origin)
+  authRedirect.searchParams.set("next", nextPathWithQuery)
+  if (plan) {
+    authRedirect.searchParams.set("plan", plan)
+  }
+  if (intent === "app") {
+    authRedirect.searchParams.set("mode", "open_app")
+  }
+  return NextResponse.redirect(authRedirect)
 }

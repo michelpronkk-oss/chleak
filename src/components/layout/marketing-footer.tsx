@@ -6,7 +6,7 @@ const footerGroups = [
   {
     title: "Product",
     links: [
-      { label: "Pricing", href: "/#pricing" },
+      { label: "Pricing", href: "/pricing" },
       {
         label: "Dashboard",
         href: "/api/app/access?next=/app&source=footer_dashboard",
@@ -40,8 +40,8 @@ export function MarketingFooter() {
             <p className="text-[0.88rem] leading-[1.68] text-muted-foreground sm:text-sm sm:leading-[1.75]">
               Revenue leak intelligence for Shopify and Stripe operators.
             </p>
-            <p className="text-[0.8rem] leading-[1.6] text-muted-foreground/55 sm:text-[0.83rem]">
-              Checkout friction, payment gaps, and failed billing recovery — ranked by impact.
+            <p className="text-[0.8rem] leading-[1.6] text-muted-foreground/50 sm:text-[0.83rem]">
+              Checkout friction, payment gaps, and failed billing recovery. Ranked by monthly impact.
             </p>
             <a
               href="mailto:support@checkoutleak.com"

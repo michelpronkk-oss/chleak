@@ -1,84 +1,36 @@
 import Link from "next/link"
 
 import { CheckoutLeakLogo } from "@/components/brand/logo"
-import { getServerSession } from "@/lib/auth/session"
+import { getPublicAccessState, type PublicAccessState } from "@/lib/auth/public-access"
 import { cn } from "@/lib/utils"
-import { createSupabaseAdminClient } from "@/lib/supabase/shared"
-import {
-  getPlanEntitlement,
-  getPlanStateForOrganization,
-} from "@/server/services/plan-state-service"
 
 const navLinks = [
   { href: "/product", label: "Product" },
   { href: "/pricing", label: "Pricing" },
 ]
 
-interface HeaderCta {
-  label: string
-  href: string
+interface MarketingHeaderProps {
+  className?: string
+  accessState?: PublicAccessState
 }
 
-async function hasConnectedSource(organizationId: string) {
-  const admin = createSupabaseAdminClient()
-  const result = await admin
-    .from("store_integrations")
-    .select("id", { head: true, count: "exact" })
-    .eq("organization_id", organizationId)
-    .in("provider", ["shopify", "stripe"])
-    .in("status", ["connected", "syncing"])
+export async function MarketingHeader({ className, accessState }: MarketingHeaderProps) {
+  const resolvedAccessState = accessState ?? (await getPublicAccessState())
 
-  if (result.error) {
-    return false
-  }
-
-  return (result.count ?? 0) > 0
-}
-
-async function getMarketingHeaderCta(): Promise<HeaderCta> {
-  try {
-    const session = await getServerSession()
-
-    if (!session?.membership) {
-      return {
-        label: "Start monitoring",
-        href: "/pricing",
-      }
-    }
-
-    const planState = await getPlanStateForOrganization(session.membership.organizationId)
-    const entitlement = getPlanEntitlement(planState)
-
-    if (!entitlement.hasActiveAccess) {
-      return {
-        label: "Continue setup",
-        href: "/app/billing?intent=plan_required",
-      }
-    }
-
-    const connected = await hasConnectedSource(session.membership.organizationId)
-
-    if (!connected) {
-      return {
-        label: "Connect source",
-        href: "/app/connect",
-      }
-    }
-
-    return {
-      label: "Open app",
-      href: "/app",
-    }
-  } catch {
-    return {
-      label: "Start monitoring",
-      href: "/pricing",
-    }
-  }
-}
-
-export async function MarketingHeader({ className }: { className?: string }) {
-  const cta = await getMarketingHeaderCta()
+  const cta =
+    resolvedAccessState === "approved"
+      ? {
+          label: "Open app",
+          href: "/api/app/access?next=/app&intent=app&source=header_open_app",
+          tone: "marketing-primary-cta",
+        }
+      : resolvedAccessState === "pending"
+        ? {
+            label: "Under review",
+            href: "/access-review",
+            tone: "border border-border/70 bg-card/30 text-muted-foreground",
+          }
+        : null
 
   return (
     <header
@@ -102,12 +54,17 @@ export async function MarketingHeader({ className }: { className?: string }) {
           ))}
         </nav>
 
-        <Link
-          href={cta.href}
-          className="marketing-primary-cta rounded-lg px-2.5 py-1.5 text-[0.69rem] font-semibold transition-transform hover:-translate-y-0.5 sm:px-3.5 sm:text-xs"
-        >
-          {cta.label}
-        </Link>
+        {cta ? (
+          <Link
+            href={cta.href}
+            className={cn(
+              "rounded-lg px-2.5 py-1.5 text-[0.69rem] font-semibold transition-transform hover:-translate-y-0.5 sm:px-3.5 sm:text-xs",
+              cta.tone
+            )}
+          >
+            {cta.label}
+          </Link>
+        ) : null}
       </div>
     </header>
   )
