@@ -9,6 +9,66 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      access_requests: {
+        Row: {
+          id: string
+          created_at: string
+          updated_at: string
+          full_name: string
+          email: string
+          company_name: string | null
+          store_url: string | null
+          platform: string
+          revenue_band: string | null
+          pain_prompt: string | null
+          status: string
+          source: string
+          notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          approval_email_sent_at: string | null
+          request_received_email_sent_at: string | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          updated_at?: string
+          full_name: string
+          email: string
+          company_name?: string | null
+          store_url?: string | null
+          platform: string
+          revenue_band?: string | null
+          pain_prompt?: string | null
+          status?: string
+          source?: string
+          notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          approval_email_sent_at?: string | null
+          request_received_email_sent_at?: string | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          updated_at?: string
+          full_name?: string
+          email?: string
+          company_name?: string | null
+          store_url?: string | null
+          platform?: string
+          revenue_band?: string | null
+          pain_prompt?: string | null
+          status?: string
+          source?: string
+          notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          approval_email_sent_at?: string | null
+          request_received_email_sent_at?: string | null
+        }
+        Relationships: []
+      }
       issue_events: {
         Row: {
           created_at: string
@@ -117,6 +177,33 @@ export type Database = {
           title?: string
           type?: string
           why_it_matters?: string
+        }
+        Relationships: []
+      }
+      operator_profiles: {
+        Row: {
+          id: string
+          user_id: string
+          display_name: string | null
+          timezone: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          display_name?: string | null
+          timezone?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          display_name?: string | null
+          timezone?: string
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -327,6 +414,42 @@ export type Database = {
           organization_id?: string
           platform?: string
           timezone?: string
+        }
+        Relationships: []
+      }
+      workspace_settings: {
+        Row: {
+          id: string
+          org_id: string
+          issue_alerts: string
+          weekly_digest_day: string
+          billing_alerts_enabled: boolean
+          digest_enabled: boolean
+          updated_by: string
+          updated_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          issue_alerts?: string
+          weekly_digest_day?: string
+          billing_alerts_enabled?: boolean
+          digest_enabled?: boolean
+          updated_by: string
+          updated_at?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          issue_alerts?: string
+          weekly_digest_day?: string
+          billing_alerts_enabled?: boolean
+          digest_enabled?: boolean
+          updated_by?: string
+          updated_at?: string
+          created_at?: string
         }
         Relationships: []
       }

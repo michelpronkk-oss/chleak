@@ -1,6 +1,9 @@
+"use server"
+
 import { NextResponse } from "next/server"
 
 import { PUBLIC_ACCESS_EMAIL_COOKIE } from "@/lib/auth/public-access"
+import { sendRequestReceivedEmail } from "@/lib/email/resend"
 import { createSupabaseAdminClient } from "@/lib/supabase/shared"
 
 interface RequestBody {
@@ -14,6 +17,16 @@ interface RequestBody {
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+function setAccessCookie(response: NextResponse, email: string) {
+  response.cookies.set(PUBLIC_ACCESS_EMAIL_COOKIE, email, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 180,
+  })
 }
 
 export async function POST(request: Request) {
@@ -46,43 +59,54 @@ export async function POST(request: Request) {
 
   try {
     const admin = createSupabaseAdminClient()
-    // access_requests is not yet in the generated types; cast until types are regenerated
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (admin as any).from("access_requests").insert({
-      full_name: fullName,
-      email,
-      store_url: storeUrl,
-      platform,
-      revenue_band: revenueBand,
-      pain_prompt: painPrompt,
-      source: "homepage",
-    })
+
+    const { data: inserted, error } = await admin
+      .from("access_requests")
+      .insert({
+        full_name: fullName,
+        email,
+        store_url: storeUrl,
+        platform,
+        revenue_band: revenueBand,
+        pain_prompt: painPrompt,
+        source: "homepage",
+      })
+      .select("id, full_name, email")
+      .single()
 
     if (error) {
-      // Unique constraint = duplicate email; return success silently
+      // Unique constraint = duplicate email; silently succeed, do not resend email
       if (error.code === "23505") {
         const response = NextResponse.json({ success: true })
-        response.cookies.set(PUBLIC_ACCESS_EMAIL_COOKIE, email, {
-          httpOnly: true,
-          sameSite: "lax",
-          secure: process.env.NODE_ENV === "production",
-          path: "/",
-          maxAge: 60 * 60 * 24 * 180,
-        })
+        setAccessCookie(response, email)
         return response
       }
       console.error("[request-access] insert error:", error.message)
       return NextResponse.json({ error: "server_error" }, { status: 500 })
     }
 
+    // New submission -- send request-received confirmation email
+    if (inserted) {
+      try {
+        const result = await sendRequestReceivedEmail({
+          to: inserted.email,
+          fullName: inserted.full_name,
+        })
+
+        if (result.status === "sent") {
+          await admin
+            .from("access_requests")
+            .update({ request_received_email_sent_at: new Date().toISOString() })
+            .eq("id", inserted.id)
+        }
+      } catch (emailErr) {
+        // Email failure must not fail the submission response
+        console.error("[request-access] confirmation email error:", emailErr)
+      }
+    }
+
     const response = NextResponse.json({ success: true })
-    response.cookies.set(PUBLIC_ACCESS_EMAIL_COOKIE, email, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 180,
-    })
+    setAccessCookie(response, email)
     return response
   } catch (err) {
     console.error("[request-access] unexpected error:", err)

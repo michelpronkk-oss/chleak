@@ -51,9 +51,7 @@ export async function POST(
 
   const admin = createSupabaseAdminClient()
 
-  // Fetch the request record first
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: record, error: fetchError } = await (admin as any)
+  const { data: record, error: fetchError } = await admin
     .from("access_requests")
     .select("id, full_name, email, status, approval_email_sent_at")
     .eq("id", id)
@@ -69,8 +67,7 @@ export async function POST(
 
   const now = new Date().toISOString()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: updateError } = await (admin as any)
+  const { error: updateError } = await admin
     .from("access_requests")
     .update({
       status: "approved",
@@ -102,9 +99,7 @@ export async function POST(
 
       if (result.status === "sent") {
         emailStatus = "sent"
-        // Mark email sent
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (admin as any)
+        await admin
           .from("access_requests")
           .update({ approval_email_sent_at: now })
           .eq("id", id)

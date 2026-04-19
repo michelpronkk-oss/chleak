@@ -3,9 +3,11 @@ import { Resend } from "resend"
 import {
   buildAccessApprovalTemplate,
   buildIssueDetectedTemplate,
+  buildRequestReceivedTemplate,
   buildWeeklySummaryTemplate,
   type AccessApprovalTemplateInput,
   type IssueDetectedTemplateInput,
+  type RequestReceivedTemplateInput,
   type WeeklySummaryTemplateInput,
 } from "./templates"
 
@@ -51,6 +53,17 @@ async function sendEmail({
     status: "sent" as const,
     id: response.data?.id ?? null,
   }
+}
+
+interface SendRequestReceivedEmailInput extends SendEmailBaseInput, RequestReceivedTemplateInput {}
+
+export async function sendRequestReceivedEmail(input: SendRequestReceivedEmailInput) {
+  const template = buildRequestReceivedTemplate(input)
+  return sendEmail({
+    to: input.to,
+    subject: template.subject,
+    html: template.html,
+  })
 }
 
 interface SendAccessApprovalEmailInput extends SendEmailBaseInput, AccessApprovalTemplateInput {}

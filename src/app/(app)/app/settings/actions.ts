@@ -27,7 +27,7 @@ export async function updateWorkspaceSettings(formData: FormData) {
 
   const admin = createSupabaseAdminClient()
   const { data: membership } = await admin
-    .from("organization_members")
+    .from("org_members")
     .select("organization_id")
     .eq("user_id", session.user.id)
     .single()
