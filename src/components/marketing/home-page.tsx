@@ -115,7 +115,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
       />
 
       {/* Hero */}
-      <section className="relative mx-auto min-h-[88svh] w-full max-w-6xl px-5 pb-14 pt-6 sm:min-h-0 sm:px-8 sm:pb-20 sm:pt-16 lg:pb-24 lg:pt-20">
+      <section className="relative mx-auto min-h-[calc(100svh-2rem)] w-full max-w-6xl px-5 pb-11 pt-[calc(env(safe-area-inset-top)+2.5rem)] min-[390px]:pb-12 min-[390px]:pt-[calc(env(safe-area-inset-top)+3rem)] sm:min-h-0 sm:px-8 sm:pb-20 sm:pt-16 lg:pb-24 lg:pt-20">
         <div
           aria-hidden
           className="pointer-events-none absolute left-1/2 top-[-34px] hidden h-[640px] w-[1280px] -translate-x-1/2 blur-[96px] lg:block"
@@ -127,7 +127,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
 
         <div className="relative mx-auto max-w-2xl text-center">
           <FadeIn delay={0.02}>
-            <div className="mb-5 sm:hidden">
+            <div className="mb-6 sm:hidden">
               <div className="inline-flex items-center gap-2.5 rounded-full border border-border/55 bg-card/25 px-3 py-1.5">
                 <Image
                   src="/logo.png"
@@ -145,7 +145,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
           </FadeIn>
 
           <FadeIn delay={0.04}>
-            <p className="mb-4 font-mono text-[0.65rem] tracking-[0.14em] uppercase text-primary/60 sm:mb-5 sm:text-[0.7rem]">
+            <p className="mb-5 font-mono text-[0.65rem] tracking-[0.14em] uppercase text-primary/60 sm:mb-5 sm:text-[0.7rem]">
               Private operator intelligence
             </p>
           </FadeIn>
@@ -159,7 +159,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
           </FadeIn>
 
           <FadeIn delay={0.12}>
-            <p className="mx-auto mt-4 max-w-[32ch] text-[0.92rem] leading-[1.7] text-muted-foreground sm:mt-5 sm:max-w-[44ch] sm:text-[1.04rem] sm:leading-[1.86]">
+            <p className="mx-auto mt-4.5 max-w-[32ch] text-[0.92rem] leading-[1.7] text-muted-foreground sm:mt-5 sm:max-w-[44ch] sm:text-[1.04rem] sm:leading-[1.86]">
               Surface the highest-impact checkout and billing issues across Shopify and Stripe. Ranked by monthly recovery. Actioned in order.
             </p>
           </FadeIn>
