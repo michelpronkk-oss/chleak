@@ -113,7 +113,7 @@ export async function POST(request: Request) {
     await ensureApprovedUserExists(email)
 
     const authOrigin = getAppOriginFromEnv() ?? url.origin
-    const redirectToUrl = new URL("/auth/confirm", authOrigin)
+    const redirectToUrl = new URL("/auth/callback", authOrigin)
     redirectToUrl.searchParams.set("next", next)
     if (plan) {
       redirectToUrl.searchParams.set("plan", plan)
@@ -170,4 +170,3 @@ export async function POST(request: Request) {
     )
   }
 }
-

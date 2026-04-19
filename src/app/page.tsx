@@ -2,6 +2,7 @@ import { MarketingFooter } from "@/components/layout/marketing-footer"
 import { MarketingHeader } from "@/components/layout/marketing-header"
 import MarketingHomePage from "@/components/marketing/home-page"
 import { getPublicAccessState } from "@/lib/auth/public-access"
+import { redirect } from "next/navigation"
 
 export default async function HomePage({
   searchParams,
@@ -10,6 +11,10 @@ export default async function HomePage({
 }) {
   const accessState = await getPublicAccessState()
   const params = await searchParams
+  const code = Array.isArray(params.code) ? params.code[0] : params.code
+  if (typeof code === "string" && code.length > 0) {
+    redirect(`/auth/callback?code=${encodeURIComponent(code)}&next=%2Fapp`)
+  }
   const intent = Array.isArray(params.intent) ? params.intent[0] : params.intent
   const showAccessNotice = intent === "app"
 
