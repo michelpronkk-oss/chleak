@@ -5,17 +5,49 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { getAccessApprovalState } from "@/lib/auth/access"
 
 export type PublicAccessState = "approved" | "pending" | "unknown"
+export const PUBLIC_ACCESS_EMAIL_COOKIE = "checkoutleak_public_access_email"
 
 function isSupabaseAuthCookie(name: string) {
   return name.startsWith("sb-") && name.includes("auth-token")
 }
 
+function normalizeEmail(value: string | null | undefined) {
+  if (!value) {
+    return null
+  }
+
+  const normalized = value.trim().toLowerCase()
+  if (!normalized || !normalized.includes("@")) {
+    return null
+  }
+
+  return normalized
+}
+
+async function resolveAccessStateForEmail(email: string | null) {
+  const normalizedEmail = normalizeEmail(email)
+  if (!normalizedEmail) {
+    return "unknown" as const
+  }
+
+  const approval = await getAccessApprovalState(normalizedEmail)
+  if (approval === "approved") {
+    return "approved" as const
+  }
+  if (approval === "pending") {
+    return "pending" as const
+  }
+
+  return "unknown" as const
+}
+
 export const getPublicAccessState = cache(async (): Promise<PublicAccessState> => {
   const cookieStore = await cookies()
+  const publicIdentityEmail = cookieStore.get(PUBLIC_ACCESS_EMAIL_COOKIE)?.value ?? null
   const hasAuthCookies = cookieStore.getAll().some((cookie) => isSupabaseAuthCookie(cookie.name))
 
   if (!hasAuthCookies) {
-    return "unknown"
+    return resolveAccessStateForEmail(publicIdentityEmail)
   }
 
   try {
@@ -26,20 +58,11 @@ export const getPublicAccessState = cache(async (): Promise<PublicAccessState> =
     } = await supabase.auth.getUser()
 
     if (error || !user?.email) {
-      return "unknown"
+      return resolveAccessStateForEmail(publicIdentityEmail)
     }
 
-    const approval = await getAccessApprovalState(user.email)
-    if (approval === "approved") {
-      return "approved"
-    }
-    if (approval === "pending") {
-      return "pending"
-    }
-
-    return "unknown"
+    return resolveAccessStateForEmail(user.email)
   } catch {
-    return "unknown"
+    return resolveAccessStateForEmail(publicIdentityEmail)
   }
 })
-

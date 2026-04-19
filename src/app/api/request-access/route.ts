@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 
+import { PUBLIC_ACCESS_EMAIL_COOKIE } from "@/lib/auth/public-access"
 import { createSupabaseAdminClient } from "@/lib/supabase/shared"
 
 interface RequestBody {
@@ -60,13 +61,29 @@ export async function POST(request: Request) {
     if (error) {
       // Unique constraint = duplicate email; return success silently
       if (error.code === "23505") {
-        return NextResponse.json({ success: true })
+        const response = NextResponse.json({ success: true })
+        response.cookies.set(PUBLIC_ACCESS_EMAIL_COOKIE, email, {
+          httpOnly: true,
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
+          path: "/",
+          maxAge: 60 * 60 * 24 * 180,
+        })
+        return response
       }
       console.error("[request-access] insert error:", error.message)
       return NextResponse.json({ error: "server_error" }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true })
+    const response = NextResponse.json({ success: true })
+    response.cookies.set(PUBLIC_ACCESS_EMAIL_COOKIE, email, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 180,
+    })
+    return response
   } catch (err) {
     console.error("[request-access] unexpected error:", err)
     return NextResponse.json({ error: "server_error" }, { status: 500 })
