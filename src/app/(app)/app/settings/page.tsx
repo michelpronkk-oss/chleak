@@ -17,7 +17,7 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-5 pb-24 lg:pb-4">
       <section className="vault-page-intro">
-        <p className="data-mono text-primary">Settings</p>
+        <p className="data-mono text-muted-foreground">Settings</p>
         <h1 className="vault-page-intro-title">
           Account and Workspace Settings
         </h1>
@@ -86,7 +86,7 @@ export default async function SettingsPage() {
                       <span className="text-sm">{store.name}</span>
                       <Link
                         href={store.href}
-                        className="text-xs text-primary transition-opacity hover:opacity-80"
+                        className="vault-link text-xs"
                       >
                         Open
                       </Link>

@@ -70,7 +70,7 @@ export default async function FixPlanPage({
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to dashboard
         </Link>
-        <p className="data-mono text-primary">Fix Plan</p>
+        <p className="data-mono text-muted-foreground">Fix Plan</p>
         <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
           {fixPlan.title}
         </h1>
@@ -136,21 +136,21 @@ export default async function FixPlanPage({
       <section className="grid gap-5 xl:grid-cols-[1.65fr_1fr]">
         <div className="space-y-5">
           <section className="surface-card p-4 sm:p-5 lg:p-6">
-            <p className="data-mono text-primary">Why this matters</p>
+            <p className="data-mono text-muted-foreground">Why this matters</p>
             <p className="mt-3 text-sm leading-7 text-muted-foreground sm:text-base">
               {fixPlan.whyItMatters}
             </p>
           </section>
 
           <section className="surface-card p-4 sm:p-5 lg:p-6">
-            <p className="data-mono text-primary">Recommended fix</p>
+            <p className="data-mono text-muted-foreground">Recommended fix</p>
             <p className="mt-3 text-sm leading-7 text-muted-foreground sm:text-base">
               {fixPlan.recommendedFix}
             </p>
           </section>
 
           <section className="surface-card p-4 sm:p-5 lg:p-6">
-            <p className="data-mono text-primary">Action steps</p>
+            <p className="data-mono text-muted-foreground">Action steps</p>
             <ol className="mt-4 space-y-3 sm:space-y-4">
               {fixPlan.steps.map((step, index) => (
                 <li key={step.id} className="rounded-xl border border-border/70 bg-background/40 p-4">
@@ -169,11 +169,11 @@ export default async function FixPlanPage({
 
         <div className="space-y-5">
           <section className="surface-card p-4 sm:p-5 lg:p-6">
-            <p className="data-mono text-primary">Platform context</p>
+            <p className="data-mono text-muted-foreground">Platform context</p>
             <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
               {fixPlan.platformContext.map((item) => (
                 <li key={item} className="flex items-start gap-2">
-                  <CircleDot className="mt-0.5 h-3.5 w-3.5 text-primary" />
+                  <CircleDot className="mt-0.5 h-3.5 w-3.5 text-muted-foreground/60" />
                   <span>{item}</span>
                 </li>
               ))}
@@ -181,18 +181,18 @@ export default async function FixPlanPage({
           </section>
 
           <section className="surface-card p-4 sm:p-5 lg:p-6">
-            <p className="data-mono text-primary">Expected outcome</p>
+            <p className="data-mono text-muted-foreground">Expected outcome</p>
             <p className="mt-3 text-sm text-muted-foreground">{fixPlan.expectedOutcome}</p>
           </section>
 
           <section className="surface-card p-4 sm:p-5 lg:p-6">
-            <p className="data-mono text-primary">Success signal</p>
+            <p className="data-mono text-muted-foreground">Success signal</p>
             <p className="mt-3 text-sm text-muted-foreground">{fixPlan.successSignal}</p>
           </section>
 
           {fixPlan.relatedIssues.length ? (
             <section className="surface-card p-4 sm:p-5 lg:p-6">
-              <p className="data-mono text-primary">Related signals</p>
+              <p className="data-mono text-muted-foreground">Related signals</p>
               <ul className="mt-4 space-y-3">
                 {fixPlan.relatedIssues.slice(0, 2).map((related) => (
                   <li

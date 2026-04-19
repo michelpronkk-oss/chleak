@@ -42,7 +42,7 @@ export default async function StoreDetailPage({
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to stores
         </Link>
-        <p className="data-mono text-primary">Source Detail</p>
+        <p className="data-mono text-muted-foreground">Source Detail</p>
         <h1 className="vault-page-intro-title">{data.store.name}</h1>
         <p className="vault-page-intro-copy">
           {data.context?.operationalArea ?? "Revenue monitoring source"} | {data.status.label}
@@ -188,7 +188,7 @@ export default async function StoreDetailPage({
                     </p>
                     <Link
                       href={plan.href}
-                      className="mt-2 inline-flex items-center gap-1 text-xs text-foreground transition-colors hover:text-primary"
+                      className="vault-link mt-2 inline-flex items-center gap-1 text-xs"
                     >
                       Open fix plan <ArrowRight className="h-3 w-3" />
                     </Link>

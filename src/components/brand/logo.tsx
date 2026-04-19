@@ -1,3 +1,4 @@
+import Image from "next/image"
 import Link from "next/link"
 
 import { cn } from "@/lib/utils"
@@ -16,12 +17,15 @@ export function CheckoutLeakLogo({ className, href = "/" }: CheckoutLeakLogoProp
         className
       )}
     >
-      <span className="relative h-4 w-4 shrink-0 border border-foreground/95">
-        <span className="absolute right-[2px] top-[2px] h-1.5 w-1.5 rounded-full bg-signal" />
-      </span>
-      <span className="leading-none">
-        CheckoutLeak
-      </span>
+      <Image
+        src="/logo.png"
+        alt=""
+        width={20}
+        height={20}
+        className="shrink-0"
+        unoptimized
+      />
+      <span className="leading-none">CheckoutLeak</span>
     </Link>
   )
 }

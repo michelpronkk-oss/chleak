@@ -73,11 +73,11 @@ export function PostOauthHandoff({
   )
 
   return (
-    <section className="surface-card border border-primary/25 bg-primary/[0.05] p-4">
-      <p className="data-mono text-primary">Connection Confirmed</p>
+    <section className="surface-card border border-border/50 bg-background/30 p-4">
+      <p className="data-mono text-muted-foreground">Connection Confirmed</p>
       <div className="mt-3 h-1.5 rounded-full bg-background/70">
         <div
-          className="h-1.5 rounded-full bg-primary/70 transition-all duration-500 ease-out"
+          className="h-1.5 rounded-full bg-foreground/50 transition-all duration-500 ease-out"
           style={{ width: `${progressPercent}%` }}
         />
       </div>
@@ -90,7 +90,7 @@ export function PostOauthHandoff({
             key={stage}
             className={cn(
               "flex items-center gap-2.5 text-sm",
-              isDone || isCurrent ? "text-primary/90" : "text-muted-foreground/70"
+              isDone || isCurrent ? "text-foreground" : "text-muted-foreground/70"
             )}
           >
             {isDone ? (
@@ -111,7 +111,7 @@ export function PostOauthHandoff({
         </p>
         <Link
           href="/app"
-          className="inline-flex items-center gap-1 text-xs text-primary transition-opacity hover:opacity-80"
+          className="vault-link inline-flex items-center gap-1 text-xs"
         >
           Open now <ArrowRight className="h-3 w-3" />
         </Link>

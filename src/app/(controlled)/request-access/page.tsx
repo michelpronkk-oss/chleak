@@ -18,16 +18,6 @@ export default async function RequestAccessPage({
 
   return (
     <div className="relative" style={{ overflowX: "clip" }}>
-      <div
-        aria-hidden
-        className="pointer-events-none absolute right-0 top-0 -z-10 h-[700px] w-[700px]"
-        style={{
-          transform: "translate(30%, -25%)",
-          background:
-            "radial-gradient(ellipse at center, rgba(70,225,215,0.06), transparent 70%)",
-        }}
-      />
-
       <section className="mx-auto w-full max-w-xl px-5 pb-16 pt-10 sm:px-8 sm:pb-20 sm:pt-14">
         <FadeIn delay={0.04}>
           <div className="mb-7 sm:mb-9">

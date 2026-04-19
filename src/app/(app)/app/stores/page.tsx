@@ -22,7 +22,7 @@ export default async function StoresPage() {
   return (
     <div className="space-y-5 pb-24 lg:pb-4">
       <section className="space-y-2">
-        <p className="data-mono text-primary">Stores</p>
+        <p className="data-mono text-muted-foreground">Stores</p>
         <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
           Connected Revenue Sources
         </h1>
@@ -45,7 +45,7 @@ export default async function StoresPage() {
             <p className="mt-2 text-sm text-muted-foreground">{data.stagingSource.message}</p>
             <Link
               href="/app/connect"
-              className="mt-4 inline-flex items-center gap-1 text-sm text-primary transition-opacity hover:opacity-80"
+              className="vault-link mt-4 inline-flex items-center gap-1 text-sm"
             >
               Open connection flow <ArrowRight className="h-3.5 w-3.5" />
             </Link>
@@ -97,7 +97,7 @@ export default async function StoresPage() {
                 <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                   <Link
                     href={store.href}
-                    className="inline-flex items-center gap-1 text-sm text-primary transition-opacity hover:opacity-80"
+                    className="vault-link inline-flex items-center gap-1 text-sm"
                   >
                     Open store <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
@@ -128,7 +128,7 @@ export default async function StoresPage() {
       </section>
 
       <section className="surface-card p-4 sm:p-5 lg:p-6">
-        <p className="data-mono text-primary">Coverage Snapshot</p>
+        <p className="data-mono text-muted-foreground">Coverage Snapshot</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-3 sm:gap-4">
           <div className="rounded-xl border border-border/70 bg-background/35 p-3.5 sm:p-4">
             <p className="text-sm text-muted-foreground">Connected stores</p>
@@ -150,7 +150,7 @@ export default async function StoresPage() {
           </div>
         </div>
         <p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-          <CircleDot className="h-3.5 w-3.5 text-primary" />
+          <CircleDot className="h-3.5 w-3.5 text-muted-foreground/60" />
           Store health updates as scans complete and issue status changes.
         </p>
       </section>

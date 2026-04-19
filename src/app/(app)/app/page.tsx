@@ -45,7 +45,7 @@ export default async function DashboardOverviewPage() {
     return (
       <div className="space-y-5 pb-24 lg:pb-4">
         <section className="space-y-2">
-          <p className="data-mono text-primary">Source Connection</p>
+          <p className="data-mono text-muted-foreground">Source Connection</p>
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
             {journey.sourceLabel} authorization in progress
           </h1>
@@ -73,7 +73,7 @@ export default async function DashboardOverviewPage() {
     return (
       <div className="space-y-5 pb-24 lg:pb-4">
         <section className="space-y-2">
-          <p className="data-mono text-primary">Integration Status</p>
+          <p className="data-mono text-muted-foreground">Integration Status</p>
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
             Connection needs attention
           </h1>
@@ -100,8 +100,8 @@ export default async function DashboardOverviewPage() {
       <div className="space-y-5 pb-24 lg:pb-4">
         <section className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-            <p className="data-mono text-primary">Scanning</p>
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-foreground/50" />
+            <p className="data-mono text-muted-foreground">Scanning</p>
           </div>
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
             {journey.sourceLabel} source connected. First scan running.
@@ -130,7 +130,7 @@ export default async function DashboardOverviewPage() {
                 key={check}
                 className="flex items-center gap-3 rounded-lg border border-border/70 bg-background/35 px-4 py-3 text-sm text-muted-foreground"
               >
-                <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-primary/60" />
+                <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-foreground/40" />
                 {check}
               </li>
             ))}
@@ -166,7 +166,7 @@ export default async function DashboardOverviewPage() {
     return (
       <div className="space-y-5 pb-24 lg:pb-4">
         <section className="space-y-2">
-          <p className="data-mono text-primary">First Findings</p>
+          <p className="data-mono text-muted-foreground">First Findings</p>
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
             {journey.sourceLabel} scan completed. Initial leakage detected.
           </h1>
@@ -177,7 +177,7 @@ export default async function DashboardOverviewPage() {
 
         <section className="surface-card-strong grid gap-5 p-5 sm:p-6 lg:p-7 lg:grid-cols-[1.3fr_1fr]">
           <div>
-            <p className="data-mono text-primary">Primary Leak</p>
+            <p className="data-mono text-muted-foreground">Primary Leak</p>
             <h2 className="mt-2 text-xl font-semibold tracking-tight">{primaryIssue.title}</h2>
             <p className="mt-2 text-sm text-muted-foreground">{primaryIssue.whyItMatters}</p>
             <div className="mt-4 flex flex-wrap gap-2 text-xs">
@@ -244,7 +244,7 @@ export default async function DashboardOverviewPage() {
     return (
       <div className="space-y-5 pb-24 lg:pb-4">
         <section className="space-y-2">
-          <p className="data-mono text-primary">First Scan Complete</p>
+          <p className="data-mono text-muted-foreground">First Scan Complete</p>
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
             {journey.sourceLabel} source connected. Monitoring is active.
           </h1>
@@ -255,7 +255,7 @@ export default async function DashboardOverviewPage() {
 
         <section className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
           <article className="surface-card-strong p-5 sm:p-6 lg:p-7">
-            <p className="data-mono text-primary">No-Signal Outcome</p>
+            <p className="data-mono text-muted-foreground">No-Signal Outcome</p>
             <h2 className="mt-2 text-lg font-semibold tracking-tight">
               Data pipeline healthy. Coverage increases with activity.
             </h2>
@@ -265,7 +265,7 @@ export default async function DashboardOverviewPage() {
           </article>
 
           <article className="surface-card p-4 sm:p-5 lg:p-6">
-            <p className="data-mono text-primary">Next Operator Move</p>
+            <p className="data-mono text-muted-foreground">Next Operator Move</p>
             <p className="mt-3 text-sm text-muted-foreground">
               Keep this source connected, then review store details after orders, checkout sessions, or billing events are available.
             </p>
@@ -309,7 +309,7 @@ export default async function DashboardOverviewPage() {
     return (
       <div className="space-y-5 pb-24 lg:pb-4">
         <section className="space-y-2">
-          <p className="data-mono text-primary">Baseline Analysis Complete</p>
+          <p className="data-mono text-muted-foreground">Baseline Analysis Complete</p>
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
             {journey.snapshot.organization.name} is currently clean.
           </h1>
@@ -320,7 +320,7 @@ export default async function DashboardOverviewPage() {
 
         <section className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
           <article className="surface-card-strong p-5 sm:p-6 lg:p-7">
-            <p className="data-mono text-primary">Monitoring Status</p>
+            <p className="data-mono text-muted-foreground">Monitoring Status</p>
             <h2 className="mt-2 text-lg font-semibold tracking-tight">
               No leaks detected. Monitoring active.
             </h2>
@@ -330,7 +330,7 @@ export default async function DashboardOverviewPage() {
           </article>
 
           <article className="surface-card p-4 sm:p-5 lg:p-6">
-            <p className="data-mono text-primary">Next Operator Move</p>
+            <p className="data-mono text-muted-foreground">Next Operator Move</p>
             <p className="mt-3 text-sm text-muted-foreground">
               No corrective action required. Keep sources connected and review store status periodically.
             </p>
@@ -381,7 +381,7 @@ export default async function DashboardOverviewPage() {
   return (
     <div className="space-y-5 pb-24 lg:pb-2">
       <section className="vault-page-intro">
-        <p className="data-mono text-primary">Revenue Workspace</p>
+        <p className="data-mono text-muted-foreground">Revenue Workspace</p>
         <h1 className="vault-page-intro-title">Revenue at risk | last 30 days</h1>
         <p className="font-mono text-[0.68rem] tracking-[0.05em] text-muted-foreground">
           Rolling window | ranked by exposure | latest scan{" "}

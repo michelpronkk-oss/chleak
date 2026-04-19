@@ -89,7 +89,7 @@ export function AppShellClient({
               className={cn(
                 "relative flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] transition-colors",
                 isNavActive(pathname, item.href)
-                  ? "bg-sidebar-accent/80 text-sidebar-accent-foreground font-medium before:absolute before:-left-2 before:top-2 before:bottom-2 before:w-[2px] before:rounded-full before:bg-primary"
+                  ? "bg-sidebar-accent/80 text-sidebar-accent-foreground font-medium before:absolute before:-left-2 before:top-2 before:bottom-2 before:w-[2px] before:rounded-full before:bg-foreground/30"
                   : "text-muted-foreground hover:bg-sidebar-accent/40 hover:text-foreground"
               )}
             >
@@ -113,7 +113,7 @@ export function AppShellClient({
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="flex items-center gap-2 truncate text-[13px] text-muted-foreground">
-                        <Store className="h-3.5 w-3.5 shrink-0 text-primary/70" />
+                        <Store className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
                         <span className="truncate">{monitor.name}</span>
                       </span>
                       <span className={cn("shrink-0 text-xs", monitor.statusTone)}>
@@ -157,7 +157,7 @@ export function AppShellClient({
               )}
 
               <DropdownMenu>
-                <DropdownMenuTrigger className="rounded-xl border border-border/60 bg-card/60 p-1.5 outline-none transition-colors hover:border-primary/30 focus-visible:ring-2 focus-visible:ring-primary/35 sm:px-2.5">
+                <DropdownMenuTrigger className="rounded-xl border border-border/60 bg-card/60 p-1.5 outline-none transition-colors hover:border-border focus-visible:ring-2 focus-visible:ring-border/50 sm:px-2.5">
                   <div className="flex items-center gap-2">
                     <Avatar className="h-6 w-6 border border-border/60 sm:h-7 sm:w-7">
                       <AvatarFallback className="text-xs">{user.initials}</AvatarFallback>
@@ -180,7 +180,7 @@ export function AppShellClient({
                   <div className="px-2 py-2.5">
                     <p className="text-sm font-semibold">{user.fullName}</p>
                     <p className="text-xs text-muted-foreground">{user.email}</p>
-                    <p className="mt-1 text-xs text-primary">{user.roleLabel}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{user.roleLabel}</p>
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="py-2" render={<Link href="/app/settings#profile" />}>
@@ -225,7 +225,7 @@ export function AppShellClient({
               className={cn(
                 "flex flex-1 flex-col items-center gap-1 rounded-lg px-2 py-2 text-[10px] font-medium transition-colors",
                 isNavActive(pathname, item.href)
-                  ? "bg-primary/15 text-primary"
+                  ? "bg-sidebar-accent/80 text-foreground font-medium"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >

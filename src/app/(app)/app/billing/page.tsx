@@ -65,7 +65,7 @@ export default async function BillingPage({
     return (
       <div className="space-y-5 pb-24 lg:pb-4">
         <section className="vault-page-intro">
-          <p className="data-mono text-primary">Plan Activation</p>
+          <p className="data-mono text-muted-foreground">Plan Activation</p>
           <h1 className="vault-page-intro-title">
             Activate your workspace plan
           </h1>
@@ -81,7 +81,7 @@ export default async function BillingPage({
 
         {hasDegradedSubscription ? (
           <section className="vault-panel-shell p-4 sm:p-5 lg:p-6">
-            <p className="vault-metric-key text-primary">Billing Status</p>
+            <p className="vault-metric-key text-muted-foreground">Billing Status</p>
             <h2 className="mt-2 text-lg font-semibold tracking-tight text-foreground">
               {data.subscription?.plan} plan is currently {billingStatusLabel.toLowerCase()}
             </h2>
@@ -116,7 +116,7 @@ export default async function BillingPage({
         </section>
 
         <section className="vault-panel-shell p-4 sm:p-5 lg:p-6">
-          <p className="data-mono text-primary">Activation Step</p>
+          <p className="data-mono text-muted-foreground">Activation Step</p>
           <p className="mt-3 text-sm text-muted-foreground">
             Selected plan: {selectedPlanDetails.name} | {formatCompactCurrency(selectedPlanDetails.monthlyPrice)} / month
           </p>
@@ -126,7 +126,7 @@ export default async function BillingPage({
         </section>
 
         <section className="vault-panel-shell p-4 sm:p-5 lg:p-6">
-          <p className="data-mono text-primary">Checkout Note</p>
+          <p className="data-mono text-muted-foreground">Checkout Note</p>
           <p className="mt-3 text-sm text-muted-foreground">
             Billing access is enforced by subscription state synced from Dodo webhooks. If checkout completed recently, refresh this page after a few seconds.
           </p>
@@ -145,7 +145,7 @@ export default async function BillingPage({
   return (
     <div className="space-y-5 pb-24 lg:pb-4">
       <section className="vault-page-intro">
-        <p className="data-mono text-primary">Billing</p>
+        <p className="data-mono text-muted-foreground">Billing</p>
         <h1 className="vault-page-intro-title">
           Subscription and Plan Controls
         </h1>
@@ -155,7 +155,7 @@ export default async function BillingPage({
         {data.onboardingState === "empty" ? (
           <Link
             href="/app/connect"
-            className="inline-flex items-center gap-1 text-sm text-primary transition-opacity hover:opacity-80"
+            className="vault-link inline-flex items-center gap-1 text-sm"
           >
             Continue onboarding by connecting your first source
             <ArrowRight className="h-3.5 w-3.5" />
@@ -258,7 +258,7 @@ export default async function BillingPage({
             <div className="px-4 pb-4 sm:px-5">
               <Link
                 href="/app/settings"
-                className="inline-flex items-center gap-1 text-sm text-primary transition-opacity hover:opacity-80"
+                className="vault-link inline-flex items-center gap-1 text-sm"
               >
                 Open workspace settings <ArrowRight className="h-3.5 w-3.5" />
               </Link>

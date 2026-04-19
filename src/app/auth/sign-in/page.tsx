@@ -60,18 +60,9 @@ export default async function SignInPage({
 
   return (
     <div className="w-full max-w-[430px]">
-      <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-card/65 px-6 py-7 shadow-[0_24px_64px_rgba(0,0,0,0.32)] backdrop-blur-sm sm:px-7 sm:py-8">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-24"
-          style={{
-            background:
-              "radial-gradient(ellipse at top, rgba(70,225,215,0.07), transparent 70%)",
-          }}
-        />
-
+      <div className="relative overflow-hidden rounded-xl border border-border bg-card px-6 py-7 shadow-[0_8px_32px_rgba(0,0,0,0.22)] sm:px-7 sm:py-8">
         <div className="relative">
-          <p className="font-mono text-[0.65rem] tracking-[0.14em] uppercase text-primary/55">
+          <p className="vault-eyebrow mb-0">
             Access approved
           </p>
           <h1 className="mt-3 text-xl font-semibold tracking-[-0.02em] text-foreground sm:text-2xl">
@@ -101,13 +92,13 @@ export default async function SignInPage({
                 defaultValue={email}
                 required
                 autoComplete="email"
-                className="w-full rounded-lg border border-border/60 bg-background/40 px-3.5 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground/45 focus:border-primary/50"
+                className="vault-input w-full rounded-lg px-3.5 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground/45 focus:border-border"
                 placeholder="you@brand.com"
               />
             </div>
             <button
               type="submit"
-              className="marketing-primary-cta mt-1 inline-flex w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold transition-transform hover:-translate-y-px"
+              className="marketing-primary-cta mt-1 inline-flex w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-medium"
             >
               Email me a sign-in link
             </button>

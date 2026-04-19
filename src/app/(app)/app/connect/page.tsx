@@ -54,9 +54,9 @@ function WorkspaceProgressSteps({ currentStep }: { currentStep: number }) {
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 font-mono text-[0.65rem] tracking-[0.08em] uppercase",
                 isDone
-                  ? "border-primary/25 bg-primary/[0.08] text-primary/65"
+                  ? "border-border/40 bg-card/40 text-muted-foreground/55"
                   : isCurrent
-                    ? "border-primary/55 bg-primary/[0.12] text-primary"
+                    ? "border-foreground/25 bg-foreground/[0.06] text-foreground"
                     : "border-border/40 text-muted-foreground/40"
               )}
             >
@@ -157,7 +157,7 @@ export default async function ConnectPage({
     <div className="space-y-5 pb-24 lg:pb-4">
       {/* Page header */}
       <section className="vault-page-intro">
-        <p className="data-mono text-primary">Workspace Setup</p>
+        <p className="data-mono text-muted-foreground">Workspace Setup</p>
         <h1 className="vault-page-intro-title">
           Connect your first revenue source
         </h1>
@@ -194,7 +194,7 @@ export default async function ConnectPage({
         <article className="vault-source-cell">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="font-mono text-[0.68rem] tracking-[0.1em] uppercase text-primary/60">
+              <p className="font-mono text-[0.68rem] tracking-[0.1em] uppercase text-muted-foreground/60">
                 Shopify
               </p>
               <h2 className="mt-1.5 text-base font-semibold tracking-tight">
@@ -224,7 +224,7 @@ export default async function ConnectPage({
                 name="shop"
                 defaultValue={shopFromParams ?? data.shopifySourceState.shopDomain ?? ""}
                 placeholder="your-store.myshopify.com"
-                className="w-full rounded-lg border border-border/60 bg-background/40 px-3.5 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground/40 focus:border-primary/50"
+                className="vault-input w-full rounded-lg px-3.5 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground/40"
                 required
                 autoCapitalize="none"
                 autoCorrect="off"
@@ -269,7 +269,7 @@ export default async function ConnectPage({
         <article className="vault-source-cell">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="font-mono text-[0.68rem] tracking-[0.1em] uppercase text-primary/60">
+              <p className="font-mono text-[0.68rem] tracking-[0.1em] uppercase text-muted-foreground/60">
                 Stripe
               </p>
               <h2 className="mt-1.5 text-base font-semibold tracking-tight">
@@ -287,8 +287,8 @@ export default async function ConnectPage({
 
           <div>
             {isPendingStripe ? (
-              <div className="inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/[0.08] px-4 py-3 text-sm text-primary">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+              <div className="inline-flex items-center gap-2 rounded-lg border border-border/60 bg-card/50 px-4 py-3 text-sm text-foreground">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-foreground/50" />
                 First billing scan running
               </div>
             ) : data.stripeConfigured ? (

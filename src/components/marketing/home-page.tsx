@@ -115,9 +115,9 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
           }}
         />
 
-        <div className="relative mx-auto flex-1 flex flex-col justify-center max-w-2xl text-center sm:block">
+        <div className="relative mx-auto flex-1 flex flex-col pt-[10svh] max-w-2xl text-center sm:block sm:pt-0">
           <FadeIn delay={0.02}>
-            <div className="mb-5 sm:mb-8">
+            <div className="mb-6 sm:mb-8">
               <div className="vault-kicker-pill">
                 <span className="h-1 w-1 rounded-full bg-signal" />
                 Private / operator-grade
