@@ -128,7 +128,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
       />
 
       {/* Hero */}
-      <section className="relative mx-auto w-full max-w-6xl px-5 pb-12 pt-10 sm:px-8 sm:pb-20 sm:pt-16 lg:pb-24 lg:pt-20">
+      <section className="relative mx-auto min-h-[88svh] w-full max-w-6xl px-5 pb-14 pt-8 sm:min-h-0 sm:px-8 sm:pb-20 sm:pt-16 lg:pb-24 lg:pt-20">
         <div
           aria-hidden
           className="pointer-events-none absolute left-1/2 top-[-34px] hidden h-[640px] w-[1280px] -translate-x-1/2 blur-[96px] lg:block"
@@ -185,7 +185,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                         Reviewed manually. We will reach out directly if approved.
                       </p>
                       <p className="mt-2.5 font-mono text-[0.6rem] tracking-[0.09em] uppercase text-muted-foreground/35">
-                        Private intake - No automated decisions
+                        Reviewed manually • Direct follow-up if approved
                       </p>
                     </div>
                   </div>

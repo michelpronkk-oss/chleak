@@ -34,7 +34,7 @@ export function RequestAccessForm({
             placeholder="your@company.com"
             required
             autoComplete="email"
-            className="w-full rounded-lg border border-border/65 bg-card/35 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/38 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring/50 sm:flex-1 sm:rounded-md sm:border-0 sm:bg-transparent sm:py-2.5 sm:pl-4 sm:pr-2"
+            className="w-full rounded-lg border border-border/65 bg-card/35 px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/38 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring/50 sm:flex-1 sm:rounded-md sm:border-0 sm:bg-transparent sm:py-2.5 sm:pl-4 sm:pr-2 sm:text-sm"
           />
           <button
             type="submit"

@@ -1,6 +1,7 @@
 import { MarketingFooter } from "@/components/layout/marketing-footer"
 import { MarketingHeader } from "@/components/layout/marketing-header"
 import MarketingHomePage from "@/components/marketing/home-page"
+import { CheckoutLeakLogo } from "@/components/brand/logo"
 import { getPublicAccessState } from "@/lib/auth/public-access"
 
 export default async function HomePage({
@@ -15,7 +16,10 @@ export default async function HomePage({
 
   return (
     <div className="relative min-h-screen">
-      <MarketingHeader accessState={accessState} />
+      <div className="md:hidden px-5 pt-4 sm:px-8">
+        <CheckoutLeakLogo className="text-[0.78rem] opacity-90" />
+      </div>
+      <MarketingHeader accessState={accessState} className="hidden md:block" />
       <main>
         {showAccessNotice ? (
           <div className="mx-auto mt-5 w-full max-w-6xl px-5 sm:px-8">
