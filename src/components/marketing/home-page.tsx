@@ -106,10 +106,35 @@ function getPricingCta(input: { accessState: PublicAccessState; planId: string }
   }
 }
 
+function getHeroSupportCopy(accessState: PublicAccessState) {
+  if (accessState === "approved") {
+    return {
+      eyebrow: "Operator signal layer",
+      title: "Workspace access is active",
+      body: "Open the app to review prioritized leakage signals and operator actions.",
+    }
+  }
+
+  if (accessState === "pending") {
+    return {
+      eyebrow: "Operator signal layer",
+      title: "Review queue in progress",
+      body: "Access review is active. We will follow up directly once a decision is finalized.",
+    }
+  }
+
+  return {
+    eyebrow: "Operator signal layer",
+    title: "What gets surfaced first",
+    body: "Initial intelligence highlights checkout friction, payment method gaps, and billing recovery leakage.",
+  }
+}
+
 export default async function MarketingHomePage({ accessState }: MarketingHomePageProps) {
   const isApproved = accessState === "approved"
   const isPending = accessState === "pending"
   const showRequestForm = accessState === "unknown"
+  const heroSupportCopy = getHeroSupportCopy(accessState)
   const mobileOrderedPlans = [
     ...pricingPlans.filter((p) => p.recommended),
     ...pricingPlans.filter((p) => !p.recommended),
@@ -185,7 +210,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                         Reviewed manually. We will reach out directly if approved.
                       </p>
                       <p className="mt-2.5 font-mono text-[0.6rem] tracking-[0.09em] uppercase text-muted-foreground/35">
-                        Reviewed manually • Direct follow-up if approved
+                        Reviewed manually - Direct follow-up if approved
                       </p>
                     </div>
                   </div>
@@ -195,6 +220,33 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                   <RequestAccessForm />
                 </div>
               )}
+
+              <div className="mx-auto mt-5 w-full max-w-md rounded-xl border border-border/60 bg-card/30 p-3.5 text-left sm:hidden">
+                <p className="font-mono text-[0.58rem] tracking-[0.1em] uppercase text-primary/65">
+                  {heroSupportCopy.eyebrow}
+                </p>
+                <p className="mt-1 text-[0.9rem] font-medium text-foreground">
+                  {heroSupportCopy.title}
+                </p>
+                <p className="mt-1.5 text-[0.8rem] leading-[1.6] text-muted-foreground">
+                  {heroSupportCopy.body}
+                </p>
+                <div className="mt-3 space-y-2">
+                  {signals.slice(0, 2).map((signal) => (
+                    <div
+                      key={signal.label}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-border/45 bg-background/35 px-2.5 py-2"
+                    >
+                      <p className="truncate font-mono text-[0.58rem] tracking-[0.08em] uppercase text-muted-foreground/52">
+                        {signal.label}
+                      </p>
+                      <p className="shrink-0 font-mono text-[0.67rem] text-primary/85">
+                        {signal.impact}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </FadeIn>
         </div>
@@ -524,4 +576,5 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
     </div>
   )
 }
+
 
