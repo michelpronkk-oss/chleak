@@ -115,9 +115,9 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
           }}
         />
 
-        <div className="relative mx-auto flex-1 max-w-2xl text-center">
+        <div className="relative mx-auto flex-1 flex flex-col justify-center max-w-2xl text-center sm:block">
           <FadeIn delay={0.02}>
-            <div className="mb-7 sm:mb-8">
+            <div className="mb-5 sm:mb-8">
               <div className="vault-kicker-pill">
                 <span className="h-1 w-1 rounded-full bg-signal" />
                 Private / operator-grade
@@ -135,7 +135,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
           </FadeIn>
 
           <FadeIn delay={0.12}>
-            <p className="mx-auto mt-5 max-w-[32ch] text-[0.92rem] leading-[1.7] text-muted-foreground sm:mt-5 sm:max-w-[44ch] sm:text-[1.04rem] sm:leading-[1.86]">
+            <p className="mx-auto mt-6 max-w-[32ch] text-[0.92rem] leading-[1.7] text-muted-foreground sm:mt-5 sm:max-w-[44ch] sm:text-[1.04rem] sm:leading-[1.86]">
               Checkout and billing leaks ranked by monthly revenue exposure. Each finding includes root cause, impact estimate, and fix path. Shopify and Stripe.
             </p>
           </FadeIn>
@@ -444,7 +444,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                 <div className="mt-6">
                   <Link
                     href="/api/app/access?next=/app&intent=app&source=closing_open_app"
-                    className="marketing-primary-cta inline-flex items-center gap-2 rounded-md px-6 py-3 text-sm font-medium"
+                    className="marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium sm:w-auto sm:px-6 sm:py-3"
                   >
                     Open app <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
@@ -472,7 +472,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                 <div className="mt-6">
                   <Link
                     href="/request-access"
-                    className="marketing-primary-cta inline-flex items-center gap-2 rounded-md px-6 py-3 text-sm font-medium"
+                    className="marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium sm:w-auto sm:px-6 sm:py-3"
                   >
                     Request Access <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
