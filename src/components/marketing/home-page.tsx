@@ -169,13 +169,26 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                   Open app <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               ) : isPending ? (
-                <div className="text-center">
-                  <p className="text-[0.9rem] text-muted-foreground">
-                    Your request is under review.
-                  </p>
-                  <p className="mt-1.5 font-mono text-[0.62rem] tracking-[0.1em] uppercase text-muted-foreground/38">
-                    We will reach out directly if approved
-                  </p>
+                <div className="mx-auto w-full max-w-md rounded-xl border border-border/60 bg-card/35 px-4 py-4 text-left sm:px-5 sm:py-5">
+                  <div className="flex items-start gap-3">
+                    <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/10">
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary/70" />
+                    </span>
+                    <div>
+                      <p className="font-mono text-[0.6rem] tracking-[0.1em] uppercase text-primary/65">
+                        Reviewed access
+                      </p>
+                      <p className="mt-1 text-[0.95rem] font-medium text-foreground">
+                        Request under review
+                      </p>
+                      <p className="mt-1.5 text-[0.85rem] leading-[1.62] text-muted-foreground sm:text-[0.88rem]">
+                        Reviewed manually. We will reach out directly if approved.
+                      </p>
+                      <p className="mt-2.5 font-mono text-[0.6rem] tracking-[0.09em] uppercase text-muted-foreground/35">
+                        Private intake - No automated decisions
+                      </p>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="w-full max-w-sm sm:max-w-md mx-auto">
