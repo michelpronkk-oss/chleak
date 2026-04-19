@@ -6,19 +6,19 @@ const footerGroups = [
   {
     title: "Product",
     links: [
+      { label: "Product", href: "/product" },
       { label: "Pricing", href: "/pricing" },
       {
-        label: "Dashboard",
-        href: "/api/app/access?next=/app&source=footer_dashboard",
+        label: "Open app",
+        href: "/api/app/access?next=/app&source=footer_open_app",
       },
-      { label: "Product", href: "/product" },
     ],
   },
   {
     title: "Company",
     links: [
       { label: "Contact", href: "/contact" },
-      { label: "Book Demo", href: "/contact#demo" },
+      { label: "Request Access", href: "/request-access" },
     ],
   },
   {
@@ -76,10 +76,10 @@ export function MarketingFooter() {
 
         <div className="mt-7 flex flex-col gap-2 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-muted-foreground/70">
-            © 2026 CheckoutLeak. All rights reserved.
+            (c) 2026 CheckoutLeak. All rights reserved.
           </p>
           <p className="font-mono text-[0.63rem] tracking-[0.1em] uppercase text-muted-foreground/35">
-            Operator-grade · Private by design
+            Operator-grade | Private by design
           </p>
         </div>
       </div>

@@ -48,21 +48,6 @@ const detectionCategories = [
   },
 ]
 
-const mechanismPoints = [
-  {
-    title: "Unified signal ingestion",
-    body: "Shopify checkout, Stripe payment intents, invoices, and retry outcomes scored in one model.",
-  },
-  {
-    title: "Impact quantification",
-    body: "Every leak includes root context, monthly impact estimate, and the next commercially sensible action.",
-  },
-  {
-    title: "Ranked action queue",
-    body: "Prioritized by recovery opportunity so teams always act where return is highest.",
-  },
-]
-
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
     <p className="mb-4 font-mono text-[0.72rem] tracking-[0.12em] uppercase text-primary/65 sm:mb-5">
@@ -107,35 +92,10 @@ function getPricingCta(input: { accessState: PublicAccessState; planId: string }
   }
 }
 
-function getHeroSupportCopy(accessState: PublicAccessState) {
-  if (accessState === "approved") {
-    return {
-      eyebrow: "What shows up first",
-      title: "Workspace access is active",
-      body: "Open the app to review prioritized leakage signals and operator actions.",
-    }
-  }
-
-  if (accessState === "pending") {
-    return {
-      eyebrow: "What shows up first",
-      title: "Review queue in progress",
-      body: "Access review is active. We will follow up directly once a decision is finalized.",
-    }
-  }
-
-  return {
-    eyebrow: "What shows up first",
-    title: "What gets surfaced first",
-    body: "Initial intelligence highlights checkout friction, payment method gaps, and billing recovery leakage.",
-  }
-}
-
 export default async function MarketingHomePage({ accessState }: MarketingHomePageProps) {
   const isApproved = accessState === "approved"
   const isPending = accessState === "pending"
   const showRequestForm = accessState === "unknown"
-  const heroSupportCopy = getHeroSupportCopy(accessState)
   const mobileOrderedPlans = [
     ...pricingPlans.filter((p) => p.recommended),
     ...pricingPlans.filter((p) => !p.recommended),
@@ -240,32 +200,6 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                 </div>
               )}
 
-              <div className="mx-auto mt-5 w-full max-w-md rounded-xl border border-border/60 bg-card/30 p-3.5 text-left sm:hidden">
-                <p className="font-mono text-[0.58rem] tracking-[0.1em] uppercase text-primary/65">
-                  {heroSupportCopy.eyebrow}
-                </p>
-                <p className="mt-1 text-[0.9rem] font-medium text-foreground">
-                  {heroSupportCopy.title}
-                </p>
-                <p className="mt-1.5 text-[0.8rem] leading-[1.6] text-muted-foreground">
-                  {heroSupportCopy.body}
-                </p>
-                <div className="mt-3 space-y-2">
-                  {signals.slice(0, 2).map((signal) => (
-                    <div
-                      key={signal.label}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-border/45 bg-background/35 px-2.5 py-2"
-                    >
-                      <p className="truncate font-mono text-[0.58rem] tracking-[0.08em] uppercase text-muted-foreground/52">
-                        {signal.label}
-                      </p>
-                      <p className="shrink-0 font-mono text-[0.67rem] text-primary/85">
-                        {signal.impact}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           </FadeIn>
         </div>
@@ -282,10 +216,10 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
           <div className="mb-6 sm:mb-8">
             <Eyebrow>Sample signal snapshot</Eyebrow>
             <h2 className="text-[1.45rem] font-semibold leading-[1.13] tracking-[-0.03em] sm:text-[1.85rem] lg:text-[2.15rem]">
-              Example signal ranking from one scan.
+              Sample ranked signals.
             </h2>
             <p className="mt-2.5 max-w-[40ch] text-[0.88rem] leading-[1.72] text-muted-foreground sm:mt-3 sm:max-w-[50ch] sm:text-[0.95rem] sm:leading-[1.8]">
-              Illustrative output showing how checkout and billing signals are prioritized for operator action.
+              Illustrative output showing how issues are prioritized for operator action.
             </p>
           </div>
 
@@ -340,10 +274,9 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
             <Eyebrow>What gets detected</Eyebrow>
             <h2 className="text-[1.55rem] font-semibold leading-[1.13] tracking-[-0.03em] sm:text-[2.05rem] lg:text-[2.35rem]">
               What gets detected first.
-              <br className="sm:hidden" /> What teams receive back.
             </h2>
             <p className="mt-3 max-w-[34ch] text-[0.9rem] leading-[1.72] text-muted-foreground sm:mt-4 sm:max-w-[40ch] sm:text-[0.97rem] sm:leading-[1.85]">
-              Every issue surfaces with root cause, financial impact, and a specific next action. Ranked by recovery opportunity.
+              Each issue includes root cause, impact level, and the next action. Ranked by recovery opportunity.
             </p>
           </div>
 
@@ -374,20 +307,6 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
             ))}
           </div>
 
-          {/* Mechanism points */}
-          <div className="mt-6 hidden gap-3.5 sm:mt-10 sm:grid sm:grid-cols-3 sm:gap-6">
-            {mechanismPoints.map((item) => (
-              <div key={item.title} className="border-l border-border/50 pl-4 sm:pl-5">
-                <p className="text-[0.88rem] font-medium text-foreground sm:text-[0.93rem]">
-                  {item.title}
-                </p>
-                <p className="mt-1 text-[0.78rem] leading-[1.65] text-muted-foreground sm:mt-1.5 sm:text-sm sm:leading-[1.75]">
-                  {item.body}
-                </p>
-              </div>
-            ))}
-          </div>
-
           <div className="mt-6 sm:mt-8">
             <Link
               href="/product"
@@ -410,12 +329,10 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
           <div className="mb-7 sm:mb-10">
             <Eyebrow>Pricing</Eyebrow>
             <h2 className="text-[1.55rem] font-semibold leading-[1.13] tracking-[-0.03em] sm:text-[2.05rem] lg:text-[2.35rem]">
-              Plans aligned to
-              <br className="hidden sm:block" />
-              operating maturity.
+              Plans by operating maturity.
             </h2>
             <p className="mt-3 max-w-[32ch] text-[0.9rem] leading-[1.75] text-muted-foreground sm:mt-4 sm:max-w-[38ch] sm:text-[0.97rem] sm:leading-[1.85]">
-              Start lean. Scale coverage as your store count and billing complexity grow.
+              Start lean, then expand coverage as store count and billing complexity grow.
             </p>
           </div>
 
@@ -520,10 +437,10 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
       <SectionRule />
 
       {/* Closing access */}
-      <section className="mx-auto w-full max-w-6xl px-4 pb-10 sm:px-8 sm:pb-16 lg:pb-20">
+      <section className="mx-auto w-full max-w-6xl px-4 pb-10 sm:px-8 sm:pb-14 lg:pb-16">
         <FadeIn delay={0.06}>
           <div
-            className="relative overflow-hidden rounded-xl px-5 py-10 text-center sm:px-10 sm:py-14 lg:px-14 lg:py-16"
+            className="relative overflow-hidden rounded-xl px-5 py-8 text-center sm:px-10 sm:py-11 lg:px-12 lg:py-12"
             style={{ border: "1px solid oklch(0.3776 0.0204 254.66 / 0.4)" }}
           >
             <div
@@ -550,9 +467,9 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                   Your access is active.
                 </h2>
                 <p className="mx-auto mt-3 max-w-[28ch] text-[0.88rem] leading-[1.68] text-muted-foreground sm:mt-4 sm:max-w-[36ch] sm:text-[0.97rem] sm:leading-[1.85]">
-                  Connect a source and run your first scan.
+                  Open the workspace to connect a source and run your first scan.
                 </p>
-                <div className="mt-7">
+                <div className="mt-6">
                   <Link
                     href="/api/app/access?next=/app&intent=app&source=closing_open_app"
                     className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold transition-all hover:-translate-y-px hover:opacity-90"
@@ -568,24 +485,25 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                   Your request is under review.
                 </h2>
                 <p className="mx-auto mt-3 max-w-[28ch] text-[0.88rem] leading-[1.68] text-muted-foreground sm:mt-4 sm:max-w-[36ch] sm:text-[0.97rem] sm:leading-[1.85]">
-                  We review every submission and reach out directly when there is a fit.
-                </p>
-                <p className="mt-6 font-mono text-[0.6rem] tracking-[0.1em] uppercase text-muted-foreground/35">
-                  Reviewed manually - No automated response
+                  Reviewed manually. We reach out directly when approved.
                 </p>
               </>
             ) : showRequestForm ? (
               <>
                 <Eyebrow>Request access</Eyebrow>
                 <h2 className="mx-auto max-w-[20ch] text-[1.55rem] font-semibold leading-[1.13] tracking-[-0.03em] sm:max-w-none sm:text-[2.05rem] lg:text-[2.35rem]">
-                  Built for operators who need signal,
-                  <br className="hidden sm:block" /> not another dashboard.
+                  Request private access.
                 </h2>
                 <p className="mx-auto mt-3 max-w-[28ch] text-[0.88rem] leading-[1.68] text-muted-foreground sm:mt-4 sm:max-w-[36ch] sm:text-[0.97rem] sm:leading-[1.85]">
-                  Connect a source. Get your first leak report in minutes.
+                  Reviewed intake for teams running Shopify and Stripe at scale.
                 </p>
-                <div className="mx-auto mt-7 w-full max-w-sm sm:max-w-md">
-                  <RequestAccessForm showTrustLine={false} />
+                <div className="mt-6">
+                  <Link
+                    href="/request-access"
+                    className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold transition-all hover:-translate-y-px hover:opacity-90"
+                  >
+                    Request Access <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
                 </div>
               </>
             ) : null}
