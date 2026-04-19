@@ -105,6 +105,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
     <div className="relative" style={{ overflowX: "clip" }}>
       {/* Hero */}
       <section className="relative mx-auto flex min-h-[calc(100svh-3.25rem)] w-full max-w-6xl flex-col px-5 pt-[calc(env(safe-area-inset-top)+2.75rem)] min-[390px]:pt-[calc(env(safe-area-inset-top)+3rem)] sm:block sm:min-h-0 sm:px-8 sm:pb-20 sm:pt-16 lg:pb-24 lg:pt-20">
+        {/* Desktop hero bloom */}
         <div
           aria-hidden
           className="pointer-events-none absolute left-1/2 top-0 hidden h-[560px] w-[1200px] -translate-x-1/2 blur-[120px] lg:block"
@@ -114,20 +115,24 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
           }}
         />
 
+        {/* Mobile hero bloom */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-[420px] blur-[90px] lg:hidden"
+          style={{
+            background:
+              "radial-gradient(80% 55% at 50% 0%, oklch(0.78 0.13 75 / 0.045), transparent 100%)",
+          }}
+        />
+
         <div className="relative mx-auto flex-1 max-w-2xl text-center">
           <FadeIn delay={0.02}>
-            <div className="mb-7 sm:hidden">
+            <div className="mb-7 sm:mb-8">
               <div className="vault-kicker-pill">
                 <span className="h-1 w-1 rounded-full bg-signal" />
                 Private / operator-grade
               </div>
             </div>
-          </FadeIn>
-
-          <FadeIn delay={0.04}>
-            <p className="vault-eyebrow mb-5 sm:mb-5 sm:text-[0.7rem]">
-              Private operator intelligence
-            </p>
           </FadeIn>
 
           <FadeIn delay={0.08}>
