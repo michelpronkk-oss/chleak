@@ -115,7 +115,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
       />
 
       {/* Hero */}
-      <section className="relative mx-auto min-h-[calc(100svh-2rem)] w-full max-w-6xl px-5 pb-11 pt-[calc(env(safe-area-inset-top)+2.5rem)] min-[390px]:pb-12 min-[390px]:pt-[calc(env(safe-area-inset-top)+3rem)] sm:min-h-0 sm:px-8 sm:pb-20 sm:pt-16 lg:pb-24 lg:pt-20">
+      <section className="relative mx-auto flex min-h-[calc(100svh-3.25rem)] w-full max-w-6xl flex-col px-5 pt-9 min-[390px]:pt-10 sm:block sm:min-h-0 sm:px-8 sm:pb-20 sm:pt-16 lg:pb-24 lg:pt-20">
         <div
           aria-hidden
           className="pointer-events-none absolute left-1/2 top-[-34px] hidden h-[640px] w-[1280px] -translate-x-1/2 blur-[96px] lg:block"
@@ -125,9 +125,9 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
           }}
         />
 
-        <div className="relative mx-auto max-w-2xl text-center">
+        <div className="relative mx-auto flex-1 max-w-2xl text-center">
           <FadeIn delay={0.02}>
-            <div className="mb-6 sm:hidden">
+            <div className="mb-5 sm:hidden">
               <div className="inline-flex items-center gap-2.5 rounded-full border border-border/55 bg-card/25 px-3 py-1.5">
                 <Image
                   src="/logo.png"
@@ -145,7 +145,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
           </FadeIn>
 
           <FadeIn delay={0.04}>
-            <p className="mb-5 font-mono text-[0.65rem] tracking-[0.14em] uppercase text-primary/60 sm:mb-5 sm:text-[0.7rem]">
+            <p className="mb-4 font-mono text-[0.65rem] tracking-[0.14em] uppercase text-primary/60 sm:mb-5 sm:text-[0.7rem]">
               Private operator intelligence
             </p>
           </FadeIn>
@@ -159,13 +159,13 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
           </FadeIn>
 
           <FadeIn delay={0.12}>
-            <p className="mx-auto mt-4.5 max-w-[32ch] text-[0.92rem] leading-[1.7] text-muted-foreground sm:mt-5 sm:max-w-[44ch] sm:text-[1.04rem] sm:leading-[1.86]">
+            <p className="mx-auto mt-4 max-w-[32ch] text-[0.92rem] leading-[1.7] text-muted-foreground sm:mt-5 sm:max-w-[44ch] sm:text-[1.04rem] sm:leading-[1.86]">
               Surface the highest-impact checkout and billing issues across Shopify and Stripe. Ranked by monthly recovery. Actioned in order.
             </p>
           </FadeIn>
 
           <FadeIn delay={0.16}>
-            <div className="mx-auto mt-7 sm:mt-8">
+            <div className="mx-auto mt-6 sm:mt-8">
               {isApproved ? (
                 <Link
                   href="/api/app/access?next=/app&intent=app&source=hero_open_app"
@@ -174,38 +174,29 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                   Open app <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               ) : isPending ? (
-                <div className="mx-auto w-full max-w-md rounded-xl border border-border/60 bg-card/35 px-4 py-4 text-left sm:px-5 sm:py-5">
-                  <div className="flex items-start gap-3">
-                    <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/10">
-                      <span className="h-1.5 w-1.5 rounded-full bg-primary/70" />
-                    </span>
-                    <div>
-                      <p className="font-mono text-[0.6rem] tracking-[0.1em] uppercase text-primary/65">
-                        Reviewed access
-                      </p>
-                      <p className="mt-1 text-[0.95rem] font-medium text-foreground">
-                        Request under review
-                      </p>
-                      <p className="mt-1.5 text-[0.85rem] leading-[1.62] text-muted-foreground sm:text-[0.88rem]">
-                        Reviewed manually. We will reach out directly if approved.
-                      </p>
-                      <p className="mt-2.5 font-mono text-[0.6rem] tracking-[0.09em] uppercase text-muted-foreground/35">
-                        Reviewed manually - Direct follow-up if approved
-                      </p>
-                    </div>
-                  </div>
+                <div className="mx-auto text-center">
+                  <p className="font-mono text-[0.6rem] tracking-[0.1em] uppercase text-primary/60">
+                    Access request
+                  </p>
+                  <p className="mt-2 text-[0.93rem] font-medium text-foreground">
+                    Your request is under review.
+                  </p>
+                  <p className="mx-auto mt-2 max-w-[30ch] text-[0.84rem] leading-[1.65] text-muted-foreground">
+                    We review every submission and reach out directly when there is a fit.
+                  </p>
                 </div>
               ) : (
-                <div className="w-full max-w-sm sm:max-w-md mx-auto">
+                <div className="mx-auto w-full max-w-sm sm:max-w-md">
                   <RequestAccessForm />
                 </div>
               )}
-
-              <div className="mx-auto mt-7 sm:hidden">
-                <MobileHeroSupportStrip />
-              </div>
             </div>
           </FadeIn>
+        </div>
+
+        {/* Support strip — compositional anchor at the fold, mobile only */}
+        <div className="pb-7 pt-8 sm:hidden">
+          <MobileHeroSupportStrip />
         </div>
       </section>
 
