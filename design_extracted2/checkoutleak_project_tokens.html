@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Tokens · Vault</title>
+<link rel="stylesheet" href="shared/vault.css" />
+<style>
+  /* color ladder */
+  .ladder {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1px;
+    background: var(--line-default);
+    border: 1px solid var(--line-default);
+    border-radius: var(--r-4);
+    overflow: hidden;
+  }
+  .rung {
+    padding: 20px 16px;
+    min-height: 120px;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    gap: 8px;
+  }
+  .rung-name { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-secondary); letter-spacing: 0.04em; }
+  .rung-val { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); letter-spacing: 0.02em; }
+  .rung-role { font-size: 11px; color: var(--text-secondary); }
+
+  .sev-row {
+    display: grid;
+    grid-template-columns: 120px 1fr 1fr 1fr 1fr;
+    gap: 0;
+    align-items: stretch;
+    border: 1px solid var(--line-default);
+    border-radius: var(--r-4);
+    overflow: hidden;
+  }
+  .sev-row + .sev-row { margin-top: 1px; border-radius: 0; }
+  .sev-cell { padding: 20px 16px; border-right: 1px solid var(--line-subtle); }
+  .sev-cell:last-child { border-right: 0; }
+  .sev-name { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); letter-spacing: 0.05em; text-transform: uppercase; }
+  .sev-bar { width: 8px; border-radius: 2px; align-self: stretch; }
+
+  .space-grid {
+    display: grid;
+    grid-template-columns: 80px 120px 1fr;
+    gap: 0;
+    border: 1px solid var(--line-default);
+    border-radius: var(--r-4);
+    overflow: hidden;
+  }
+  .space-row { display: contents; }
+  .space-row > div { padding: 14px 16px; border-bottom: 1px solid var(--line-subtle); }
+  .space-row:last-child > div { border-bottom: 0; }
+  .space-n { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); }
+  .space-v { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+  .space-bar { display: flex; align-items: center; }
+  .space-bar span { background: var(--signal); height: 8px; display: block; border-radius: 1px; opacity: 0.6; }
+
+  .radius-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1px;
+    background: var(--line-default);
+    border: 1px solid var(--line-default);
+    border-radius: var(--r-4);
+    overflow: hidden;
+  }
+  .radius-cell { background: var(--ink-100); padding: 28px 16px; display: grid; gap: 14px; }
+  .radius-swatch { width: 56px; height: 56px; background: var(--ink-300); border: 1px solid var(--line-strong); }
+  .radius-meta { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); }
+  .radius-meta strong { color: var(--text-secondary); font-weight: 500; display: block; margin-bottom: 2px; }
+
+  .border-demo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line-default); border: 1px solid var(--line-default); border-radius: var(--r-4); overflow: hidden; }
+  .border-demo .b { background: var(--ink-100); padding: 32px 24px; }
+  .border-demo .box { height: 80px; border-radius: var(--r-3); background: var(--ink-150); }
+  .border-demo .meta { margin-top: 14px; font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); }
+  .border-demo .meta strong { color: var(--text-secondary); font-weight: 500; display: block; margin-bottom: 2px; }
+
+  .motion-demo { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line-default); border: 1px solid var(--line-default); border-radius: var(--r-4); overflow: hidden; }
+  .motion-demo .m { background: var(--ink-100); padding: 24px; }
+  .motion-demo .dot { width: 14px; height: 14px; background: var(--signal); border-radius: 50%; animation: slide 2.4s infinite; }
+  .motion-demo .m:nth-child(1) .dot { animation-duration: 0.08s; }
+  .motion-demo .m:nth-child(2) .dot { animation-duration: 0.12s; }
+  .motion-demo .m:nth-child(3) .dot { animation-duration: 0.18s; }
+  .motion-demo .m:nth-child(4) .dot { animation-duration: 0.28s; }
+  @keyframes slide {
+    0%, 40% { transform: translateX(0); }
+    60%, 100% { transform: translateX(180px); }
+  }
+  .motion-demo .track { position: relative; padding: 20px 0; border-top: 1px dashed var(--line-strong); border-bottom: 1px dashed var(--line-strong); }
+  .motion-demo .meta { margin-top: 14px; font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); }
+  .motion-demo .meta strong { color: var(--text-secondary); font-weight: 500; display: block; margin-bottom: 2px; }
+
+  .focus-demo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line-default); border: 1px solid var(--line-default); border-radius: var(--r-4); overflow: hidden; }
+  .focus-demo .f { background: var(--ink-100); padding: 32px 24px; }
+  .focus-ring-btn {
+    padding: 8px 14px;
+    background: var(--ink-200);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-3);
+    font-size: 13px;
+    color: var(--text-primary);
+    outline: 2px solid var(--signal);
+    outline-offset: 2px;
+  }
+  .focus-ring-input {
+    padding: 8px 12px;
+    background: var(--ink-050);
+    border: 1px solid var(--line-focus);
+    border-radius: var(--r-3);
+    font-size: 13px;
+    color: var(--text-primary);
+    width: 100%;
+    box-shadow: 0 0 0 3px oklch(0.78 0.13 75 / 0.14);
+  }
+
+  .z-stack {
+    position: relative;
+    height: 240px;
+    background: var(--ink-050);
+    border: 1px solid var(--line-default);
+    border-radius: var(--r-4);
+    overflow: hidden;
+  }
+  .z-layer {
+    position: absolute;
+    background: var(--ink-150);
+    border: 1px solid var(--line-default);
+    border-radius: var(--r-3);
+    padding: 10px 14px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    box-shadow: var(--shadow-popover);
+  }
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <div class="chrome-inner">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-name">CheckoutLeak</div>
+      <div class="brand-slash">/</div>
+      <div class="brand-section">Vault — Design System</div>
+    </div>
+    <nav class="chrome-nav">
+      <a href="index.html">Overview</a>
+      <a href="tokens.html" class="active">Tokens</a>
+      <a href="typography.html">Typography</a>
+      <a href="components.html">Components</a>
+      <a href="states.html">States</a>
+      <a href="pages.html">Pages</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="mobile.html">Mobile</a>
+      <a href="content.html">Voice</a>
+    </nav>
+    <div class="chrome-meta"><span class="live"></span><span>v0.1 · draft</span></div>
+  </div>
+</div>
+
+<div class="doc">
+
+  <header class="doc-header">
+    <div class="doc-crumb"><span class="dot"></span> 01 · Foundation</div>
+    <h1 class="doc-title"><span class="n">01</span>Tokens</h1>
+    <p class="doc-lede">Every value in Vault resolves to a token. If it isn't a token, it doesn't ship. Tokens use OKLCH for perceptual consistency and are exposed as CSS custom properties.</p>
+  </header>
+
+  <!-- NEUTRALS -->
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">01.1</div>
+      <div>
+        <div class="section-title">Neutrals — the surface ladder</div>
+        <div class="section-kicker">Five rungs, each ≈ 2% lighter than the one below. Vault is a dark-first system; there is no light-mode equivalent. A "white theme" would break the operator language.</div>
+      </div>
+    </div>
+
+    <div class="ladder">
+      <div class="rung" style="background: var(--ink-000);"><div></div><div><div class="rung-name">ink-000</div><div class="rung-val">oklch(0.13 .006 250)</div><div class="rung-role">Void / outside app</div></div></div>
+      <div class="rung" style="background: var(--ink-050);"><div></div><div><div class="rung-name">ink-050</div><div class="rung-val">oklch(0.17 .008 250)</div><div class="rung-role">App canvas</div></div></div>
+      <div class="rung" style="background: var(--ink-100);"><div></div><div><div class="rung-name">ink-100</div><div class="rung-val">oklch(0.19 .008 250)</div><div class="rung-role">Panel</div></div></div>
+      <div class="rung" style="background: var(--ink-150);"><div></div><div><div class="rung-name">ink-150</div><div class="rung-val">oklch(0.22 .009 250)</div><div class="rung-role">Elevated panel</div></div></div>
+      <div class="rung" style="background: var(--ink-200);"><div></div><div><div class="rung-name">ink-200</div><div class="rung-val">oklch(0.26 .010 250)</div><div class="rung-role">Input, well</div></div></div>
+    </div>
+
+    <div class="ladder" style="margin-top: 1px;">
+      <div class="rung" style="background: var(--ink-300);"><div></div><div><div class="rung-name">ink-300</div><div class="rung-val">oklch(0.32 .010 250)</div><div class="rung-role">Hover surface</div></div></div>
+      <div class="rung" style="background: var(--ink-400);"><div></div><div><div class="rung-name">ink-400</div><div class="rung-val">oklch(0.42 .010 250)</div><div class="rung-role">Muted stroke / disabled</div></div></div>
+      <div class="rung" style="background: var(--text-tertiary); color: var(--text-inverse);"><div></div><div><div class="rung-name" style="color:var(--text-inverse);opacity:.7">text-tertiary</div><div class="rung-val" style="color:var(--text-inverse);opacity:.6">oklch(0.55 .008 250)</div><div class="rung-role" style="color:var(--text-inverse);opacity:.8">Tertiary text</div></div></div>
+      <div class="rung" style="background: var(--text-secondary); color: var(--text-inverse);"><div></div><div><div class="rung-name" style="color:var(--text-inverse);opacity:.7">text-secondary</div><div class="rung-val" style="color:var(--text-inverse);opacity:.6">oklch(0.72 .006 250)</div><div class="rung-role" style="color:var(--text-inverse);opacity:.8">Body / secondary</div></div></div>
+      <div class="rung" style="background: var(--text-primary); color: var(--text-inverse);"><div></div><div><div class="rung-name" style="color:var(--text-inverse);opacity:.7">text-primary</div><div class="rung-val" style="color:var(--text-inverse);opacity:.6">oklch(0.96 .003 250)</div><div class="rung-role" style="color:var(--text-inverse);opacity:.8">Primary text</div></div></div>
+    </div>
+  </section>
+
+  <!-- SIGNAL -->
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">01.2</div>
+      <div>
+        <div class="section-title">Signal — the amber rule</div>
+        <div class="section-kicker">One accent. It marks money at risk. It is reserved: not for CTAs, not for links, not for active navigation. Breaking this rule breaks trust in the system.</div>
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="cell" style="padding: 0;">
+        <div style="height: 120px; background: var(--signal);"></div>
+        <div style="padding: 16px;">
+          <div style="font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary);">signal</div>
+          <div style="font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); margin-top: 4px;">oklch(0.78 0.13 75)</div>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 10px;">Foreground for money-at-risk numerals, severity bars on high/critical, and a single pixel-thin underline on active nav.</div>
+        </div>
+      </div>
+      <div class="cell" style="padding: 0;">
+        <div style="height: 120px; background: var(--signal-dim); display: flex; align-items: center; justify-content: center; color: var(--signal); font-family: var(--font-mono); font-size: 13px;">Aa · $12,480</div>
+        <div style="padding: 16px;">
+          <div style="font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary);">signal-dim</div>
+          <div style="font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); margin-top: 4px;">signal @ 14% alpha</div>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 10px;">Backgrounds for pills and call-outs referencing revenue at risk. Never on a standalone button.</div>
+        </div>
+      </div>
+      <div class="cell" style="padding: 0;">
+        <div style="height: 120px; background: var(--ink-100); border-left: 2px solid var(--signal); display: flex; align-items: center; padding-left: 20px; color: var(--text-primary); font-size: 13px;">Leak detected</div>
+        <div style="padding: 16px;">
+          <div style="font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary);">signal-line</div>
+          <div style="font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); margin-top: 4px;">signal @ 30% alpha / 2px</div>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 10px;">Accent stroke on issue rows that carry dollar amounts. Always left-edge, never full-border.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SEVERITY -->
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">01.3</div>
+      <div>
+        <div class="section-title">Severity — risk temperature</div>
+        <div class="section-kicker">Four levels, cool→warm→hot. A severity is never expressed in color alone; it also appears in the severity bar, label, and hierarchy treatment described in Components.</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sev-row" style="background: var(--ink-100);">
+        <div class="sev-cell" style="display: flex; align-items: center; gap: 12px;"><div class="sev-bar" style="background: var(--sev-low); min-height: 32px;"></div><div class="sev-name">Low</div></div>
+        <div class="sev-cell"><div class="rung-val">oklch(0.70 0.08 200)</div><div class="rung-role" style="margin-top:4px;">Ambient · noteworthy but not acting now</div></div>
+        <div class="sev-cell"><div class="rung-name" style="color: var(--sev-low);">Treatment</div><div class="rung-role" style="margin-top:4px;">Subdued · no interruption · grouped in digests</div></div>
+        <div class="sev-cell"><div class="rung-name">CTA emphasis</div><div class="rung-role" style="margin-top:4px;">Ghost button · "Review later"</div></div>
+        <div class="sev-cell" style="background: var(--sev-low-bg);"><div class="rung-name" style="color: var(--sev-low);">Example</div><div class="rung-role" style="margin-top:4px; color: var(--text-secondary);">Webhook latency 2.1× baseline</div></div>
+      </div>
+      <div class="sev-row" style="background: var(--ink-100);">
+        <div class="sev-cell" style="display: flex; align-items: center; gap: 12px;"><div class="sev-bar" style="background: var(--sev-medium); min-height: 32px;"></div><div class="sev-name">Medium</div></div>
+        <div class="sev-cell"><div class="rung-val">oklch(0.80 0.14 90)</div><div class="rung-role" style="margin-top:4px;">Confirmed leak · not growing</div></div>
+        <div class="sev-cell"><div class="rung-name" style="color: var(--sev-medium);">Treatment</div><div class="rung-role" style="margin-top:4px;">Visible · queued · appears in digest + dashboard</div></div>
+        <div class="sev-cell"><div class="rung-name">CTA emphasis</div><div class="rung-role" style="margin-top:4px;">Secondary button · "Open fix path"</div></div>
+        <div class="sev-cell" style="background: var(--sev-medium-bg);"><div class="rung-name" style="color: var(--sev-medium);">Example</div><div class="rung-role" style="margin-top:4px; color: var(--text-secondary);">Abandoned setup intents > 72h</div></div>
+      </div>
+      <div class="sev-row" style="background: var(--ink-100);">
+        <div class="sev-cell" style="display: flex; align-items: center; gap: 12px;"><div class="sev-bar" style="background: var(--sev-high); min-height: 32px;"></div><div class="sev-name">High</div></div>
+        <div class="sev-cell"><div class="rung-val">oklch(0.72 0.18 40)</div><div class="rung-role" style="margin-top:4px;">Active revenue loss</div></div>
+        <div class="sev-cell"><div class="rung-name" style="color: var(--sev-high);">Treatment</div><div class="rung-role" style="margin-top:4px;">Prominent · in-app banner · email alert</div></div>
+        <div class="sev-cell"><div class="rung-name">CTA emphasis</div><div class="rung-role" style="margin-top:4px;">Primary button · "Resolve now"</div></div>
+        <div class="sev-cell" style="background: var(--sev-high-bg);"><div class="rung-name" style="color: var(--sev-high);">Example</div><div class="rung-role" style="margin-top:4px; color: var(--text-secondary);">3DS retry disabled · EU cohort</div></div>
+      </div>
+      <div class="sev-row" style="background: var(--ink-100);">
+        <div class="sev-cell" style="display: flex; align-items: center; gap: 12px;"><div class="sev-bar" style="background: var(--sev-critical); min-height: 32px;"></div><div class="sev-name">Critical</div></div>
+        <div class="sev-cell"><div class="rung-val">oklch(0.64 0.22 22)</div><div class="rung-role" style="margin-top:4px;">System is leaking now · compounding</div></div>
+        <div class="sev-cell"><div class="rung-name" style="color: var(--sev-critical);">Treatment</div><div class="rung-role" style="margin-top:4px;">Interrupt · modal or top-banner · SMS optional</div></div>
+        <div class="sev-cell"><div class="rung-name">CTA emphasis</div><div class="rung-role" style="margin-top:4px;">Primary · "Resolve now" · keyboard ⌘↵</div></div>
+        <div class="sev-cell" style="background: var(--sev-critical-bg);"><div class="rung-name" style="color: var(--sev-critical);">Example</div><div class="rung-role" style="margin-top:4px; color: var(--text-secondary);">Webhook signature failing · 38 events dropped</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SEMANTIC -->
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">01.4</div>
+      <div>
+        <div class="section-title">Semantic — ok / warn / err / info</div>
+        <div class="section-kicker">For system state outside of leak severity: connection status, saves, deploys. Distinct from severity so the two languages never collide.</div>
+      </div>
+    </div>
+
+    <div class="grid-4">
+      <div class="cell">
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;"><span style="width:8px;height:8px;background:var(--ok);border-radius:50%;box-shadow:0 0 0 4px var(--ok-bg);"></span><span style="color:var(--text-primary);">Connected</span></div>
+        <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-tertiary);margin-top:14px;">ok · 0.74 0.11 155</div>
+      </div>
+      <div class="cell">
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;"><span style="width:8px;height:8px;background:var(--warn);border-radius:50%;box-shadow:0 0 0 4px var(--warn-bg);"></span><span style="color:var(--text-primary);">Coverage partial</span></div>
+        <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-tertiary);margin-top:14px;">warn · 0.80 0.14 90</div>
+      </div>
+      <div class="cell">
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;"><span style="width:8px;height:8px;background:var(--err);border-radius:50%;box-shadow:0 0 0 4px var(--err-bg);"></span><span style="color:var(--text-primary);">Disconnected</span></div>
+        <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-tertiary);margin-top:14px;">err · 0.64 0.22 22</div>
+      </div>
+      <div class="cell">
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;"><span style="width:8px;height:8px;background:var(--info);border-radius:50%;box-shadow:0 0 0 4px var(--info-bg);"></span><span style="color:var(--text-primary);">Scan queued</span></div>
+        <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-tertiary);margin-top:14px;">info · 0.70 0.06 230</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SPACING -->
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">01.5</div>
+      <div>
+        <div class="section-title">Spacing</div>
+        <div class="section-kicker">4pt base. Only values in this scale are allowed in layout. No 10px. No 18px. If a layout needs 15px, the layout is wrong.</div>
+      </div>
+    </div>
+
+    <div class="space-grid">
+      <div class="space-row"><div class="space-n">s-1</div><div class="space-v">2px</div><div class="space-bar"><span style="width:2px;"></span></div></div>
+      <div class="space-row"><div class="space-n">s-2</div><div class="space-v">4px</div><div class="space-bar"><span style="width:4px;"></span></div></div>
+      <div class="space-row"><div class="space-n">s-3</div><div class="space-v">8px</div><div class="space-bar"><span style="width:8px;"></span></div></div>
+      <div class="space-row"><div class="space-n">s-4</div><div class="space-v">12px</div><div class="space-bar"><span style="width:12px;"></span></div></div>
+      <div class="space-row"><div class="space-n">s-5</div><div class="space-v">16px</div><div class="space-bar"><span style="width:16px;"></span></div></div>
+      <div class="space-row"><div class="space-n">s-6</div><div class="space-v">20px</div><div class="space-bar"><span style="width:20px;"></span></div></div>
+      <div class="space-row"><div class="space-n">s-7</div><div class="space-v">24px</div><div class="space-bar"><span style="width:24px;"></span></div></div>
+      <div class="space-row"><div class="space-n">s-8</div><div class="space-v">32px</div><div class="space-bar"><span style="width:32px;"></span></div></div>
+      <div class="space-row"><div class="space-n">s-9</div><div class="space-v">40px</div><div class="space-bar"><span style="width:40px;"></span></div></div>
+      <div class="space-row"><div class="space-n">s-10</div><div class="space-v">48px</div><div class="space-bar"><span style="width:48px;"></span></div></div>
+      <div class="space-row"><div class="space-n">s-12</div><div class="space-v">64px</div><div class="space-bar"><span style="width:64px;"></span></div></div>
+      <div class="space-row"><div class="space-n">s-14</div><div class="space-v">80px</div><div class="space-bar"><span style="width:80px;"></span></div></div>
+      <div class="space-row"><div class="space-n">s-16</div><div class="space-v">96px</div><div class="space-bar"><span style="width:96px;"></span></div></div>
+    </div>
+  </section>
+
+  <!-- RADIUS -->
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">01.6</div>
+      <div>
+        <div class="section-title">Radius</div>
+        <div class="section-kicker">Small. Vault is a serious instrument, not a toy. 2–8px on surfaces; full-round only on dots and pills.</div>
+      </div>
+    </div>
+
+    <div class="radius-row">
+      <div class="radius-cell"><div class="radius-swatch" style="border-radius: 0;"></div><div class="radius-meta"><strong>r-0</strong>0px · dividers, inline</div></div>
+      <div class="radius-cell"><div class="radius-swatch" style="border-radius: 2px;"></div><div class="radius-meta"><strong>r-1</strong>2px · inputs (inner)</div></div>
+      <div class="radius-cell"><div class="radius-swatch" style="border-radius: 4px;"></div><div class="radius-meta"><strong>r-2</strong>4px · controls</div></div>
+      <div class="radius-cell"><div class="radius-swatch" style="border-radius: 6px;"></div><div class="radius-meta"><strong>r-3</strong>6px · buttons, pills</div></div>
+      <div class="radius-cell"><div class="radius-swatch" style="border-radius: 8px;"></div><div class="radius-meta"><strong>r-4</strong>8px · panels</div></div>
+      <div class="radius-cell"><div class="radius-swatch" style="border-radius: 12px;"></div><div class="radius-meta"><strong>r-5</strong>12px · modals</div></div>
+    </div>
+  </section>
+
+  <!-- BORDERS -->
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">01.7</div>
+      <div>
+        <div class="section-title">Borders — hairlines</div>
+        <div class="section-kicker">Three weights, all 1px. Weight varies by alpha, not thickness. A 2px border is never correct.</div>
+      </div>
+    </div>
+
+    <div class="border-demo">
+      <div class="b"><div class="box" style="border: 1px solid var(--line-subtle);"></div><div class="meta"><strong>line-subtle</strong>oklch(1 0 0 / 0.04) · dividers between rows</div></div>
+      <div class="b"><div class="box" style="border: 1px solid var(--line-default);"></div><div class="meta"><strong>line-default</strong>oklch(1 0 0 / 0.07) · panels, inputs, groups</div></div>
+      <div class="b"><div class="box" style="border: 1px solid var(--line-strong);"></div><div class="meta"><strong>line-strong</strong>oklch(1 0 0 / 0.12) · hover, emphasized</div></div>
+    </div>
+  </section>
+
+  <!-- SHADOW -->
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">01.8</div>
+      <div>
+        <div class="section-title">Shadow — reserved</div>
+        <div class="section-kicker">Shadows are a last resort. They appear only on floating layers: popovers and modals. Panels and cards do not cast shadows.</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="cell" style="padding: 48px; display: flex; justify-content: center; align-items: center;">
+        <div style="background: var(--ink-150); border: 1px solid var(--line-default); padding: 16px 20px; border-radius: var(--r-4); box-shadow: var(--shadow-popover); font-size: 13px; color: var(--text-primary);">Popover — <span class="mono">shadow-popover</span></div>
+      </div>
+      <div class="cell" style="padding: 48px; display: flex; justify-content: center; align-items: center;">
+        <div style="background: var(--ink-150); border: 1px solid var(--line-default); padding: 24px 28px; border-radius: var(--r-5); box-shadow: var(--shadow-modal); font-size: 13px; color: var(--text-primary); min-width: 280px;">Modal — <span class="mono">shadow-modal</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MOTION -->
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">01.9</div>
+      <div>
+        <div class="section-title">Motion</div>
+        <div class="section-kicker">One easing curve. Four durations. Nothing overshoots. Nothing bounces. Active scans may pulse at 2s; nothing else animates on idle.</div>
+      </div>
+    </div>
+
+    <div class="motion-demo">
+      <div class="m"><div class="track"><div class="dot"></div></div><div class="meta"><strong>dur-instant</strong>80ms · micro-feedback</div></div>
+      <div class="m"><div class="track"><div class="dot"></div></div><div class="meta"><strong>dur-fast</strong>120ms · hovers, state swaps</div></div>
+      <div class="m"><div class="track"><div class="dot"></div></div><div class="meta"><strong>dur-base</strong>180ms · panel transitions</div></div>
+      <div class="m"><div class="track"><div class="dot"></div></div><div class="meta"><strong>dur-slow</strong>280ms · modal open/close</div></div>
+    </div>
+
+    <div style="margin-top: 16px; font-family: var(--font-mono); font-size: 12px; color: var(--text-tertiary); letter-spacing: 0.02em;">
+      easing · cubic-bezier(0.2, 0, 0, 1) — no rebound
+    </div>
+  </section>
+
+  <!-- FOCUS -->
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">01.10</div>
+      <div>
+        <div class="section-title">Focus</div>
+        <div class="section-kicker">Focus is a contract. Every interactive element has a visible focus ring in the signal color — yes, the same amber reserved for money. Focus is the one other thing the system treats with equal seriousness.</div>
+      </div>
+    </div>
+
+    <div class="focus-demo">
+      <div class="f"><button class="focus-ring-btn">Resolve now</button><div style="margin-top:20px;font-family:var(--font-mono);font-size:10.5px;color:var(--text-tertiary);">outline 2px signal · offset 2px</div></div>
+      <div class="f"><input class="focus-ring-input" value="north-goods.myshopify.com" /><div style="margin-top:20px;font-family:var(--font-mono);font-size:10.5px;color:var(--text-tertiary);">border + 3px signal @ 14%</div></div>
+      <div class="f"><div style="padding: 6px 10px; border-radius: var(--r-3); background: var(--ink-200); color: var(--text-primary); display: inline-block; font-size: 13px; outline: 2px solid var(--signal); outline-offset: 2px;">Nav link</div><div style="margin-top:20px;font-family:var(--font-mono);font-size:10.5px;color:var(--text-tertiary);">keyboard only · not on :hover</div></div>
+    </div>
+  </section>
+
+  <!-- Z -->
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">01.11</div>
+      <div>
+        <div class="section-title">Layering</div>
+        <div class="section-kicker">Five named layers. No z-index above 80 is ever correct.</div>
+      </div>
+    </div>
+
+    <div class="z-stack">
+      <div class="z-layer" style="top: 16px; left: 20px;">z-nav · 10</div>
+      <div class="z-layer" style="top: 52px; left: 60px;">z-sticky · 20</div>
+      <div class="z-layer" style="top: 88px; left: 100px;">z-dropdown · 40</div>
+      <div class="z-layer" style="top: 124px; left: 140px;">z-modal · 60</div>
+      <div class="z-layer" style="top: 160px; left: 180px; background: var(--signal-dim); border-color: var(--signal-line); color: var(--signal);">z-toast · 80</div>
+    </div>
+  </section>
+
+  <!-- CODE -->
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">01.12</div>
+      <div>
+        <div class="section-title">In code</div>
+        <div class="section-kicker">Every token is a CSS custom property on <span class="mono">:root</span>. Tailwind, styled-components, or vanilla — pick any, but consume the same variables.</div>
+      </div>
+    </div>
+
+<pre class="code"><span class="c">/* tokens.css — excerpt */</span>
+<span class="k">:root</span> {
+  <span class="c">/* surface */</span>
+  <span class="k">--ink-050</span>: <span class="s">oklch(0.17 0.008 250)</span>;
+  <span class="k">--ink-100</span>: <span class="s">oklch(0.19 0.008 250)</span>;
+
+  <span class="c">/* signal — money at risk only */</span>
+  <span class="k">--signal</span>: <span class="s">oklch(0.78 0.13 75)</span>;
+
+  <span class="c">/* severity */</span>
+  <span class="k">--sev-critical</span>: <span class="s">oklch(0.64 0.22 22)</span>;
+
+  <span class="c">/* motion — one curve to rule them all */</span>
+  <span class="k">--ease</span>: <span class="s">cubic-bezier(0.2, 0, 0, 1)</span>;
+  <span class="k">--dur-fast</span>: <span class="s">120ms</span>;
+}</pre>
+  </section>
+
+</div>
+
+</body>
+</html>

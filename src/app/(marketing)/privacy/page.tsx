@@ -123,14 +123,14 @@ export default function PrivacyPage() {
           Privacy questions can be sent to{" "}
           <a
             href="mailto:privacy@checkoutleak.com"
-            className="text-primary transition-opacity hover:opacity-80"
+            className="vault-link"
           >
             privacy@checkoutleak.com
           </a>
           . For general support, contact{" "}
           <a
             href="mailto:support@checkoutleak.com"
-            className="text-primary transition-opacity hover:opacity-80"
+            className="vault-link"
           >
             support@checkoutleak.com
           </a>

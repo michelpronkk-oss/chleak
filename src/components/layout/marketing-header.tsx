@@ -35,19 +35,19 @@ export async function MarketingHeader({ className, accessState }: MarketingHeade
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 w-full border-b border-border/50 bg-background/80 backdrop-blur",
+        "sticky top-0 z-30 w-full border-b border-border bg-background/85 backdrop-blur-xl",
         className
       )}
     >
-      <div className="mx-auto flex h-[3.25rem] w-full max-w-6xl items-center justify-between px-4 sm:h-16 sm:px-8">
+      <div className="mx-auto flex h-[3.35rem] w-full max-w-6xl items-center justify-between px-4 sm:h-14 sm:px-8">
         <CheckoutLeakLogo />
 
-        <nav className="hidden items-center gap-7 md:flex">
+        <nav className="hidden items-center gap-1 md:flex">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="text-[0.8125rem] text-muted-foreground transition-colors hover:text-foreground"
+              className="vault-link rounded-md px-2.5 py-1 text-[0.79rem]"
             >
               {link.label}
             </Link>
@@ -58,7 +58,7 @@ export async function MarketingHeader({ className, accessState }: MarketingHeade
           <Link
             href={cta.href}
             className={cn(
-              "rounded-lg px-2.5 py-1.5 text-[0.69rem] font-semibold transition-transform hover:-translate-y-0.5 sm:px-3.5 sm:text-xs",
+              "rounded-md px-3 py-1.5 text-[0.68rem] font-medium tracking-[0.04em] uppercase sm:text-[0.7rem]",
               cta.tone
             )}
           >

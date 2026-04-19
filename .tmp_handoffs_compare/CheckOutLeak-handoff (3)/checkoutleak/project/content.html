@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Voice · Vault</title>
+<link rel="stylesheet" href="shared/vault.css" />
+<style>
+  .phrase-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; }
+  .phrase-col { border: 1px solid var(--line-default); border-radius: var(--r-4); overflow: hidden; }
+  .phrase-head { padding: 14px 20px; background: var(--ink-100); border-bottom: 1px solid var(--line-default); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .phrase-head.say { color: var(--ok); }
+  .phrase-head.never { color: var(--sev-critical); }
+  .phrase-row { padding: 14px 20px; border-bottom: 1px solid var(--line-subtle); font-size: 14px; color: var(--text-primary); background: var(--ink-050); }
+  .phrase-row:last-child { border-bottom: 0; }
+  .phrase-note { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 6px; letter-spacing: 0.02em; }
+
+  .voice-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line-default); border: 1px solid var(--line-default); border-radius: var(--r-4); overflow: hidden; margin-top: 16px; }
+  .voice-pair .col { background: var(--ink-100); padding: 20px; }
+  .voice-pair .lbl { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .voice-pair .lbl.bad { color: var(--sev-critical); }
+  .voice-pair .lbl.good { color: var(--ok); }
+  .voice-pair .text { font-size: 14px; color: var(--text-primary); line-height: 1.55; margin-top: 10px; }
+  .voice-pair .text.bad { color: var(--text-tertiary); }
+
+  .princ { display: grid; grid-template-columns: 40px 1fr; gap: 24px; padding: 20px 0; border-top: 1px solid var(--line-subtle); }
+  .princ-n { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); padding-top: 4px; }
+  .princ-t { font-size: 16px; font-weight: 500; color: var(--text-primary); letter-spacing: -0.005em; }
+  .princ-d { font-size: 13px; color: var(--text-secondary); margin-top: 6px; max-width: 62ch; line-height: 1.55; }
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <div class="chrome-inner">
+    <div class="brand"><div class="brand-mark"></div><div class="brand-name">CheckoutLeak</div><div class="brand-slash">/</div><div class="brand-section">Vault — Design System</div></div>
+    <nav class="chrome-nav">
+      <a href="index.html">Overview</a><a href="tokens.html">Tokens</a>
+      <a href="typography.html">Typography</a><a href="components.html">Components</a>
+      <a href="states.html">States</a><a href="pages.html">Pages</a>
+      <a href="dashboard.html">Dashboard</a><a href="mobile.html">Mobile</a>
+      <a href="content.html" class="active">Voice</a>
+    </nav>
+    <div class="chrome-meta"><span class="live"></span><span>v0.1 · draft</span></div>
+  </div>
+</div>
+
+<div class="doc">
+
+  <header class="doc-header">
+    <div class="doc-crumb"><span class="dot"></span> 08 · Voice</div>
+    <h1 class="doc-title"><span class="n">08</span>Content &amp; UI language</h1>
+    <p class="doc-lede">Vault is precise, premium, commercially grounded. It writes like an operator writing for operators. No product jargon, no emotional leakage, no celebration of its own features.</p>
+  </header>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">08.1</div>
+      <div>
+        <div class="section-title">Voice principles</div>
+        <div class="section-kicker">Six rules. They govern button labels, banners, email, push, marketing, and error strings alike.</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="princ"><div class="princ-n">V1</div><div><div class="princ-t">Name the money, not the feeling.</div><div class="princ-d">"Revenue at risk" not "issues detected." "38 events dropped" not "something went wrong." A number is always more useful than an emotion.</div></div></div>
+      <div class="princ"><div class="princ-n">V2</div><div><div class="princ-t">Every sentence carries a next action — or none.</div><div class="princ-d">Either tell the user exactly what to do, or say nothing. Don't narrate the system's inner life. "Coverage incomplete. Connect Shopify." is two sentences; both are load-bearing.</div></div></div>
+      <div class="princ"><div class="princ-n">V3</div><div><div class="princ-t">Technical words are welcome.</div><div class="princ-d">The audience is engineering-literate. "Webhook signature", "3DS step-up", "setup_intent", "dunning" are load-bearing — not jargon. Dumbing them down reads as condescension.</div></div></div>
+      <div class="princ"><div class="princ-n">V4</div><div><div class="princ-t">Never apologize. Never celebrate.</div><div class="princ-d">No "oops!", no "we're on it", no "great job!", no streaks, no trophies. The system is a serious instrument. It reports and it recommends.</div></div></div>
+      <div class="princ"><div class="princ-n">V5</div><div><div class="princ-t">Tense: present or past. Not future-promise.</div><div class="princ-d">"38 events dropped." "Scan complete." Not "we'll make sure this never happens" or "your revenue is protected." We report what we see.</div></div></div>
+      <div class="princ"><div class="princ-n">V6</div><div><div class="princ-t">Mono words inside sans sentences.</div><div class="princ-d">Any technical value — an event name, a domain, a variable — renders in mono inline with the prose. This is a voice rule as much as a typographic one; it signals what the user can click, copy, or act on.</div></div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">08.2</div>
+      <div>
+        <div class="section-title">What we say · what we never say</div>
+        <div class="section-kicker">Two columns. The right column contains real copy we have caught ourselves writing. The left is the rewrite.</div>
+      </div>
+    </div>
+
+    <div class="phrase-grid">
+      <div class="phrase-col">
+        <div class="phrase-head say">Say</div>
+        <div class="phrase-row">Revenue at risk · 30d<div class="phrase-note">Names the commercial unit and the window.</div></div>
+        <div class="phrase-row">Leak detected · webhook signature<div class="phrase-note">Specific surface, specific failure mode.</div></div>
+        <div class="phrase-row">Coverage incomplete — Shopify not connected.<div class="phrase-note">States the fact and the missing input.</div></div>
+        <div class="phrase-row">First scan in progress — 4 min remaining.<div class="phrase-note">Time-bounded, no fluff.</div></div>
+        <div class="phrase-row">Recommended next move<div class="phrase-note">Not "suggestion." The system picks one.</div></div>
+        <div class="phrase-row">Fix path · 3 steps<div class="phrase-note">Stepwise, finite, finishable.</div></div>
+        <div class="phrase-row">Source connected — first scan queued.<div class="phrase-note">Confirms the prior action; declares the next.</div></div>
+        <div class="phrase-row">Billing requires attention.<div class="phrase-note">Precise. No exclamation mark.</div></div>
+        <div class="phrase-row">No issues detected · last scan 00:14 ago.<div class="phrase-note">Silence is a valid result.</div></div>
+      </div>
+      <div class="phrase-col">
+        <div class="phrase-head never">Never say</div>
+        <div class="phrase-row">"Your insights are ready! 🚀"<div class="phrase-note">Vague noun + celebration + emoji.</div></div>
+        <div class="phrase-row">"Looks like we found something interesting…"<div class="phrase-note">Coy. Operators don't have time.</div></div>
+        <div class="phrase-row">"Uh oh! It seems like Stripe is acting up."<div class="phrase-note">Infantilizing; blames the upstream.</div></div>
+        <div class="phrase-row">"Great job! You've resolved 12 issues this week."<div class="phrase-note">No trophies. The reward is the numbers going down.</div></div>
+        <div class="phrase-row">"Let's get you set up."<div class="phrase-note">First-person plural; consumer voice.</div></div>
+        <div class="phrase-row">"We're working on it."<div class="phrase-note">Narrates the system's inner life.</div></div>
+        <div class="phrase-row">"Don't worry — your revenue is safe with us."<div class="phrase-note">Promises. Never promise.</div></div>
+        <div class="phrase-row">"Tap here to unlock premium insights"<div class="phrase-note">Marketing leaking into product.</div></div>
+        <div class="phrase-row">"Welcome back! Here's what's new."<div class="phrase-note">Non-operator voice. No homepage fluff inside the product.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">08.3</div>
+      <div>
+        <div class="section-title">Rewrites — from generic SaaS to Vault</div>
+        <div class="section-kicker">Side-by-sides of real interface strings. Bad on the left; rewritten on the right.</div>
+      </div>
+    </div>
+
+    <div class="voice-pair">
+      <div class="col"><div class="lbl bad">Before</div><div class="text bad">Hmm, something went wrong. Please try again or contact support.</div></div>
+      <div class="col"><div class="lbl good">After</div><div class="text">Stripe source disconnected · 00:06:12 ago. 401 · token revoked upstream. Reconnect to resume scans.</div></div>
+    </div>
+    <div class="voice-pair">
+      <div class="col"><div class="lbl bad">Before</div><div class="text bad">🎉 Welcome to CheckoutLeak! Let's start by connecting your store.</div></div>
+      <div class="col"><div class="lbl good">After</div><div class="text">Connect a source. Stripe or Shopify — the second is connected from the workspace.</div></div>
+    </div>
+    <div class="voice-pair">
+      <div class="col"><div class="lbl bad">Before</div><div class="text bad">Uh oh — your payment didn't go through. No worries! Please update your card to keep enjoying CheckoutLeak.</div></div>
+      <div class="col"><div class="lbl good">After</div><div class="text">Billing requires attention — card declined 2d ago. Monitoring pauses in 2d 14h. Update billing.</div></div>
+    </div>
+    <div class="voice-pair">
+      <div class="col"><div class="lbl bad">Before</div><div class="text bad">We're analyzing your data now to surface insights. This may take a few minutes.</div></div>
+      <div class="col"><div class="lbl good">After</div><div class="text">First scan in progress. Indexing 30 days · ~4 min remaining. Findings appear as they land.</div></div>
+    </div>
+    <div class="voice-pair">
+      <div class="col"><div class="lbl bad">Before</div><div class="text bad">Nice work — you're all caught up! 🎯</div></div>
+      <div class="col"><div class="lbl good">After</div><div class="text">No issues detected. Last scan 00:14 ago. Next scan in 4 minutes.</div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">08.4</div>
+      <div>
+        <div class="section-title">The canonical vocabulary</div>
+        <div class="section-kicker">Terms the product uses consistently. New features should extend this vocabulary, not invent parallel one.</div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 24px;">
+      <div style="padding: 14px 18px; border: 1px solid var(--line-default); border-radius: var(--r-3); background: var(--ink-100);"><span class="mono" style="color: var(--signal);">Revenue at risk</span><span style="color: var(--text-secondary); font-size: 13px;"> · the money that could be lost if an issue isn't fixed within the window.</span></div>
+      <div style="padding: 14px 18px; border: 1px solid var(--line-default); border-radius: var(--r-3); background: var(--ink-100);"><span class="mono" style="color: var(--signal);">Leak</span><span style="color: var(--text-secondary); font-size: 13px;"> · a confirmed revenue loss pattern, not a hypothesis.</span></div>
+      <div style="padding: 14px 18px; border: 1px solid var(--line-default); border-radius: var(--r-3); background: var(--ink-100);"><span class="mono" style="color: var(--signal);">Finding</span><span style="color: var(--text-secondary); font-size: 13px;"> · one instance of a leak, with ID, severity, exposure.</span></div>
+      <div style="padding: 14px 18px; border: 1px solid var(--line-default); border-radius: var(--r-3); background: var(--ink-100);"><span class="mono" style="color: var(--signal);">Source</span><span style="color: var(--text-secondary); font-size: 13px;"> · a connected Stripe account or Shopify store.</span></div>
+      <div style="padding: 14px 18px; border: 1px solid var(--line-default); border-radius: var(--r-3); background: var(--ink-100);"><span class="mono" style="color: var(--signal);">Coverage</span><span style="color: var(--text-secondary); font-size: 13px;"> · the portion of revenue surface the system can see.</span></div>
+      <div style="padding: 14px 18px; border: 1px solid var(--line-default); border-radius: var(--r-3); background: var(--ink-100);"><span class="mono" style="color: var(--signal);">Scan</span><span style="color: var(--text-secondary); font-size: 13px;"> · a sweep of the corpus that produces findings.</span></div>
+      <div style="padding: 14px 18px; border: 1px solid var(--line-default); border-radius: var(--r-3); background: var(--ink-100);"><span class="mono" style="color: var(--signal);">Fix path</span><span style="color: var(--text-secondary); font-size: 13px;"> · the ordered steps to resolve a finding.</span></div>
+      <div style="padding: 14px 18px; border: 1px solid var(--line-default); border-radius: var(--r-3); background: var(--ink-100);"><span class="mono" style="color: var(--signal);">Exposure</span><span style="color: var(--text-secondary); font-size: 13px;"> · dollars attributable to a single finding.</span></div>
+      <div style="padding: 14px 18px; border: 1px solid var(--line-default); border-radius: var(--r-3); background: var(--ink-100);"><span class="mono" style="color: var(--signal);">Recovered</span><span style="color: var(--text-secondary); font-size: 13px;"> · dollars the user has reclaimed since resolution.</span></div>
+      <div style="padding: 14px 18px; border: 1px solid var(--line-default); border-radius: var(--r-3); background: var(--ink-100);"><span class="mono" style="color: var(--signal);">Severity</span><span style="color: var(--text-secondary); font-size: 13px;"> · low · medium · high · critical. Fixed four-level scale.</span></div>
+    </div>
+  </section>
+
+  <!-- IMPLEMENTATION NOTES -->
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">09</div>
+      <div>
+        <div class="section-title">Implementation notes</div>
+        <div class="section-kicker">Closing the system.</div>
+      </div>
+    </div>
+
+    <div style="display: grid; gap: 16px;">
+      <div style="padding: 20px; border: 1px solid var(--line-default); border-radius: var(--r-4); background: var(--ink-100);">
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.05em;">I · 01 · Tokens</div>
+        <div style="font-size: 14px; color: var(--text-primary); margin-top: 6px; font-weight: 500;">Ship tokens as CSS custom properties on <span class="mono">:root</span>.</div>
+        <div style="font-size: 13px; color: var(--text-secondary); margin-top: 6px; line-height: 1.55;">Consuming them via Tailwind, styled-components, or raw CSS is equivalent. Do not fork the palette for marketing — marketing consumes the same <span class="mono">--signal</span> as product.</div>
+      </div>
+      <div style="padding: 20px; border: 1px solid var(--line-default); border-radius: var(--r-4); background: var(--ink-100);">
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.05em;">I · 02 · Theming</div>
+        <div style="font-size: 14px; color: var(--text-primary); margin-top: 6px; font-weight: 500;">There is no light theme.</div>
+        <div style="font-size: 13px; color: var(--text-secondary); margin-top: 6px; line-height: 1.55;">A light-mode port would destroy the operator language. If accessibility dictates a higher-contrast variant, build a <span class="mono">prefers-contrast: more</span> override on the existing dark palette — increase text primary to <span class="mono">oklch(1 0 0)</span>, deepen borders to 0.12 alpha.</div>
+      </div>
+      <div style="padding: 20px; border: 1px solid var(--line-default); border-radius: var(--r-4); background: var(--ink-100);">
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.05em;">I · 03 · Review checklist</div>
+        <div style="font-size: 14px; color: var(--text-primary); margin-top: 6px; font-weight: 500;">Five questions to clear before any screen ships.</div>
+        <ol style="font-size: 13px; color: var(--text-secondary); margin-top: 10px; line-height: 1.8; padding-left: 20px;">
+          <li>Is the primary money number the largest thing on the screen?</li>
+          <li>Is every numeric value set in mono with tabular figures?</li>
+          <li>Is amber reserved for revenue-at-risk only, nowhere else?</li>
+          <li>Does the screen answer: where am I, what happened, what's next, what after?</li>
+          <li>If the workspace is healthy, is the screen quiet?</li>
+        </ol>
+      </div>
+      <div style="padding: 20px; border: 1px solid var(--line-default); border-radius: var(--r-4); background: var(--ink-100);">
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.05em;">I · 04 · Scope &amp; evolution</div>
+        <div style="font-size: 14px; color: var(--text-primary); margin-top: 6px; font-weight: 500;">Vault is a working system, not a style guide.</div>
+        <div style="font-size: 13px; color: var(--text-secondary); margin-top: 6px; line-height: 1.55;">Every token, component, and pattern here compiles to CSS and ships. New features extend the system by adding components that follow these grammars — never by forking the tokens.</div>
+      </div>
+    </div>
+  </section>
+
+  <div style="margin-top: 80px; padding: 40px; border: 1px solid var(--signal-line); border-radius: var(--r-4); background: linear-gradient(180deg, var(--signal-dim), var(--ink-050) 70%); text-align: center;">
+    <div style="font-family: var(--font-mono); font-size: 11px; color: var(--signal); letter-spacing: 0.08em; text-transform: uppercase;">End of document</div>
+    <div style="font-family: var(--font-display); font-style: italic; font-size: 36px; color: var(--text-primary); margin-top: 14px; letter-spacing: -0.02em; line-height: 1.1;">Vault — v0.1 · draft</div>
+    <div style="font-size: 13px; color: var(--text-secondary); margin-top: 10px; max-width: 52ch; margin-left: auto; margin-right: auto; line-height: 1.55;">Clear like a modern workspace. Dark like a premium operator tool. Sharp like a product built around money and risk.</div>
+  </div>
+
+</div>
+</body>
+</html>

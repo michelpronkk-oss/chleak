@@ -12,7 +12,7 @@ export default function ContactPage() {
           For product support, integration guidance, or account help, email{" "}
           <a
             href="mailto:support@checkoutleak.com"
-            className="text-primary transition-opacity hover:opacity-80"
+            className="vault-link"
           >
             support@checkoutleak.com
           </a>
@@ -30,7 +30,7 @@ export default function ContactPage() {
           contact{" "}
           <a
             href="mailto:sales@checkoutleak.com"
-            className="text-primary transition-opacity hover:opacity-80"
+            className="vault-link"
           >
             sales@checkoutleak.com
           </a>

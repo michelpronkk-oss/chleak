@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>States · Vault</title>
+<link rel="stylesheet" href="shared/vault.css" />
+<style>
+  .state-grid { display: grid; grid-template-columns: 1fr; gap: 48px; }
+  .state { border: 1px solid var(--line-default); border-radius: var(--r-4); overflow: hidden; background: var(--ink-050); }
+  .state-head { padding: 20px 24px; display: grid; grid-template-columns: 80px 1fr auto; gap: 20px; align-items: center; border-bottom: 1px solid var(--line-default); background: var(--ink-100); }
+  .state-n { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.05em; }
+  .state-name { font-size: 16px; font-weight: 500; color: var(--text-primary); letter-spacing: -0.01em; }
+  .state-sub { font-size: 12.5px; color: var(--text-secondary); margin-top: 3px; }
+  .state-body { padding: 24px; display: grid; grid-template-columns: 1fr 320px; gap: 32px; }
+  .state-mock { background: var(--ink-000); border: 1px solid var(--line-default); border-radius: var(--r-4); min-height: 240px; padding: 32px; display: flex; flex-direction: column; justify-content: center; }
+  .state-rules { display: grid; gap: 14px; }
+  .rule { font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; padding-left: 14px; border-left: 1px solid var(--line-default); }
+  .rule strong { display: block; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 4px; }
+  .rule strong.active { color: var(--signal); border-color: var(--signal); }
+
+  .mock-title { font-family: var(--font-display); font-style: italic; font-size: 34px; letter-spacing: -0.02em; color: var(--text-primary); line-height: 1.1; }
+  .mock-sub { font-size: 13px; color: var(--text-secondary); margin-top: 12px; max-width: 48ch; line-height: 1.55; }
+  .mock-cta { margin-top: 20px; display: flex; gap: 10px; align-items: center; }
+  .mb { background: var(--text-primary); color: var(--text-inverse); padding: 8px 14px; border-radius: var(--r-3); font-size: 13px; font-weight: 500; cursor: pointer; border: 0; }
+  .ms { background: var(--ink-200); border: 1px solid var(--line-default); color: var(--text-primary); padding: 8px 14px; border-radius: var(--r-3); font-size: 13px; font-weight: 500; cursor: pointer; }
+  .mg { background: transparent; color: var(--text-secondary); padding: 8px 14px; border-radius: var(--r-3); font-size: 13px; font-weight: 500; cursor: pointer; }
+
+  .mock-row { display: flex; gap: 16px; align-items: center; font-family: var(--font-mono); font-size: 12px; color: var(--text-tertiary); }
+  .mock-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: var(--r-3); font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid; }
+  .mock-metric { font-family: var(--font-mono); font-size: 48px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1; }
+  .mock-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px; }
+  .mock-ev { display: grid; grid-template-columns: 4px 1fr auto; gap: 14px; padding: 12px 14px; border-left: 4px solid; background: var(--ink-050); border-radius: var(--r-3); font-size: 12.5px; }
+  .mock-ev + .mock-ev { margin-top: 6px; }
+  .dot-live { width: 6px; height: 6px; background: var(--ok); border-radius: 50%; box-shadow: 0 0 0 3px var(--ok-bg); display: inline-block; }
+  .dot-err { width: 6px; height: 6px; background: var(--sev-critical); border-radius: 50%; box-shadow: 0 0 0 3px var(--sev-critical-bg); display: inline-block; }
+  .dot-warn { width: 6px; height: 6px; background: var(--warn); border-radius: 50%; box-shadow: 0 0 0 3px var(--warn-bg); display: inline-block; }
+  .dot-idle { width: 6px; height: 6px; background: var(--text-tertiary); border-radius: 50%; display: inline-block; }
+
+  .progress { margin-top: 16px; height: 3px; background: var(--ink-200); border-radius: 2px; overflow: hidden; width: 260px; }
+  .progress div { height: 100%; background: var(--signal); width: 42%; }
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <div class="chrome-inner">
+    <div class="brand"><div class="brand-mark"></div><div class="brand-name">CheckoutLeak</div><div class="brand-slash">/</div><div class="brand-section">Vault — Design System</div></div>
+    <nav class="chrome-nav">
+      <a href="index.html">Overview</a><a href="tokens.html">Tokens</a>
+      <a href="typography.html">Typography</a><a href="components.html">Components</a>
+      <a href="states.html" class="active">States</a>
+      <a href="pages.html">Pages</a><a href="dashboard.html">Dashboard</a>
+      <a href="mobile.html">Mobile</a><a href="content.html">Voice</a>
+    </nav>
+    <div class="chrome-meta"><span class="live"></span><span>v0.1 · draft</span></div>
+  </div>
+</div>
+
+<div class="doc">
+
+  <header class="doc-header">
+    <div class="doc-crumb"><span class="dot"></span> 04 · Patterns</div>
+    <h1 class="doc-title"><span class="n">04</span>State patterns</h1>
+    <p class="doc-lede">Ten product states. Each answers four questions: where am I, what has happened, what is the next move, what happens after I take it.</p>
+  </header>
+
+  <div class="state-grid">
+
+    <!-- 01 UNAUTH -->
+    <div class="state">
+      <div class="state-head">
+        <div class="state-n">S · 01</div>
+        <div><div class="state-name">Unauthenticated</div><div class="state-sub">Visitor is on marketing or signing in. No data yet, no risk yet.</div></div>
+        <div><span class="pill" style="display:inline-flex; align-items:center; gap:6px; padding:3px 8px; border-radius: var(--r-3); font-family: var(--font-mono); font-size: 10px; letter-spacing: .04em; text-transform: uppercase; border:1px solid var(--line-default); background: var(--ink-150); color: var(--text-secondary);">Marketing / Auth</span></div>
+      </div>
+      <div class="state-body">
+        <div class="state-mock">
+          <div class="mock-title"><em>Quiet instruments</em><br/>for loud money.</div>
+          <div class="mock-sub">CheckoutLeak detects revenue leakage across your Shopify and Stripe flows — in checkout, payment setup, failed charges, and billing recovery.</div>
+          <div class="mock-cta"><button class="mb">Start — 14-day audit</button><button class="mg">Sign in</button></div>
+        </div>
+        <div class="state-rules">
+          <div class="rule"><strong>Where am I</strong>Public surface. Editorial Instrument Serif hero, no dashboard chrome.</div>
+          <div class="rule"><strong>What happened</strong>Nothing yet. Avoid fake-metric confetti.</div>
+          <div class="rule"><strong class="active">Next move</strong>Primary: start trial. Secondary: sign in.</div>
+          <div class="rule"><strong>After</strong>Create-account flow → connect source.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 02 NO PLAN -->
+    <div class="state">
+      <div class="state-head">
+        <div class="state-n">S · 02</div>
+        <div><div class="state-name">Authenticated, no active plan</div><div class="state-sub">User signed in but trial expired or plan never selected.</div></div>
+        <div><span class="mock-pill" style="color: var(--warn); border-color: oklch(0.80 0.14 90 / 0.3); background: var(--warn-bg);">Billing required</span></div>
+      </div>
+      <div class="state-body">
+        <div class="state-mock">
+          <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.05em; text-transform: uppercase;">Plan inactive</div>
+          <div style="font-size: 24px; font-weight: 500; letter-spacing: -0.015em; color: var(--text-primary); margin-top: 10px;">Monitoring paused</div>
+          <div style="font-size: 13px; color: var(--text-secondary); margin-top: 8px; max-width: 52ch; line-height: 1.55;">Your trial ended 2 days ago. Existing findings remain visible. New scans and alerts resume once a plan is active.</div>
+          <div class="mock-cta"><button class="mb">Activate plan</button><button class="mg">View pricing</button></div>
+        </div>
+        <div class="state-rules">
+          <div class="rule"><strong>Where am I</strong>Workspace is reachable but gated.</div>
+          <div class="rule"><strong>What happened</strong>Trial lapsed. Data preserved. No new scans.</div>
+          <div class="rule"><strong class="active">Next move</strong>Primary: activate plan. Keep tone factual, not guilty.</div>
+          <div class="rule"><strong>After</strong>First scan resumes within 4 min; banner clears.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 03 NO SOURCE -->
+    <div class="state">
+      <div class="state-head">
+        <div class="state-n">S · 03</div>
+        <div><div class="state-name">Active plan · no source connected</div><div class="state-sub">Paid, but Stripe and Shopify aren't linked yet.</div></div>
+        <div><span class="mock-pill" style="color: var(--info); border-color: oklch(0.70 0.06 230 / 0.3); background: var(--info-bg);">Onboarding</span></div>
+      </div>
+      <div class="state-body">
+        <div class="state-mock">
+          <div class="mock-label">Step 1 of 2</div>
+          <div style="font-size: 24px; font-weight: 500; letter-spacing: -0.015em; color: var(--text-primary);">Connect a source</div>
+          <div style="font-size: 13px; color: var(--text-secondary); margin-top: 8px; max-width: 52ch; line-height: 1.55;">Connect Stripe or Shopify first. Connect the second inside the workspace — leak detection improves dramatically with both linked.</div>
+          <div class="mock-cta" style="gap: 8px;">
+            <button class="mb">Connect Stripe</button>
+            <button class="ms">Connect Shopify</button>
+          </div>
+          <div class="progress"><div></div></div>
+        </div>
+        <div class="state-rules">
+          <div class="rule"><strong>Where am I</strong>Onboarding shell · no workspace data.</div>
+          <div class="rule"><strong>What happened</strong>Plan active. Scanner has nothing to read.</div>
+          <div class="rule"><strong class="active">Next move</strong>Connect a source. Two buttons of equal weight.</div>
+          <div class="rule"><strong>After</strong>Ownership verified → enters state 04.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 04 FIRST SCAN PENDING -->
+    <div class="state">
+      <div class="state-head">
+        <div class="state-n">S · 04</div>
+        <div><div class="state-name">Source connected · first scan pending</div><div class="state-sub">We're indexing. No findings yet, but they're coming.</div></div>
+        <div><span class="mock-pill" style="color: var(--info); border-color: oklch(0.70 0.06 230 / 0.3); background: var(--info-bg);">Scanning</span></div>
+      </div>
+      <div class="state-body">
+        <div class="state-mock">
+          <div class="mock-label">First scan · in progress</div>
+          <div style="font-size: 24px; font-weight: 500; letter-spacing: -0.015em; color: var(--text-primary);">Indexing the last 30 days</div>
+          <div style="font-family: var(--font-mono); font-size: 12px; color: var(--text-tertiary); margin-top: 8px;">
+            <div>↳ Stripe events · <span style="color: var(--text-primary);">1,482,109</span> scanned</div>
+            <div>↳ Shopify orders · <span style="color: var(--text-primary);">284,401</span> scanned</div>
+            <div>↳ Webhook corpus · <span style="color: var(--text-primary);">queued</span></div>
+          </div>
+          <div class="progress"><div style="width: 68%;"></div></div>
+          <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 10px;">Estimated 00:02:40 remaining</div>
+        </div>
+        <div class="state-rules">
+          <div class="rule"><strong>Where am I</strong>Workspace dashboard, pre-populated with shell.</div>
+          <div class="rule"><strong>What happened</strong>Ownership verified; scan running.</div>
+          <div class="rule"><strong class="active">Next move</strong>Wait, or configure notifications in parallel.</div>
+          <div class="rule"><strong>After</strong>First findings land → enters state 05.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 05 FIRST FINDINGS -->
+    <div class="state">
+      <div class="state-head">
+        <div class="state-n">S · 05</div>
+        <div><div class="state-name">First findings available</div><div class="state-sub">The scanner just returned real money. Highest-impact leak surfaces first.</div></div>
+        <div><span class="mock-pill" style="color: var(--signal); border-color: var(--signal-line); background: var(--signal-dim);">Active</span></div>
+      </div>
+      <div class="state-body">
+        <div class="state-mock">
+          <div class="mock-label">Revenue at risk · 30d</div>
+          <div class="mock-metric" style="color: var(--signal);">$84,120.40</div>
+          <div style="font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); margin-top: 16px;">14 findings · 2 critical · 5 high</div>
+          <div style="margin-top: 20px;">
+            <div class="mock-ev" style="border-left-color: var(--sev-critical);"><div></div><div>Webhook signature failing<div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 2px;">north-goods · 38 dropped</div></div><div class="mono" style="color: var(--signal); font-size: 13px;">$14,382</div></div>
+            <div class="mock-ev" style="border-left-color: var(--sev-high);"><div></div><div>3DS retry disabled · EU cohort<div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 2px;">412 transactions</div></div><div class="mono" style="color: var(--signal); font-size: 13px;">$6,940</div></div>
+          </div>
+        </div>
+        <div class="state-rules">
+          <div class="rule"><strong>Where am I</strong>Full dashboard, live.</div>
+          <div class="rule"><strong>What happened</strong>First scan complete; queue populated.</div>
+          <div class="rule"><strong class="active">Next move</strong>Open the top-exposure finding → fix path.</div>
+          <div class="rule"><strong>After</strong>Each resolution drops the at-risk total.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 06 MATURE -->
+    <div class="state">
+      <div class="state-head">
+        <div class="state-n">S · 06</div>
+        <div><div class="state-name">Mature workspace</div><div class="state-sub">Weeks in. Issue velocity is stable. The product fades into the background.</div></div>
+        <div><span class="mock-pill" style="color: var(--ok); border-color: oklch(0.74 0.11 155 / 0.3); background: var(--ok-bg);">Steady</span></div>
+      </div>
+      <div class="state-body">
+        <div class="state-mock">
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px;">
+            <div><div class="mock-label">At risk · 30d</div><div class="mock-metric" style="font-size: 34px;">$2,180</div><div style="font-family: var(--font-mono); font-size: 11px; color: var(--ok); margin-top: 6px;">▼ 92% vs Mar</div></div>
+            <div><div class="mock-label">Open</div><div class="mock-metric" style="font-size: 34px;">3</div><div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 6px;">all low / med</div></div>
+            <div><div class="mock-label">Recovered · 30d</div><div class="mock-metric" style="font-size: 34px;">$41k</div><div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 6px;">12 resolutions</div></div>
+          </div>
+        </div>
+        <div class="state-rules">
+          <div class="rule"><strong>Where am I</strong>Workspace in steady-state.</div>
+          <div class="rule"><strong>What happened</strong>You've been running CheckoutLeak for weeks.</div>
+          <div class="rule"><strong class="active">Next move</strong>Review digest or ignore. Both are valid.</div>
+          <div class="rule"><strong>After</strong>Page is almost boring — by design.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 07 DEGRADED BILLING -->
+    <div class="state">
+      <div class="state-head">
+        <div class="state-n">S · 07</div>
+        <div><div class="state-name">Degraded billing</div><div class="state-sub">User's own card declined. Service continues for a grace window, then pauses.</div></div>
+        <div><span class="mock-pill" style="color: var(--warn); border-color: oklch(0.80 0.14 90 / 0.3); background: var(--warn-bg);">Billing attn.</span></div>
+      </div>
+      <div class="state-body">
+        <div class="state-mock">
+          <div style="padding: 12px 20px; background: var(--warn-bg); border: 1px solid oklch(0.80 0.14 90 / 0.3); border-radius: var(--r-3); display: flex; align-items: center; justify-content: space-between;">
+            <div style="font-size: 13px; color: var(--text-primary);">Billing requires attention — <span class="mono" style="color: var(--warn);">card declined 2d ago</span>. Monitoring pauses in 2d 14h.</div>
+            <button class="mb">Update billing</button>
+          </div>
+          <div style="margin-top: 20px; font-size: 13px; color: var(--text-secondary); line-height: 1.55;">The workspace remains fully usable during the grace window. Findings continue to appear. After grace expires, scans pause; existing findings remain readable.</div>
+        </div>
+        <div class="state-rules">
+          <div class="rule"><strong>Where am I</strong>Workspace + warn banner, pinned top.</div>
+          <div class="rule"><strong>What happened</strong>Card declined. Grace window active.</div>
+          <div class="rule"><strong class="active">Next move</strong>Update billing. One-click reconnect.</div>
+          <div class="rule"><strong>After</strong>Banner clears; monitoring continues uninterrupted.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 08 INCOMPLETE COVERAGE -->
+    <div class="state">
+      <div class="state-head">
+        <div class="state-n">S · 08</div>
+        <div><div class="state-name">Incomplete coverage</div><div class="state-sub">Only one source connected. Findings exist but are partial.</div></div>
+        <div><span class="mock-pill" style="color: var(--signal); border-color: var(--signal-line); background: var(--signal-dim);">Partial coverage</span></div>
+      </div>
+      <div class="state-body">
+        <div class="state-mock">
+          <div style="padding: 12px 20px; background: var(--signal-dim); border: 1px solid var(--signal-line); border-radius: var(--r-3); display: flex; align-items: center; justify-content: space-between;">
+            <div style="font-size: 13px; color: var(--text-primary);">Coverage incomplete — <span class="mono" style="color: var(--signal);">Shopify not connected</span>. Leak detection is partial until both sources are linked.</div>
+            <button class="mb">Connect Shopify</button>
+          </div>
+          <div style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div style="padding: 14px; border: 1px solid var(--line-default); border-radius: var(--r-3); background: var(--ink-100);"><div style="display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 12px; color: var(--ok);"><span class="dot-live"></span>Stripe · connected</div><div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 6px;">acct_1Pq · last scan 00:14</div></div>
+            <div style="padding: 14px; border: 1px solid var(--line-default); border-radius: var(--r-3); background: var(--ink-100);"><div style="display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 12px; color: var(--text-tertiary);"><span class="dot-idle"></span>Shopify · not connected</div><div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 6px;">connect to complete coverage</div></div>
+          </div>
+        </div>
+        <div class="state-rules">
+          <div class="rule"><strong>Where am I</strong>Normal workspace with coverage banner.</div>
+          <div class="rule"><strong>What happened</strong>One source is live, one is missing.</div>
+          <div class="rule"><strong class="active">Next move</strong>Connect the second source.</div>
+          <div class="rule"><strong>After</strong>Coverage banner disappears; findings deepen.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 09 CONNECTION ERROR -->
+    <div class="state">
+      <div class="state-head">
+        <div class="state-n">S · 09</div>
+        <div><div class="state-name">Connection error</div><div class="state-sub">A previously-connected source has disconnected or lost scope.</div></div>
+        <div><span class="mock-pill" style="color: var(--sev-critical); border-color: oklch(0.64 0.22 22 / 0.35); background: var(--sev-critical-bg);">Disconnected</span></div>
+      </div>
+      <div class="state-body">
+        <div class="state-mock">
+          <div style="padding: 14px 20px; background: var(--sev-critical-bg); border: 1px solid oklch(0.64 0.22 22 / 0.35); border-radius: var(--r-3);">
+            <div style="font-size: 13px; color: var(--text-primary);"><strong>Stripe source disconnected · 00:06:12 ago.</strong> Retry loops are running automatically. No findings are being generated during the outage.</div>
+            <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 8px;">last_error · <span style="color: var(--sev-critical);">401 · token revoked upstream</span></div>
+            <div style="margin-top: 14px; display: flex; gap: 8px;"><button class="mb">Reconnect Stripe</button><button class="mg">View log</button></div>
+          </div>
+        </div>
+        <div class="state-rules">
+          <div class="rule"><strong>Where am I</strong>Workspace + critical banner, non-dismissible.</div>
+          <div class="rule"><strong>What happened</strong>Source revoked / scopes changed.</div>
+          <div class="rule"><strong class="active">Next move</strong>Reconnect. Keyboard: ⌘R.</div>
+          <div class="rule"><strong>After</strong>Source comes live; backfill scan runs automatically.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10 NO ISSUES -->
+    <div class="state">
+      <div class="state-head">
+        <div class="state-n">S · 10</div>
+        <div><div class="state-name">No issues detected</div><div class="state-sub">The clean state. Reward is silence — no confetti, no trophy.</div></div>
+        <div><span class="mock-pill" style="color: var(--ok); border-color: oklch(0.74 0.11 155 / 0.3); background: var(--ok-bg);">All clear</span></div>
+      </div>
+      <div class="state-body">
+        <div class="state-mock" style="align-items: flex-start;">
+          <div class="mock-label">Revenue at risk · 30d</div>
+          <div class="mock-metric" style="color: var(--text-primary);">$0.00</div>
+          <div style="font-family: var(--font-mono); font-size: 12px; color: var(--text-tertiary); margin-top: 16px;">No issues detected · last scan 00:14 ago · next scan 04:00</div>
+          <div style="font-family: var(--font-mono); font-size: 12px; color: var(--ok); margin-top: 8px;"><span class="dot-live" style="margin-right: 6px;"></span>Monitoring live across 2 sources</div>
+        </div>
+        <div class="state-rules">
+          <div class="rule"><strong>Where am I</strong>Workspace. The page is almost empty.</div>
+          <div class="rule"><strong>What happened</strong>The system is working; nothing needs action.</div>
+          <div class="rule"><strong class="active">Next move</strong>None required. Leave the user alone.</div>
+          <div class="rule"><strong>After</strong>Next finding interrupts this calm — deliberately.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</body>
+</html>

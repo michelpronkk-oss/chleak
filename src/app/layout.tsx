@@ -1,17 +1,30 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Sora } from "next/font/google";
+import { Instrument_Serif, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const sora = Sora({
+const interTight = Inter_Tight({
   variable: "--font-sans",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
 
-const ibmPlexMono = IBM_Plex_Mono({
+const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
   weight: ["400", "500", "600"],
+});
+
+const jetbrainsMonoData = JetBrains_Mono({
+  variable: "--font-data",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+});
+
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["400"],
+  style: ["normal", "italic"],
 });
 
 export const metadata: Metadata = {
@@ -31,7 +44,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${sora.variable} ${ibmPlexMono.variable} dark`}
+      className={`${interTight.variable} ${jetbrainsMono.variable} ${jetbrainsMonoData.variable} ${instrumentSerif.variable} dark`}
       suppressHydrationWarning
     >
       <body className="min-h-screen bg-background text-foreground antialiased">

@@ -31,7 +31,7 @@ export default async function RequestAccessPage({
       <section className="mx-auto w-full max-w-xl px-5 pb-16 pt-10 sm:px-8 sm:pb-20 sm:pt-14">
         <FadeIn delay={0.04}>
           <div className="mb-7 sm:mb-9">
-            <p className="mb-3 font-mono text-[0.65rem] tracking-[0.14em] uppercase text-primary/60 sm:text-[0.7rem]">
+            <p className="vault-eyebrow mb-3 sm:text-[0.7rem]">
               Private access
             </p>
             <h1 className="text-[1.9rem] font-semibold leading-[1.08] tracking-[-0.035em] text-foreground sm:text-[2.4rem] sm:leading-[1.05]">
@@ -44,7 +44,7 @@ export default async function RequestAccessPage({
         </FadeIn>
 
         <FadeIn delay={0.08}>
-          <div className="rounded-xl border border-border/55 bg-card/25 p-5 sm:p-6">
+          <div className="rounded-lg border border-border bg-card p-5 sm:p-6">
             <RequestAccessFullForm defaultEmail={defaultEmail} />
           </div>
         </FadeIn>

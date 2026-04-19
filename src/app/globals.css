@@ -10,6 +10,58 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --font-heading: var(--font-sans);
+  --font-display: var(--font-display);
+  --font-data: var(--font-data);
+
+  /* Vault — signal (amber, revenue at risk only) */
+  --color-signal: var(--signal);
+  --color-signal-dim: var(--signal-dim);
+  --color-signal-line: var(--signal-line);
+
+  /* Vault — severity */
+  --color-sev-low: var(--sev-low);
+  --color-sev-low-bg: var(--sev-low-bg);
+  --color-sev-medium: var(--sev-medium);
+  --color-sev-medium-bg: var(--sev-medium-bg);
+  --color-sev-high: var(--sev-high);
+  --color-sev-high-bg: var(--sev-high-bg);
+  --color-sev-critical: var(--sev-critical);
+  --color-sev-critical-bg: var(--sev-critical-bg);
+
+  /* Vault — semantic */
+  --color-ok: var(--ok);
+  --color-ok-bg: var(--ok-bg);
+  --color-warn: var(--warn);
+  --color-warn-bg: var(--warn-bg);
+  --color-err: var(--err);
+  --color-err-bg: var(--err-bg);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+
+  /* Vault — ink surface ladder */
+  --color-ink-000: var(--ink-000);
+  --color-ink-050: var(--ink-050);
+  --color-ink-100: var(--ink-100);
+  --color-ink-150: var(--ink-150);
+  --color-ink-200: var(--ink-200);
+  --color-ink-300: var(--ink-300);
+  --color-ink-400: var(--ink-400);
+
+  /* Vault — text hierarchy */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-quaternary: var(--text-quaternary);
+
+  /* Vault — hairlines */
+  --color-line-subtle: var(--line-subtle);
+  --color-line-default: var(--line-default);
+  --color-line-strong: var(--line-strong);
+
+  /* Vault — shadows */
+  --shadow-inset: var(--shadow-inset);
+  --shadow-popover: var(--shadow-popover);
+  --shadow-modal: var(--shadow-modal);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,31 +100,129 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ── VAULT DESIGN SYSTEM TOKENS ─────────────────────────────────────────── */
 :root {
-  --background: oklch(0.1852 0.0185 258.15);
-  --foreground: oklch(0.9525 0.0126 213.62);
-  --card: oklch(0.2329 0.0161 259.92);
-  --card-foreground: oklch(0.9525 0.0126 213.62);
-  --popover: oklch(0.2377 0.0148 255.83);
-  --popover-foreground: oklch(0.9525 0.0126 213.62);
-  --primary: oklch(0.7899 0.1378 186.74);
-  --primary-foreground: oklch(0.1679 0.0174 255.7);
-  --secondary: oklch(0.2924 0.0203 256.83);
-  --secondary-foreground: oklch(0.9142 0.0216 210.66);
-  --muted: oklch(0.2758 0.0134 254.45);
-  --muted-foreground: oklch(0.7391 0.0268 224.61);
-  --accent: oklch(0.3044 0.0301 188.58);
-  --accent-foreground: oklch(0.9243 0.0223 210.1);
+  /* Surface ladder */
+  --ink-000: oklch(0.13 0.006 250);
+  --ink-050: oklch(0.17 0.008 250);
+  --ink-100: oklch(0.19 0.008 250);
+  --ink-150: oklch(0.22 0.009 250);
+  --ink-200: oklch(0.26 0.010 250);
+  --ink-300: oklch(0.32 0.010 250);
+  --ink-400: oklch(0.42 0.010 250);
+
+  /* Text hierarchy */
+  --text-primary: oklch(0.96 0.003 250);
+  --text-secondary: oklch(0.72 0.006 250);
+  --text-tertiary: oklch(0.55 0.008 250);
+  --text-quaternary: oklch(0.42 0.010 250);
+  --text-inverse: oklch(0.17 0.008 250);
+
+  /* Hairlines */
+  --line-subtle: oklch(1 0 0 / 0.04);
+  --line-default: oklch(1 0 0 / 0.07);
+  --line-strong: oklch(1 0 0 / 0.12);
+  --line-focus: oklch(0.78 0.13 75 / 0.6);
+
+  /* Fonts */
+  --font-ui: var(--font-sans);
+
+  /* Signal — amber, reserved for revenue at risk only */
+  --signal: oklch(0.78 0.13 75);
+  --signal-dim: oklch(0.78 0.13 75 / 0.14);
+  --signal-line: oklch(0.78 0.13 75 / 0.3);
+
+  /* Severity */
+  --sev-low: oklch(0.70 0.08 200);
+  --sev-low-bg: oklch(0.70 0.08 200 / 0.10);
+  --sev-medium: oklch(0.80 0.14 90);
+  --sev-medium-bg: oklch(0.80 0.14 90 / 0.12);
+  --sev-high: oklch(0.72 0.18 40);
+  --sev-high-bg: oklch(0.72 0.18 40 / 0.12);
+  --sev-critical: oklch(0.64 0.22 22);
+  --sev-critical-bg: oklch(0.64 0.22 22 / 0.14);
+
+  /* Semantic */
+  --ok: oklch(0.74 0.11 155);
+  --ok-bg: oklch(0.74 0.11 155 / 0.10);
+  --warn: oklch(0.80 0.14 90);
+  --warn-bg: oklch(0.80 0.14 90 / 0.12);
+  --err: oklch(0.64 0.22 22);
+  --err-bg: oklch(0.64 0.22 22 / 0.14);
+  --info: oklch(0.70 0.06 230);
+  --info-bg: oklch(0.70 0.06 230 / 0.10);
+
+  /* Radius */
+  --r-0: 0;
+  --r-1: 2px;
+  --r-2: 4px;
+  --r-3: 6px;
+  --r-4: 8px;
+  --r-5: 12px;
+  --r-full: 999px;
+
+  /* Shadow — floating layers only */
+  --shadow-inset: inset 0 1px 0 oklch(1 0 0 / 0.03);
+  --shadow-popover: 0 1px 0 oklch(0 0 0 / 0.3), 0 12px 32px -8px oklch(0 0 0 / 0.5);
+  --shadow-modal: 0 24px 64px -16px oklch(0 0 0 / 0.6);
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur-instant: 80ms;
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 280ms;
+
+  /* Layering */
+  --z-nav: 10;
+  --z-sticky: 20;
+  --z-dropdown: 40;
+  --z-modal: 60;
+  --z-toast: 80;
+
+  /* Spacing (4pt base) */
+  --s-0: 0;
+  --s-1: 2px;
+  --s-2: 4px;
+  --s-3: 8px;
+  --s-4: 12px;
+  --s-5: 16px;
+  --s-6: 20px;
+  --s-7: 24px;
+  --s-8: 32px;
+  --s-9: 40px;
+  --s-10: 48px;
+  --s-12: 64px;
+  --s-14: 80px;
+  --s-16: 96px;
+}
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --background: var(--ink-050);
+  --foreground: var(--text-primary);
+  --card: var(--ink-100);
+  --card-foreground: var(--text-primary);
+  --popover: var(--ink-150);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--signal);
+  --primary-foreground: var(--text-inverse);
+  --secondary: var(--ink-200);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--ink-150);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--ink-200);
+  --accent-foreground: var(--text-primary);
   --destructive: oklch(0.6592 0.2054 27.09);
-  --border: oklch(0.3776 0.0204 254.66);
-  --input: oklch(0.3814 0.0202 255.59);
-  --ring: oklch(0.7899 0.1378 186.74);
+  --border: var(--line-default);
+  --input: var(--line-default);
+  --ring: var(--signal);
   --chart-1: oklch(0.7899 0.1378 186.74);
   --chart-2: oklch(0.7178 0.1244 208.27);
   --chart-3: oklch(0.6714 0.1562 148.16);
   --chart-4: oklch(0.6128 0.1734 96.32);
   --chart-5: oklch(0.5814 0.2078 27.38);
-  --radius: 0.9rem;
+  --radius: 0.5rem;
   --sidebar: oklch(0.2118 0.017 258.5);
   --sidebar-foreground: oklch(0.9142 0.0216 210.66);
   --sidebar-primary: oklch(0.7899 0.1378 186.74);
@@ -84,24 +234,24 @@
 }
 
 .dark {
-  --background: oklch(0.1852 0.0185 258.15);
-  --foreground: oklch(0.9525 0.0126 213.62);
-  --card: oklch(0.2329 0.0161 259.92);
-  --card-foreground: oklch(0.9525 0.0126 213.62);
-  --popover: oklch(0.2377 0.0148 255.83);
-  --popover-foreground: oklch(0.9525 0.0126 213.62);
-  --primary: oklch(0.7899 0.1378 186.74);
-  --primary-foreground: oklch(0.1679 0.0174 255.7);
-  --secondary: oklch(0.2924 0.0203 256.83);
-  --secondary-foreground: oklch(0.9142 0.0216 210.66);
-  --muted: oklch(0.2758 0.0134 254.45);
-  --muted-foreground: oklch(0.7391 0.0268 224.61);
-  --accent: oklch(0.3044 0.0301 188.58);
-  --accent-foreground: oklch(0.9243 0.0223 210.1);
+  --background: var(--ink-050);
+  --foreground: var(--text-primary);
+  --card: var(--ink-100);
+  --card-foreground: var(--text-primary);
+  --popover: var(--ink-150);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--signal);
+  --primary-foreground: var(--text-inverse);
+  --secondary: var(--ink-200);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--ink-150);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--ink-200);
+  --accent-foreground: var(--text-primary);
   --destructive: oklch(0.6592 0.2054 27.09);
-  --border: oklch(0.3776 0.0204 254.66);
-  --input: oklch(0.3814 0.0202 255.59);
-  --ring: oklch(0.7899 0.1378 186.74);
+  --border: var(--line-default);
+  --input: var(--line-default);
+  --ring: var(--signal);
   --chart-1: oklch(0.7899 0.1378 186.74);
   --chart-2: oklch(0.7178 0.1244 208.27);
   --chart-3: oklch(0.6714 0.1562 148.16);
@@ -124,9 +274,9 @@
   body {
     @apply bg-background text-foreground;
     background-image:
-      radial-gradient(1200px 700px at 90% -10%, rgba(70, 225, 215, 0.11), transparent 60%),
-      radial-gradient(800px 480px at 10% -10%, rgba(56, 113, 190, 0.14), transparent 60%),
-      linear-gradient(180deg, rgba(8, 14, 24, 0.12), transparent 45%);
+      radial-gradient(1100px 680px at 88% -12%, oklch(0.78 0.13 75 / 0.07), transparent 62%),
+      radial-gradient(860px 520px at 14% -16%, oklch(0.70 0.06 230 / 0.1), transparent 62%),
+      linear-gradient(180deg, oklch(0.11 0.006 250 / 0.2), transparent 48%);
   }
   html {
     @apply font-sans;
@@ -136,11 +286,11 @@
 
 @layer utilities {
   .surface-card {
-    @apply rounded-xl border border-border/75 bg-card/78 backdrop-blur-sm sm:rounded-2xl;
+    @apply rounded-lg border border-border bg-card/95 backdrop-blur-sm;
   }
 
   .surface-card-strong {
-    @apply rounded-xl border border-primary/25 bg-card/88 shadow-[0_0_0_1px_rgba(70,225,215,0.08),0_24px_60px_rgba(2,14,22,0.45)] sm:rounded-2xl;
+    @apply rounded-lg border border-border bg-card;
   }
 
   .dashboard-grid {
@@ -157,19 +307,76 @@
   }
 
   .data-mono {
-    @apply font-mono text-[0.74rem] tracking-[0.08em] uppercase;
+    @apply font-mono text-[0.7rem] tracking-[0.08em] uppercase;
   }
 
+  .vault-button-primary,
   .marketing-primary-cta {
-    @apply border border-primary/50 bg-primary text-white shadow-[0_0_24px_rgba(70,225,215,0.18)] focus-visible:ring-2 focus-visible:ring-primary/35;
+    @apply border bg-foreground text-background transition-colors;
+    border-color: color-mix(in oklab, var(--text-primary) 85%, transparent);
+    box-shadow: none;
   }
 
+  .vault-button-primary:hover,
   .marketing-primary-cta:hover {
-    filter: brightness(0.96);
+    background: color-mix(in oklab, var(--text-primary) 94%, black);
   }
 
+  .vault-button-primary:active,
   .marketing-primary-cta:active {
     transform: translateY(1px);
+  }
+
+  .vault-eyebrow {
+    @apply font-mono text-[0.66rem] tracking-[0.1em] uppercase;
+    color: color-mix(in oklab, var(--text-tertiary) 94%, transparent);
+  }
+
+  .vault-kicker-pill {
+    @apply inline-flex items-center gap-2 rounded-md border px-2.5 py-1 font-mono text-[0.64rem] tracking-[0.08em] uppercase;
+    border-color: var(--line-default);
+    background: var(--ink-100);
+    color: var(--text-tertiary);
+  }
+
+  .vault-link {
+    color: var(--text-secondary);
+    transition: color var(--dur-fast) var(--ease);
+  }
+
+  .vault-link:hover {
+    color: var(--text-primary);
+  }
+
+  .vault-input {
+    border: 1px solid var(--line-default);
+    background: var(--ink-050);
+    color: var(--text-primary);
+    border-radius: var(--r-3);
+  }
+
+  .vault-input::placeholder {
+    color: var(--text-quaternary);
+  }
+
+  .vault-input:focus-visible {
+    border-color: var(--line-focus);
+    box-shadow: 0 0 0 3px oklch(0.78 0.13 75 / 0.14);
+    outline: none;
+  }
+
+  .vault-button-secondary,
+  .vault-secondary-cta {
+    @apply inline-flex items-center justify-center border rounded-md transition-colors;
+    border-color: var(--line-default);
+    background: var(--ink-200);
+    color: var(--text-primary);
+  }
+
+  .vault-button-secondary:hover,
+  .vault-secondary-cta:hover {
+    background: var(--ink-300);
+    border-color: var(--line-strong);
   }
 }
 

@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Dashboard · Vault</title>
+<link rel="stylesheet" href="shared/vault.css" />
+<style>
+  .dash {
+    border: 1px solid var(--line-default);
+    border-radius: var(--r-4);
+    overflow: hidden;
+    background: var(--ink-050);
+  }
+  .dash-top {
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--line-default);
+    background: var(--ink-100);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .dash-body { padding: 28px 32px; display: grid; grid-template-columns: 240px 1fr; gap: 32px; }
+  .dash-side { display: grid; gap: 4px; font-size: 13px; }
+  .dash-side-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); padding: 10px 10px 4px; }
+  .dash-side-item { padding: 7px 10px; border-radius: var(--r-3); color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center; }
+  .dash-side-item.active { background: var(--ink-200); color: var(--text-primary); position: relative; }
+  .dash-side-item.active::before { content: ''; position: absolute; left: -8px; top: 10px; bottom: 10px; width: 2px; background: var(--signal); border-radius: 1px; }
+  .dash-side-item .c { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+
+  .region-title { font-size: 22px; font-weight: 500; letter-spacing: -0.015em; color: var(--text-primary); }
+  .region-meta { font-family: var(--font-mono); font-size: 12px; color: var(--text-tertiary); margin-top: 4px; }
+
+  /* IMPACT BAR */
+  .impact {
+    margin-top: 24px;
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    gap: 1px;
+    background: var(--line-default);
+    border: 1px solid var(--line-default);
+    border-radius: var(--r-4);
+    overflow: hidden;
+  }
+  .impact .cell { background: var(--ink-100); padding: 22px 24px; }
+  .impact .primary { background: linear-gradient(180deg, oklch(0.78 0.13 75 / 0.08), transparent 60%), var(--ink-100); border-right: 1px solid var(--signal-line); }
+  .impact .k { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
+  .impact .v { font-family: var(--font-mono); font-size: 48px; font-variant-numeric: tabular-nums; letter-spacing: -0.025em; line-height: 1; margin-top: 10px; color: var(--text-primary); }
+  .impact .primary .v { color: var(--signal); font-size: 56px; }
+  .impact .d { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); margin-top: 14px; }
+  .impact .primary .d { color: var(--sev-high); }
+
+  /* GRID */
+  .grid { margin-top: 24px; display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; }
+
+  .panel { background: var(--ink-100); border: 1px solid var(--line-default); border-radius: var(--r-4); }
+  .panel-head { padding: 14px 20px; border-bottom: 1px solid var(--line-subtle); display: flex; align-items: center; justify-content: space-between; }
+  .panel-title { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+  .panel-meta { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+  .panel-cta { font-family: var(--font-mono); font-size: 11px; color: var(--signal); letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; }
+
+  /* EVENTS */
+  .ev-row { display: grid; grid-template-columns: 4px 70px 1fr auto auto; gap: 16px; padding: 14px 20px; border-left: 4px solid; border-bottom: 1px solid var(--line-subtle); align-items: center; background: var(--ink-100); }
+  .ev-row:last-child { border-bottom: 0; }
+  .ev-row.crit { border-left-color: var(--sev-critical); }
+  .ev-row.high { border-left-color: var(--sev-high); }
+  .ev-row.med { border-left-color: var(--sev-medium); }
+  .ev-row.low { border-left-color: var(--sev-low); }
+  .sev-pill { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; text-align: center; padding: 2px 0; border-radius: var(--r-3); border: 1px solid; width: 58px; }
+  .sev-pill.crit { color: var(--sev-critical); border-color: oklch(0.64 0.22 22 / 0.35); background: var(--sev-critical-bg); }
+  .sev-pill.high { color: var(--sev-high); border-color: oklch(0.72 0.18 40 / 0.3); background: var(--sev-high-bg); }
+  .sev-pill.med { color: var(--sev-medium); border-color: oklch(0.80 0.14 90 / 0.3); background: var(--sev-medium-bg); }
+  .sev-pill.low { color: var(--sev-low); border-color: oklch(0.70 0.08 200 / 0.3); background: var(--sev-low-bg); }
+
+  .ev-title { font-size: 13px; color: var(--text-primary); }
+  .ev-title .mono { font-family: var(--font-mono); font-size: 12px; background: var(--ink-200); padding: 1px 5px; border-radius: 3px; }
+  .ev-sub { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 4px; }
+  .ev-age { font-family: var(--font-mono); font-size: 12px; color: var(--text-tertiary); white-space: nowrap; }
+  .ev-amt { font-family: var(--font-mono); font-size: 14px; color: var(--signal); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ev-amt.muted { color: var(--text-tertiary); }
+
+  /* NEXT MOVE */
+  .nm { padding: 24px; background: var(--ink-100); border: 1px solid var(--signal-line); border-radius: var(--r-4); background: linear-gradient(180deg, var(--signal-dim), var(--ink-100) 60%); }
+  .nm-k { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--signal); }
+  .nm-t { font-size: 17px; font-weight: 500; color: var(--text-primary); letter-spacing: -0.01em; margin-top: 8px; line-height: 1.3; }
+  .nm-d { font-size: 12.5px; color: var(--text-secondary); margin-top: 8px; line-height: 1.55; }
+  .nm-cta { margin-top: 16px; display: flex; gap: 8px; }
+
+  /* SOURCE HEALTH */
+  .sh-item { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--line-subtle); align-items: center; }
+  .sh-item:last-child { border-bottom: 0; }
+  .sh-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .sh-name { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-primary); }
+  .sh-meta { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+  .sh-latency { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); }
+
+  /* EVIDENCE */
+  .ev-log { padding: 14px 20px; font-family: var(--font-mono); font-size: 11px; line-height: 1.8; color: var(--text-secondary); max-height: 180px; overflow: hidden; }
+  .ev-log .ts { color: var(--text-quaternary); }
+  .ev-log .err { color: var(--sev-critical); }
+
+  .grammar { margin-top: 64px; }
+  .grammar-row { display: grid; grid-template-columns: 220px 1fr; gap: 32px; padding: 24px 0; border-top: 1px solid var(--line-subtle); }
+  .grammar-row:first-of-type { border-top: 1px solid var(--line-default); }
+  .grammar-k { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.04em; text-transform: uppercase; }
+  .grammar-t { font-size: 15px; font-weight: 500; color: var(--text-primary); }
+  .grammar-d { font-size: 13px; color: var(--text-secondary); margin-top: 6px; line-height: 1.55; max-width: 60ch; }
+  .grammar-rule { margin-top: 10px; font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.02em; background: var(--ink-050); border: 1px solid var(--line-default); border-radius: var(--r-3); padding: 8px 12px; display: inline-block; }
+  .grammar-rule b { color: var(--text-secondary); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <div class="chrome-inner">
+    <div class="brand"><div class="brand-mark"></div><div class="brand-name">CheckoutLeak</div><div class="brand-slash">/</div><div class="brand-section">Vault — Design System</div></div>
+    <nav class="chrome-nav">
+      <a href="index.html">Overview</a><a href="tokens.html">Tokens</a>
+      <a href="typography.html">Typography</a><a href="components.html">Components</a>
+      <a href="states.html">States</a><a href="pages.html">Pages</a>
+      <a href="dashboard.html" class="active">Dashboard</a>
+      <a href="mobile.html">Mobile</a><a href="content.html">Voice</a>
+    </nav>
+    <div class="chrome-meta"><span class="live"></span><span>v0.1 · draft</span></div>
+  </div>
+</div>
+
+<div class="doc">
+
+  <header class="doc-header">
+    <div class="doc-crumb"><span class="dot"></span> 06 · Patterns</div>
+    <h1 class="doc-title"><span class="n">06</span>Dashboard grammar</h1>
+    <p class="doc-lede">The dashboard is the product. It is impact-first, commercially framed, and scannable in under four seconds. Card-chaos is not allowed. Six named regions compose every workspace surface.</p>
+  </header>
+
+  <!-- FULL DASHBOARD MOCK -->
+  <div class="dash">
+    <div class="dash-top">
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <div class="brand"><div class="brand-mark"></div><div class="brand-name">CheckoutLeak</div></div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); padding-left: 16px; border-left: 1px solid var(--line-default);">north-goods · ops ▾</div>
+      </div>
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--ok); display: flex; align-items: center; gap: 8px;"><span style="width: 6px; height: 6px; background: var(--ok); border-radius: 50%; box-shadow: 0 0 0 3px var(--ok-bg);"></span>Live · scan 00:14</div>
+        <button style="padding: 6px 12px; background: var(--ink-200); border: 1px solid var(--line-default); border-radius: var(--r-3); color: var(--text-primary); font-size: 12px;">⌘K</button>
+      </div>
+    </div>
+    <div class="dash-body">
+      <aside class="dash-side">
+        <div class="dash-side-label">Workspace</div>
+        <div class="dash-side-item active">Dashboard <span class="c">14</span></div>
+        <div class="dash-side-item">Findings <span class="c">142</span></div>
+        <div class="dash-side-item">Fix plans <span class="c">6</span></div>
+        <div class="dash-side-item">Sources <span class="c">2/3</span></div>
+        <div class="dash-side-item">Rules</div>
+        <div class="dash-side-item">Audit log</div>
+        <div class="dash-side-label">Account</div>
+        <div class="dash-side-item">Billing</div>
+        <div class="dash-side-item">Team</div>
+        <div class="dash-side-item">Settings</div>
+      </aside>
+
+      <main>
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <div>
+            <div class="region-title">Revenue at risk — last 30 days</div>
+            <div class="region-meta">Rolling window · recalculated hourly · last update 00:14 ago</div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button style="padding: 6px 12px; background: var(--ink-200); border: 1px solid var(--line-default); border-radius: var(--r-3); color: var(--text-primary); font-size: 12px;">30d ▾</button>
+            <button style="padding: 6px 12px; background: var(--ink-200); border: 1px solid var(--line-default); border-radius: var(--r-3); color: var(--text-primary); font-size: 12px;">Export</button>
+          </div>
+        </div>
+
+        <!-- PRIMARY METRIC REGION (R1) -->
+        <div class="impact">
+          <div class="cell primary">
+            <div class="k">Revenue at risk</div>
+            <div class="v">$84,120<span style="font-size: 28px; color: var(--text-tertiary);">.40</span></div>
+            <div class="d">▲ $12,480 vs prior 30d · 14.8%</div>
+          </div>
+          <div class="cell">
+            <div class="k">Open findings</div>
+            <div class="v">14</div>
+            <div class="d" style="display: flex; gap: 6px;"><span class="sev-pill crit" style="width: auto; padding: 2px 8px;">2 crit</span><span class="sev-pill high" style="width: auto; padding: 2px 8px;">5 hi</span></div>
+          </div>
+          <div class="cell">
+            <div class="k">Recovered · 30d</div>
+            <div class="v" style="font-size: 40px;">$38,940</div>
+            <div class="d" style="color: var(--ok);">12 resolutions</div>
+          </div>
+          <div class="cell">
+            <div class="k">Sources</div>
+            <div class="v" style="font-size: 40px;">2<span style="color: var(--text-tertiary); font-size: 24px;"> / 3</span></div>
+            <div class="d" style="color: var(--warn);">coverage partial</div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <!-- LEFT COLUMN -->
+          <div style="display: grid; gap: 24px;">
+            <!-- R2 — ISSUE QUEUE -->
+            <div class="panel">
+              <div class="panel-head">
+                <div class="panel-title">Leak queue · 14 open</div>
+                <div class="panel-meta">sorted by exposure</div>
+              </div>
+              <div>
+                <div class="ev-row crit">
+                  <div></div>
+                  <div class="sev-pill crit">Crit</div>
+                  <div><div class="ev-title">Webhook signature failing · <span class="mono">invoice.payment_failed</span></div><div class="ev-sub">north-goods · 38 dropped · compounding</div></div>
+                  <div class="ev-age">00:02</div>
+                  <div class="ev-amt">$14,382.40</div>
+                </div>
+                <div class="ev-row crit">
+                  <div></div>
+                  <div class="sev-pill crit">Crit</div>
+                  <div><div class="ev-title">Setup intent <span class="mono">requires_action</span> never resolved</div><div class="ev-sub">62 customers · EU cohort</div></div>
+                  <div class="ev-age">00:41</div>
+                  <div class="ev-amt">$9,820.00</div>
+                </div>
+                <div class="ev-row high">
+                  <div></div>
+                  <div class="sev-pill high">High</div>
+                  <div><div class="ev-title">Decline retry disabled on 3DS step-up</div><div class="ev-sub">EU card cohort · 412 transactions</div></div>
+                  <div class="ev-age">18h</div>
+                  <div class="ev-amt">$6,940.00</div>
+                </div>
+                <div class="ev-row high">
+                  <div></div>
+                  <div class="sev-pill high">High</div>
+                  <div><div class="ev-title">Dunning halted after single attempt</div><div class="ev-sub">polar-coffee · subscription cohort</div></div>
+                  <div class="ev-age">2d</div>
+                  <div class="ev-amt">$4,210.00</div>
+                </div>
+                <div class="ev-row med">
+                  <div></div>
+                  <div class="sev-pill med">Med</div>
+                  <div><div class="ev-title">Abandoned setup intents &gt; 72h</div><div class="ev-sub">Checkout → Billing · cohort not notified</div></div>
+                  <div class="ev-age">4d</div>
+                  <div class="ev-amt muted">$2,210.00</div>
+                </div>
+                <div class="ev-row low">
+                  <div></div>
+                  <div class="sev-pill low">Low</div>
+                  <div><div class="ev-title">Webhook latency 2.1× baseline</div><div class="ev-sub">polar-coffee · p99 · monitoring</div></div>
+                  <div class="ev-age">6d</div>
+                  <div class="ev-amt muted">—</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- R5 — SUPPORTING EVIDENCE -->
+            <div class="panel">
+              <div class="panel-head">
+                <div class="panel-title">Evidence · last 6 min</div>
+                <div class="panel-meta">live tail</div>
+              </div>
+              <div class="ev-log">
+                <div><span class="ts">14:08:12.412</span> POST /wh · sig <span class="err">401 invalid_signature</span> evt_1Pq3Y2</div>
+                <div><span class="ts">14:08:09.001</span> POST /wh · sig <span class="err">401 invalid_signature</span> evt_1Pq3Y4</div>
+                <div><span class="ts">14:08:06.218</span> POST /wh · sig <span class="err">401 invalid_signature</span> evt_1Pq3Y7</div>
+                <div><span class="ts">14:08:01.885</span> setup_intent.requires_action · age 78:04:12</div>
+                <div><span class="ts">14:07:54.102</span> charge.failed · retry_disabled · EU · $128.00</div>
+                <div><span class="ts">14:07:48.721</span> charge.failed · retry_disabled · EU · $94.50</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN -->
+          <div style="display: grid; gap: 24px;">
+            <!-- R3 — NEXT MOVE -->
+            <div class="nm">
+              <div class="nm-k">Recommended next move</div>
+              <div class="nm-t">Rotate your Stripe webhook secret, then replay the 38 dropped events.</div>
+              <div class="nm-d">This resolves the highest-exposure finding in the queue. Estimated time to resolution: 4 minutes. Estimated exposure recovered: $14,382.40.</div>
+              <div class="nm-cta">
+                <button style="padding: 8px 14px; background: var(--text-primary); color: var(--text-inverse); border-radius: var(--r-3); font-size: 13px; font-weight: 500; border: 0; cursor: pointer;">Open fix path</button>
+                <button style="padding: 8px 14px; background: transparent; color: var(--text-secondary); border: 1px solid var(--line-default); border-radius: var(--r-3); font-size: 13px; cursor: pointer;">Assign to team</button>
+              </div>
+            </div>
+
+            <!-- R4 — SOURCE HEALTH -->
+            <div class="panel">
+              <div class="panel-head">
+                <div class="panel-title">Source health</div>
+                <div class="panel-meta">scan 00:14</div>
+              </div>
+              <div>
+                <div class="sh-item">
+                  <span class="sh-dot" style="background: var(--ok); box-shadow: 0 0 0 3px var(--ok-bg);"></span>
+                  <div><div class="sh-name">Stripe · north-goods</div><div class="sh-meta">acct_1Pq · read_only</div></div>
+                  <div class="sh-latency">p99 · 890ms</div>
+                </div>
+                <div class="sh-item">
+                  <span class="sh-dot" style="background: var(--ok); box-shadow: 0 0 0 3px var(--ok-bg);"></span>
+                  <div><div class="sh-name">Shopify · north-goods</div><div class="sh-meta">custom app · read_orders</div></div>
+                  <div class="sh-latency">p99 · 340ms</div>
+                </div>
+                <div class="sh-item">
+                  <span class="sh-dot" style="background: var(--sev-critical); box-shadow: 0 0 0 3px var(--sev-critical-bg);"></span>
+                  <div><div class="sh-name">Webhook · events.cl.io</div><div class="sh-meta" style="color: var(--sev-critical);">38 dropped · signature invalid</div></div>
+                  <div class="sh-latency" style="color: var(--sev-critical);">retrying</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- SEVERITY LEGEND -->
+            <div class="panel" style="padding: 20px;">
+              <div style="font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 14px;">Severity · what each level means</div>
+              <div style="display: grid; gap: 10px; font-size: 12.5px;">
+                <div style="display: grid; grid-template-columns: 70px 1fr; gap: 12px;"><span class="sev-pill crit">Crit</span><span style="color: var(--text-secondary);">Leaking now. Compounding. Interrupts.</span></div>
+                <div style="display: grid; grid-template-columns: 70px 1fr; gap: 12px;"><span class="sev-pill high">High</span><span style="color: var(--text-secondary);">Active loss. Alert on emit.</span></div>
+                <div style="display: grid; grid-template-columns: 70px 1fr; gap: 12px;"><span class="sev-pill med">Med</span><span style="color: var(--text-secondary);">Confirmed leak. Queued.</span></div>
+                <div style="display: grid; grid-template-columns: 70px 1fr; gap: 12px;"><span class="sev-pill low">Low</span><span style="color: var(--text-secondary);">Ambient. Digest only.</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- GRAMMAR -->
+  <section class="grammar">
+    <div class="section-head">
+      <div class="section-ix">06.1</div>
+      <div>
+        <div class="section-title">Six regions — the grammar</div>
+        <div class="section-kicker">Every dashboard view in CheckoutLeak composes these regions. Omit one and the screen loses information. Add a seventh and the screen loses focus.</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="grammar-row">
+        <div class="grammar-k">R1 · Primary metric</div>
+        <div>
+          <div class="grammar-t">Revenue at risk — top-left, always.</div>
+          <div class="grammar-d">The largest, cleanest number on the screen. Mono, tabular, signal amber. Subtitle is the delta vs the prior window, colored by direction. This region occupies roughly one quarter of the visible real estate above the fold.</div>
+          <div class="grammar-rule"><b>Rule —</b> 48–64px mono · signal color · always labeled with a time window</div>
+        </div>
+      </div>
+      <div class="grammar-row">
+        <div class="grammar-k">R2 · Leak queue</div>
+        <div>
+          <div class="grammar-t">Issues, sorted by exposure.</div>
+          <div class="grammar-d">The queue is the product. It sorts by dollar exposure by default, not by severity, not by recency. Every row: severity stripe, severity pill, title with a mono code fragment, sub-line of source + meta, age, and mono currency anchor.</div>
+          <div class="grammar-rule"><b>Rule —</b> sort by exposure · severity is color only · currency mono-right</div>
+        </div>
+      </div>
+      <div class="grammar-row">
+        <div class="grammar-k">R3 · Next move</div>
+        <div>
+          <div class="grammar-t">One recommendation, upper-right.</div>
+          <div class="grammar-d">The system picks exactly one next action and commits to it — the one that moves the at-risk number down the most. Signal-tinted background, one-line prescription, a primary button that opens the fix path. Never a list of suggestions.</div>
+          <div class="grammar-rule"><b>Rule —</b> single prescription · primary button is verb + noun (Open fix path, Replay events)</div>
+        </div>
+      </div>
+      <div class="grammar-row">
+        <div class="grammar-k">R4 · Source health</div>
+        <div>
+          <div class="grammar-t">The instrumentation itself.</div>
+          <div class="grammar-d">Each connected source in one row: status dot, name, scope, latency. When a source fails, this region brightens — never flashes, never modals unless critical. The user must trust that if R4 is silent, the signal in R1 is real.</div>
+          <div class="grammar-rule"><b>Rule —</b> semantic dot colors · p99 latency mono · critical state stays on screen until acknowledged</div>
+        </div>
+      </div>
+      <div class="grammar-row">
+        <div class="grammar-k">R5 · Evidence</div>
+        <div>
+          <div class="grammar-t">Live tail of the raw corpus.</div>
+          <div class="grammar-d">Mono log, timestamps in tertiary, error substrings in severity color. This is where the operator confirms the system is seeing what they're seeing. It is never the main story; it sits below the queue.</div>
+          <div class="grammar-rule"><b>Rule —</b> JetBrains Mono 11px · timestamp left · no prose</div>
+        </div>
+      </div>
+      <div class="grammar-row">
+        <div class="grammar-k">R6 · Legend / grammar</div>
+        <div>
+          <div class="grammar-t">A small, persistent severity key.</div>
+          <div class="grammar-d">Four rows describing what each severity level means in this product. It lives in a fixed corner — usually lower-right of the sidebar column — and never moves. New operators read it once; everyone else ignores it, which is correct.</div>
+          <div class="grammar-rule"><b>Rule —</b> small type · never occupies primary focus · never rewrites itself</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANTI-PATTERNS -->
+  <section class="section" style="margin-top: 24px;">
+    <div class="section-head">
+      <div class="section-ix">06.2</div>
+      <div>
+        <div class="section-title">Anti-patterns</div>
+        <div class="section-kicker">Things that look right on a Dribbble shot and fail in production.</div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div style="padding: 20px; border: 1px solid oklch(0.64 0.22 22 / 0.3); border-radius: var(--r-4); background: var(--sev-critical-bg);">
+        <div style="font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sev-critical);">Don't</div>
+        <div style="font-size: 14px; color: var(--text-primary); margin-top: 8px; line-height: 1.5;">Paint eight metric cards across the top. The user will read zero of them.</div>
+      </div>
+      <div style="padding: 20px; border: 1px solid oklch(0.74 0.11 155 / 0.3); border-radius: var(--r-4); background: var(--ok-bg);">
+        <div style="font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ok);">Do</div>
+        <div style="font-size: 14px; color: var(--text-primary); margin-top: 8px; line-height: 1.5;">One signal metric, three supporting. R1 is the reason they opened the tab.</div>
+      </div>
+      <div style="padding: 20px; border: 1px solid oklch(0.64 0.22 22 / 0.3); border-radius: var(--r-4); background: var(--sev-critical-bg);">
+        <div style="font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sev-critical);">Don't</div>
+        <div style="font-size: 14px; color: var(--text-primary); margin-top: 8px; line-height: 1.5;">Put a donut chart of "issues by category" at the top. Categories don't pay the bills.</div>
+      </div>
+      <div style="padding: 20px; border: 1px solid oklch(0.74 0.11 155 / 0.3); border-radius: var(--r-4); background: var(--ok-bg);">
+        <div style="font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ok);">Do</div>
+        <div style="font-size: 14px; color: var(--text-primary); margin-top: 8px; line-height: 1.5;">Sort the leak queue by exposure. Dollars outrank taxonomies.</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

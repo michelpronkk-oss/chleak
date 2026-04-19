@@ -52,9 +52,7 @@ export default async function AccessReviewPage() {
           )}
         </div>
 
-        <p className="mb-3 font-mono text-[0.65rem] tracking-[0.14em] uppercase text-primary/55">
-          Access Request
-        </p>
+        <p className="vault-eyebrow mb-3 text-muted-foreground/70">Access request</p>
 
         {isPending ? (
           <>
@@ -62,7 +60,8 @@ export default async function AccessReviewPage() {
               Your request is under review.
             </h1>
             <p className="mx-auto mt-4 max-w-[34ch] text-[0.9rem] leading-[1.72] text-muted-foreground sm:mt-5 sm:max-w-[38ch] sm:text-[0.97rem] sm:leading-[1.82]">
-              We review every submission and reach out directly when there is a fit. No automated response will be sent.
+              We review every submission and reach out directly when there is a fit. No automated
+              response will be sent.
             </p>
           </>
         ) : (
@@ -71,15 +70,16 @@ export default async function AccessReviewPage() {
               This request was not approved.
             </h1>
             <p className="mx-auto mt-4 max-w-[34ch] text-[0.9rem] leading-[1.72] text-muted-foreground sm:mt-5 sm:max-w-[38ch] sm:text-[0.97rem] sm:leading-[1.82]">
-              We review each submission carefully. This one did not meet our current intake criteria.
+              We review each submission carefully. This one did not meet our current intake
+              criteria.
             </p>
           </>
         )}
 
         <div className="mx-auto mt-8 h-px max-w-[100px] bg-border/30" />
 
-        <p className="mt-5 font-mono text-[0.6rem] tracking-[0.1em] uppercase text-muted-foreground/32">
-          {isPending ? "Reviewed manually · No automated response" : "Invite-only · Reviewed manually"}
+        <p className="mt-5 font-mono text-[0.6rem] tracking-[0.08em] uppercase text-muted-foreground/46">
+          {isPending ? "Reviewed manually / no automated response" : "Invite-only / reviewed manually"}
         </p>
       </div>
     </div>

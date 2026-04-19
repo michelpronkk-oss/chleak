@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Typography · Vault</title>
+<link rel="stylesheet" href="shared/vault.css" />
+<style>
+  .spec { display: grid; grid-template-columns: 200px 1fr; gap: 32px; padding: 32px 0; border-top: 1px solid var(--line-subtle); align-items: baseline; }
+  .spec:first-child { border-top: 0; padding-top: 0; }
+  .spec-meta { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); line-height: 1.8; letter-spacing: 0.02em; }
+  .spec-meta strong { display: block; color: var(--text-secondary); font-weight: 500; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; font-size: 10px; }
+  .spec-sample { color: var(--text-primary); }
+
+  .pairing { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: var(--line-default); border: 1px solid var(--line-default); border-radius: var(--r-4); overflow: hidden; }
+  .pairing .p { background: var(--ink-100); padding: 32px; min-height: 220px; display: grid; gap: 18px; }
+  .pairing .lbl { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
+  .pairing .s { font-size: 12px; color: var(--text-secondary); font-family: var(--font-mono); line-height: 1.7; }
+
+  .mono-demo { padding: 28px 32px; border: 1px solid var(--line-default); border-radius: var(--r-4); background: var(--ink-050); display: grid; gap: 14px; }
+  .mono-row { display: grid; grid-template-columns: 160px 1fr auto; gap: 16px; align-items: baseline; padding-bottom: 12px; border-bottom: 1px solid var(--line-subtle); }
+  .mono-row:last-child { border-bottom: 0; padding-bottom: 0; }
+  .mono-row .k { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.04em; text-transform: uppercase; }
+  .mono-row .v { font-family: var(--font-mono); font-size: 14px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  .mono-row .meta { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <div class="chrome-inner">
+    <div class="brand"><div class="brand-mark"></div><div class="brand-name">CheckoutLeak</div><div class="brand-slash">/</div><div class="brand-section">Vault — Design System</div></div>
+    <nav class="chrome-nav">
+      <a href="index.html">Overview</a><a href="tokens.html">Tokens</a>
+      <a href="typography.html" class="active">Typography</a>
+      <a href="components.html">Components</a><a href="states.html">States</a>
+      <a href="pages.html">Pages</a><a href="dashboard.html">Dashboard</a>
+      <a href="mobile.html">Mobile</a><a href="content.html">Voice</a>
+    </nav>
+    <div class="chrome-meta"><span class="live"></span><span>v0.1 · draft</span></div>
+  </div>
+</div>
+
+<div class="doc">
+
+  <header class="doc-header">
+    <div class="doc-crumb"><span class="dot"></span> 02 · Foundation</div>
+    <h1 class="doc-title"><span class="n">02</span>Typography</h1>
+    <p class="doc-lede">Three typefaces. Each has one job. Inter Tight for UI prose. Instrument Serif for rare editorial moments — marketing headlines and quoted voice. JetBrains Mono for every numeral, timestamp, domain, and log.</p>
+  </header>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">02.1</div>
+      <div>
+        <div class="section-title">Typeface pairing</div>
+        <div class="section-kicker">The three faces never blur into each other. A glance at a block of copy should tell the user whether they are reading prose, a number, or a marketing phrase.</div>
+      </div>
+    </div>
+
+    <div class="pairing">
+      <div class="p">
+        <div class="lbl">Primary · UI</div>
+        <div style="font-family: var(--font-ui); font-size: 48px; letter-spacing: -0.02em; color: var(--text-primary); line-height: 1;">Inter Tight</div>
+        <div style="font-family: var(--font-ui); font-size: 14px; color: var(--text-secondary); line-height: 1.55;">Neutral, commercial, dense at small sizes. Every heading, label, button, and paragraph in the product.</div>
+        <div class="s">weights · 400 / 500 / 600 / 700<br/>features · ss01 cv11<br/>fallback · system-ui, -apple-system</div>
+      </div>
+      <div class="p">
+        <div class="lbl">Editorial · Display</div>
+        <div style="font-family: var(--font-display); font-style: italic; font-size: 56px; letter-spacing: -0.02em; color: var(--text-primary); line-height: 1;">Instrument</div>
+        <div style="font-family: var(--font-ui); font-size: 14px; color: var(--text-secondary); line-height: 1.55;">Used sparingly — marketing hero, quoted voice, editorial pull-quotes, section dividers in long docs. Never in dashboards.</div>
+        <div class="s">weights · 400 regular + italic<br/>usage · 1–2 moments per surface max<br/>fallback · 'Times New Roman', serif</div>
+      </div>
+      <div class="p">
+        <div class="lbl">Data · Mono</div>
+        <div style="font-family: var(--font-mono); font-size: 44px; letter-spacing: -0.01em; color: var(--text-primary); line-height: 1; font-variant-numeric: tabular-nums;">$14,382.40</div>
+        <div style="font-family: var(--font-ui); font-size: 14px; color: var(--text-secondary); line-height: 1.55;">Currency, counts, percentages, timestamps, store IDs, webhook payloads, JSON. Tabular figures, always.</div>
+        <div class="s">weights · 400 / 500 / 600<br/>features · tnum zero<br/>fallback · ui-monospace, monospace</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">02.2</div>
+      <div>
+        <div class="section-title">Type scale</div>
+        <div class="section-kicker">Every text element in the system resolves to one of these. Freehand sizes are not allowed.</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="spec">
+        <div class="spec-meta"><strong>Display L</strong>72 / 1.0 / -0.035em<br/>Instrument Serif italic<br/>marketing hero only</div>
+        <div class="spec-sample" style="font-family: var(--font-display); font-style: italic; font-size: 72px; line-height: 1; letter-spacing: -0.035em;">Operator-grade revenue intelligence.</div>
+      </div>
+      <div class="spec">
+        <div class="spec-meta"><strong>Display S</strong>48 / 1.05 / -0.02em<br/>Instrument Serif italic<br/>doc titles · section dividers</div>
+        <div class="spec-sample" style="font-family: var(--font-display); font-style: italic; font-size: 48px; line-height: 1.05; letter-spacing: -0.02em;">Quiet instruments for loud money.</div>
+      </div>
+      <div class="spec">
+        <div class="spec-meta"><strong>Title L</strong>32 / 1.15 / -0.02em<br/>Inter Tight 500<br/>page titles in product</div>
+        <div class="spec-sample" style="font-family: var(--font-ui); font-weight: 500; font-size: 32px; line-height: 1.15; letter-spacing: -0.02em;">Revenue at risk — 30-day window</div>
+      </div>
+      <div class="spec">
+        <div class="spec-meta"><strong>Title M</strong>24 / 1.2 / -0.015em<br/>Inter Tight 500<br/>section titles</div>
+        <div class="spec-sample" style="font-family: var(--font-ui); font-weight: 500; font-size: 24px; line-height: 1.2; letter-spacing: -0.015em;">Leak queue · 14 open</div>
+      </div>
+      <div class="spec">
+        <div class="spec-meta"><strong>Title S</strong>18 / 1.3 / -0.01em<br/>Inter Tight 500<br/>panel titles</div>
+        <div class="spec-sample" style="font-family: var(--font-ui); font-weight: 500; font-size: 18px; line-height: 1.3; letter-spacing: -0.01em;">Source health · north-goods</div>
+      </div>
+      <div class="spec">
+        <div class="spec-meta"><strong>Body</strong>14 / 1.55 / 0<br/>Inter Tight 400<br/>prose, table cells, form help</div>
+        <div class="spec-sample" style="font-family: var(--font-ui); font-size: 14px; line-height: 1.55; color: var(--text-secondary); max-width: 60ch;">A webhook signature mismatch on <span class="mono" style="color:var(--text-primary)">invoice.payment_failed</span> has dropped 38 events over the last two hours. Stripe considers these delivered; your billing retry logic hasn't seen them.</div>
+      </div>
+      <div class="spec">
+        <div class="spec-meta"><strong>Body S</strong>13 / 1.55 / 0<br/>Inter Tight 400<br/>table content, dense UI</div>
+        <div class="spec-sample" style="font-family: var(--font-ui); font-size: 13px; line-height: 1.55; color: var(--text-secondary); max-width: 60ch;">Secondary UI text. Used for dense tables, row descriptions, and tooltip bodies. Always pairs with a mono value to its right.</div>
+      </div>
+      <div class="spec">
+        <div class="spec-meta"><strong>Support</strong>12 / 1.5 / 0.01em<br/>Inter Tight 400<br/>help text, captions</div>
+        <div class="spec-sample" style="font-family: var(--font-ui); font-size: 12px; line-height: 1.5; color: var(--text-tertiary); max-width: 60ch;">Caption-level text. Used beneath inputs, in empty-state body, and for inline explanations.</div>
+      </div>
+      <div class="spec">
+        <div class="spec-meta"><strong>Label</strong>11 / 1.4 / 0.05em · uppercase<br/>Inter Tight 500<br/>section + column labels</div>
+        <div class="spec-sample" style="font-family: var(--font-ui); font-weight: 500; font-size: 11px; line-height: 1.4; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-tertiary);">Severity · Source · Last seen · Exposure</div>
+      </div>
+      <div class="spec">
+        <div class="spec-meta"><strong>Meta</strong>11 / 1.5 / 0.04em<br/>JetBrains Mono 400<br/>timestamps, IDs, slugs</div>
+        <div class="spec-sample" style="font-family: var(--font-mono); font-size: 11px; line-height: 1.5; letter-spacing: 0.04em; color: var(--text-tertiary);">evt_1Pq3Y2LkQmX8f · 2026-04-18T14:02:38Z · 00:02:14 ago</div>
+      </div>
+      <div class="spec">
+        <div class="spec-meta"><strong>Micro</strong>10 / 1.4 / 0.08em · uppercase<br/>JetBrains Mono 500<br/>system chips, statuses</div>
+        <div class="spec-sample" style="font-family: var(--font-mono); font-weight: 500; font-size: 10px; line-height: 1.4; letter-spacing: 0.08em; text-transform: uppercase; color: var(--signal);">Revenue at risk · $14,382.40</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">02.3</div>
+      <div>
+        <div class="section-title">The mono voice — where money lives</div>
+        <div class="section-kicker">Mono is load-bearing. It is how the user visually separates "prose I need to read" from "values I need to act on." Every row in the product has at least one mono anchor.</div>
+      </div>
+    </div>
+
+    <div class="mono-demo">
+      <div class="mono-row"><div class="k">Currency</div><div class="v" style="color: var(--signal);">$14,382.40</div><div class="meta">Signal color · tabular</div></div>
+      <div class="mono-row"><div class="k">Large number</div><div class="v">84,120</div><div class="meta">Count · no thousands sep allowed &lt; 1000</div></div>
+      <div class="mono-row"><div class="k">Percentage</div><div class="v">14.8<span style="color: var(--text-tertiary);">%</span></div><div class="meta">Symbol in tertiary</div></div>
+      <div class="mono-row"><div class="k">Timestamp</div><div class="v" style="color: var(--text-secondary);">2026-04-18 14:02:38</div><div class="meta">ISO · local shown, UTC on hover</div></div>
+      <div class="mono-row"><div class="k">Duration</div><div class="v" style="color: var(--text-secondary);">00:02:14</div><div class="meta">hh:mm:ss · truncate leading zeros allowed</div></div>
+      <div class="mono-row"><div class="k">Event ID</div><div class="v" style="color: var(--text-secondary);">evt_1Pq3Y2LkQmX8f</div><div class="meta">full on hover · truncate with ellipsis</div></div>
+      <div class="mono-row"><div class="k">Domain</div><div class="v" style="color: var(--text-secondary);">north-goods.myshopify.com</div><div class="meta">Always full domain · never www-stripped</div></div>
+      <div class="mono-row"><div class="k">Webhook</div><div class="v" style="color: var(--text-secondary);">invoice.payment_failed</div><div class="meta">Event type · dot-separated</div></div>
+      <div class="mono-row"><div class="k">Delta</div><div class="v" style="color: var(--sev-high);">▲ $12,480 · 14.8%</div><div class="meta">Severity color · arrow on left</div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">02.4</div>
+      <div>
+        <div class="section-title">Hierarchy in practice</div>
+        <div class="section-kicker">A realistic block showing every tier stacked.</div>
+      </div>
+    </div>
+
+    <div style="padding: 32px; background: var(--ink-050); border: 1px solid var(--line-default); border-radius: var(--r-4);">
+      <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 10px;">Finding · CHK-2884</div>
+      <div style="font-family: var(--font-ui); font-weight: 500; font-size: 32px; letter-spacing: -0.02em; color: var(--text-primary); line-height: 1.15;">Stripe webhook signature failing on <span class="mono" style="font-weight: 500;">invoice.payment_failed</span></div>
+      <div style="font-family: var(--font-ui); font-size: 14px; color: var(--text-secondary); line-height: 1.55; margin-top: 12px; max-width: 62ch;">38 events have been dropped since 12:14 UTC. Your billing recovery flow hasn't received any of them, meaning failed charges aren't being retried and customers aren't being notified.</div>
+      <div style="display: flex; gap: 24px; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line-subtle);">
+        <div><div style="font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary);">Exposure</div><div style="font-family: var(--font-mono); font-size: 22px; color: var(--signal); margin-top: 4px; font-variant-numeric: tabular-nums;">$14,382.40</div></div>
+        <div><div style="font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary);">First seen</div><div style="font-family: var(--font-mono); font-size: 13px; color: var(--text-secondary); margin-top: 4px;">00:02:14 ago</div></div>
+        <div><div style="font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary);">Source</div><div style="font-family: var(--font-mono); font-size: 13px; color: var(--text-secondary); margin-top: 4px;">north-goods.myshopify.com</div></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+</body>
+</html>

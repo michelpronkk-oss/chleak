@@ -2,6 +2,10 @@
 
 import { useState } from "react"
 
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+
 type Platform = "shopify" | "stripe" | "both"
 
 const platformOptions: { value: Platform; label: string }[] = [
@@ -18,14 +22,13 @@ const revenueBandOptions = [
   { value: "20m_plus", label: "$20M+ / year" },
 ]
 
-const inputClass =
-  "w-full rounded-lg border bg-background/40 px-3.5 py-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/38 focus:border-primary/50"
+const inputClass = "w-full h-auto px-3.5 py-3 text-sm text-foreground outline-none transition-colors"
 
 const labelClass =
-  "block font-mono text-[0.63rem] tracking-[0.1em] uppercase text-muted-foreground/50 mb-1.5"
+  "mb-1.5 block font-mono text-[0.62rem] tracking-[0.08em] uppercase text-muted-foreground/62"
 
 function fieldInputClass(hasError: boolean) {
-  return inputClass + (hasError ? " border-red-400/60" : " border-border/60")
+  return inputClass + (hasError ? " border-red-400/60" : " border-border")
 }
 
 interface FieldErrors {
@@ -105,9 +108,9 @@ export function RequestAccessFullForm({ defaultEmail = "" }: Props) {
   if (state === "success") {
     return (
       <div className="py-4 text-center sm:py-6">
-        <div className="mx-auto mb-5 flex h-9 w-9 items-center justify-center rounded-full border border-primary/25 bg-primary/7">
+        <div className="mx-auto mb-5 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card">
           <svg
-            className="h-3.5 w-3.5 text-primary/70"
+            className="h-3.5 w-3.5 text-signal"
             fill="none"
             stroke="currentColor"
             strokeWidth={2.5}
@@ -126,10 +129,10 @@ export function RequestAccessFullForm({ defaultEmail = "" }: Props) {
           We review every submission and reach out directly if there is a fit.
         </p>
 
-        <div className="mx-auto mt-5 h-px max-w-[120px] bg-border/35" />
+        <div className="mx-auto mt-5 h-px max-w-[120px] bg-border" />
 
-        <p className="mt-4 font-mono text-[0.6rem] tracking-[0.1em] uppercase text-muted-foreground/35">
-          Reviewed manually · No automated response
+        <p className="mt-4 font-mono text-[0.6rem] tracking-[0.08em] uppercase text-muted-foreground/46">
+          Reviewed manually / no automated response
         </p>
       </div>
     )
@@ -142,7 +145,7 @@ export function RequestAccessFullForm({ defaultEmail = "" }: Props) {
           <label htmlFor="ra-full-name" className={labelClass}>
             Full name
           </label>
-          <input
+          <Input
             id="ra-full-name"
             type="text"
             value={fullName}
@@ -165,7 +168,7 @@ export function RequestAccessFullForm({ defaultEmail = "" }: Props) {
           <label htmlFor="ra-email" className={labelClass}>
             Work email
           </label>
-          <input
+          <Input
             id="ra-email"
             type="email"
             value={email}
@@ -188,9 +191,9 @@ export function RequestAccessFullForm({ defaultEmail = "" }: Props) {
       <div>
         <label htmlFor="ra-store-url" className={labelClass}>
           Company or store URL{" "}
-          <span className="normal-case tracking-normal text-muted-foreground/30">(optional)</span>
+          <span className="normal-case tracking-normal text-muted-foreground/40">(optional)</span>
         </label>
-        <input
+        <Input
           id="ra-store-url"
           type="text"
           value={storeUrl}
@@ -202,9 +205,7 @@ export function RequestAccessFullForm({ defaultEmail = "" }: Props) {
       </div>
 
       <div>
-        <p className={labelClass}>
-          Platform
-        </p>
+        <p className={labelClass}>Platform</p>
         <div className="flex gap-2">
           {platformOptions.map((opt) => (
             <button
@@ -215,10 +216,10 @@ export function RequestAccessFullForm({ defaultEmail = "" }: Props) {
                 if (fieldErrors.platform) setFieldErrors((p) => ({ ...p, platform: undefined }))
               }}
               className={[
-                "flex-1 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex-1 rounded-md border px-3 py-2.5 text-sm font-medium transition-colors",
                 platform === opt.value
-                  ? "border-primary/50 bg-primary/10 text-primary"
-                  : "border-border/55 bg-background/30 text-muted-foreground hover:border-border hover:text-foreground",
+                  ? "border-signal-line bg-signal-dim text-signal"
+                  : "border-border bg-background/30 text-muted-foreground hover:border-border hover:text-foreground",
               ].join(" ")}
             >
               {opt.label}
@@ -235,7 +236,7 @@ export function RequestAccessFullForm({ defaultEmail = "" }: Props) {
       <div>
         <label htmlFor="ra-revenue" className={labelClass}>
           Annual revenue{" "}
-          <span className="normal-case tracking-normal text-muted-foreground/30">(optional)</span>
+          <span className="normal-case tracking-normal text-muted-foreground/40">(optional)</span>
         </label>
         <select
           id="ra-revenue"
@@ -254,15 +255,15 @@ export function RequestAccessFullForm({ defaultEmail = "" }: Props) {
       <div>
         <label htmlFor="ra-pain" className={labelClass}>
           What are you trying to solve?{" "}
-          <span className="normal-case tracking-normal text-muted-foreground/30">(optional)</span>
+          <span className="normal-case tracking-normal text-muted-foreground/40">(optional)</span>
         </label>
-        <textarea
+        <Textarea
           id="ra-pain"
           value={painPrompt}
           onChange={(e) => setPainPrompt(e.target.value)}
           rows={3}
           placeholder="Where you think revenue is leaking, what you have already tried, or why now."
-          className={fieldInputClass(false) + " resize-none leading-[1.65]"}
+          className={fieldInputClass(false) + " min-h-[5.25rem] resize-none leading-[1.65]"}
         />
       </div>
 
@@ -271,16 +272,16 @@ export function RequestAccessFullForm({ defaultEmail = "" }: Props) {
       )}
 
       <div className="pt-0.5">
-        <button
+        <Button
           type="submit"
           disabled={state === "submitting"}
-          className="marketing-primary-cta inline-flex w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold transition-all hover:-translate-y-px hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-auto w-full rounded-md px-4 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
         >
           {state === "submitting" ? "Sending..." : "Send request"}
-        </button>
+        </Button>
 
-        <p className="mt-3 text-center font-mono text-[0.6rem] tracking-[0.09em] uppercase text-muted-foreground/32">
-          Invite-only · Reviewed manually · Early operator access
+        <p className="mt-3 text-center font-mono text-[0.6rem] tracking-[0.08em] uppercase text-muted-foreground/44">
+          Invite-only / reviewed manually / early operator access
         </p>
       </div>
     </form>

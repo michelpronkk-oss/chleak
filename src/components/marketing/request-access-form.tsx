@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { ArrowRight } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 interface RequestAccessFormProps {
   className?: string
@@ -26,27 +28,28 @@ export function RequestAccessForm({
   return (
     <div className={className}>
       <form onSubmit={handleSubmit}>
-        <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-1.5 sm:rounded-xl sm:border sm:border-border/65 sm:bg-card/35 sm:p-1.5">
-          <input
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-1.5 sm:rounded-lg sm:border sm:border-border sm:bg-card sm:p-1.5">
+          <Input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="your@company.com"
             required
             autoComplete="email"
-            className="w-full rounded-lg border border-border/65 bg-card/35 px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/38 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring/50 sm:flex-1 sm:rounded-md sm:border-0 sm:bg-transparent sm:py-2.5 sm:pl-4 sm:pr-2 sm:text-sm"
+            className="h-auto w-full px-4 py-3 text-base sm:flex-1 sm:rounded-md sm:border-0 sm:bg-transparent sm:py-2.5 sm:pl-4 sm:pr-2 sm:text-sm"
           />
-          <button
+          <Button
             type="submit"
-            className="marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold transition-all hover:-translate-y-px hover:opacity-90 sm:w-auto sm:shrink-0 sm:rounded-lg sm:py-2.5"
+            className="h-auto w-full gap-2 rounded-md px-5 py-3 text-sm font-medium sm:w-auto sm:shrink-0 sm:py-2.5"
           >
             Request Access
             <ArrowRight className="h-3.5 w-3.5" />
-          </button>
+          </Button>
         </div>
         {showTrustLine && (
-          <p className="mt-2.5 text-center font-mono text-[0.65rem] tracking-[0.09em] uppercase text-muted-foreground/38">
-            Invite-only · Reviewed manually<span className="hidden sm:inline"> · Early operator access</span>
+          <p className="mt-2.5 text-center font-mono text-[0.62rem] tracking-[0.08em] uppercase text-muted-foreground/46">
+            Invite-only / reviewed manually
+            <span className="hidden sm:inline"> / early operator access</span>
           </p>
         )}
       </form>

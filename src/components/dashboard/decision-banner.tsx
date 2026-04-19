@@ -1,39 +1,15 @@
 import Link from "next/link"
 import { ArrowRight, ShieldCheck } from "lucide-react"
 
-import { formatCompactCurrency } from "@/lib/format"
+import {
+  MetaPill,
+  SeverityPill,
+  cleanPrimaryCopy,
+  formatImpactLabel,
+  formatSourceLabel,
+  getSeverityConfidence,
+} from "@/components/dashboard/vault-primitives"
 import type { Issue } from "@/types/domain"
-
-const confidenceBySeverity: Record<Issue["severity"], string> = {
-  critical: "Strong signal",
-  high: "High confidence",
-  medium: "Medium confidence",
-  low: "Emerging signal",
-}
-
-function formatImpactLabel(value: number) {
-  if (value > 0) {
-    return formatCompactCurrency(value)
-  }
-
-  return "Impact pending"
-}
-
-function formatSourceLabel(source: string) {
-  if (source.startsWith("shopify_simulation")) {
-    return "shopify_monitoring"
-  }
-
-  if (source.startsWith("shopify_monitoring")) {
-    return "shopify_monitoring"
-  }
-
-  return source
-}
-
-function cleanPrimaryCopy(text: string) {
-  return text.replace(/^simulation:\s*/i, "")
-}
 
 export function DecisionBanner({
   issue,
@@ -54,15 +30,9 @@ export function DecisionBanner({
             {cleanPrimaryCopy(issue.whyItMatters)}
           </p>
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="rounded-md border border-primary/35 bg-primary/10 px-2 py-1 text-primary">
-              {confidenceBySeverity[issue.severity]}
-            </span>
-            <span className="rounded-md border border-border/70 px-2 py-1 text-muted-foreground">
-              Severity: {issue.severity}
-            </span>
-            <span className="rounded-md border border-border/70 px-2 py-1 text-muted-foreground">
-              Source: {formatSourceLabel(issue.source)}
-            </span>
+            <SeverityPill severity={issue.severity} />
+            <MetaPill>Confidence: {getSeverityConfidence(issue.severity)}</MetaPill>
+            <MetaPill>Source: {formatSourceLabel(issue.source)}</MetaPill>
           </div>
         </div>
 
@@ -81,7 +51,7 @@ export function DecisionBanner({
           </Link>
           <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
             <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-            Decision confidence: {confidenceBySeverity[issue.severity]}
+            Decision confidence: {getSeverityConfidence(issue.severity)}
           </p>
         </div>
       </div>

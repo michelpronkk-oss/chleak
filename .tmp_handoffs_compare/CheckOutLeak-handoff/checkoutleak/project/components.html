@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Components · Vault</title>
+<link rel="stylesheet" href="shared/vault.css" />
+<style>
+  /* BUTTONS */
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: var(--r-3); font-size: 13px; font-weight: 500; border: 1px solid transparent; cursor: pointer; transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); line-height: 1; }
+  .btn-primary { background: var(--text-primary); color: var(--text-inverse); border-color: var(--text-primary); }
+  .btn-primary:hover { background: oklch(0.92 0.003 250); }
+  .btn-secondary { background: var(--ink-200); color: var(--text-primary); border-color: var(--line-default); }
+  .btn-secondary:hover { background: var(--ink-300); border-color: var(--line-strong); }
+  .btn-ghost { background: transparent; color: var(--text-secondary); }
+  .btn-ghost:hover { background: var(--ink-200); color: var(--text-primary); }
+  .btn-danger { background: var(--sev-critical); color: oklch(0.98 0 0); border-color: var(--sev-critical); }
+  .btn-danger:hover { background: oklch(0.70 0.22 22); }
+  .btn-disabled { background: var(--ink-100); color: var(--text-quaternary); border-color: var(--line-default); cursor: not-allowed; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-lg { padding: 11px 18px; font-size: 14px; }
+  .btn-kbd { margin-left: 6px; font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); background: var(--ink-100); padding: 1px 5px; border-radius: 3px; border: 1px solid var(--line-default); }
+
+  /* INPUT */
+  .field { display: grid; gap: 6px; }
+  .field-label { font-family: var(--font-ui); font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+  .field-input { background: var(--ink-050); border: 1px solid var(--line-default); border-radius: var(--r-3); padding: 9px 12px; font-size: 13px; color: var(--text-primary); width: 100%; transition: border-color var(--dur-fast) var(--ease); }
+  .field-input:focus { outline: none; border-color: var(--line-focus); box-shadow: 0 0 0 3px oklch(0.78 0.13 75 / 0.14); }
+  .field-input::placeholder { color: var(--text-quaternary); }
+  .field-help { font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono); letter-spacing: 0.02em; }
+  .field-err { color: var(--sev-critical); }
+
+  .select-wrap { position: relative; }
+  .select-wrap::after { content: '▾'; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-tertiary); font-size: 10px; pointer-events: none; }
+
+  /* TOGGLE */
+  .toggle { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
+  .toggle-track { width: 32px; height: 18px; border-radius: 999px; background: var(--ink-300); position: relative; transition: background var(--dur-fast) var(--ease); }
+  .toggle-thumb { width: 14px; height: 14px; background: var(--text-primary); border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: transform var(--dur-fast) var(--ease); }
+  .toggle.on .toggle-track { background: var(--signal); }
+  .toggle.on .toggle-thumb { transform: translateX(14px); background: var(--text-inverse); }
+  .toggle-label { font-size: 13px; color: var(--text-primary); }
+
+  /* PILL */
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: var(--r-3); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid var(--line-default); background: var(--ink-100); color: var(--text-secondary); }
+  .pill-sev-low { border-color: oklch(0.70 0.08 200 / 0.3); color: var(--sev-low); background: var(--sev-low-bg); }
+  .pill-sev-med { border-color: oklch(0.80 0.14 90 / 0.3); color: var(--sev-medium); background: var(--sev-medium-bg); }
+  .pill-sev-high { border-color: oklch(0.72 0.18 40 / 0.3); color: var(--sev-high); background: var(--sev-high-bg); }
+  .pill-sev-crit { border-color: oklch(0.64 0.22 22 / 0.35); color: var(--sev-critical); background: var(--sev-critical-bg); }
+  .pill-ok { border-color: oklch(0.74 0.11 155 / 0.3); color: var(--ok); background: var(--ok-bg); }
+  .pill-signal { border-color: var(--signal-line); color: var(--signal); background: var(--signal-dim); }
+
+  /* TABS */
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line-default); }
+  .tab { padding: 10px 12px; font-size: 13px; color: var(--text-secondary); border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); display: inline-flex; align-items: center; gap: 8px; }
+  .tab:hover { color: var(--text-primary); }
+  .tab.active { color: var(--text-primary); border-bottom-color: var(--signal); }
+  .tab-count { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); background: var(--ink-200); padding: 1px 6px; border-radius: var(--r-3); }
+  .tab.active .tab-count { color: var(--signal); background: var(--signal-dim); }
+
+  /* PANELS */
+  .panel { background: var(--ink-100); border: 1px solid var(--line-default); border-radius: var(--r-4); }
+  .panel-head { padding: 14px 20px; border-bottom: 1px solid var(--line-subtle); display: flex; align-items: center; justify-content: space-between; }
+  .panel-title { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+  .panel-meta { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+  .panel-body { padding: 20px; }
+
+  /* METRIC */
+  .metric { display: grid; gap: 8px; padding: 20px; }
+  .metric-k { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.05em; text-transform: uppercase; }
+  .metric-v { font-family: var(--font-mono); font-size: 40px; font-weight: 500; letter-spacing: -0.02em; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1; }
+  .metric-v.signal { color: var(--signal); }
+  .metric-d { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+  .metric-d.up { color: var(--sev-high); }
+  .metric-d.down { color: var(--ok); }
+
+  /* TABLE */
+  .tbl { width: 100%; border-collapse: separate; border-spacing: 0; }
+  .tbl thead th { font-family: var(--font-ui); font-weight: 500; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-tertiary); text-align: left; padding: 10px 16px; border-bottom: 1px solid var(--line-default); background: var(--ink-050); }
+  .tbl tbody td { padding: 14px 16px; font-size: 13px; color: var(--text-primary); border-bottom: 1px solid var(--line-subtle); vertical-align: middle; }
+  .tbl tbody tr:last-child td { border-bottom: 0; }
+  .tbl tbody tr:hover { background: var(--ink-150); }
+  .tbl td.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 12.5px; }
+  .tbl td.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 13px; }
+
+  /* EVENT ROW */
+  .event { display: grid; grid-template-columns: 4px 1fr auto; gap: 16px; padding: 14px 18px; border-left: 4px solid transparent; background: var(--ink-050); border-bottom: 1px solid var(--line-subtle); align-items: center; }
+  .event:first-child { border-top-left-radius: var(--r-4); border-top-right-radius: var(--r-4); }
+  .event:last-child { border-bottom-left-radius: var(--r-4); border-bottom-right-radius: var(--r-4); border-bottom: 0; }
+  .event.crit { border-left-color: var(--sev-critical); }
+  .event.high { border-left-color: var(--sev-high); }
+  .event.med { border-left-color: var(--sev-medium); }
+  .event.low { border-left-color: var(--sev-low); }
+  .event-title { font-size: 13px; color: var(--text-primary); }
+  .event-title .mono-inline { font-family: var(--font-mono); font-size: 12px; color: var(--text-primary); background: var(--ink-200); padding: 1px 5px; border-radius: 3px; }
+  .event-sub { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 4px; letter-spacing: 0.02em; }
+  .event-amt { font-family: var(--font-mono); font-size: 14px; color: var(--signal); font-variant-numeric: tabular-nums; }
+
+  /* ALERT */
+  .alert { display: grid; grid-template-columns: 20px 1fr auto; gap: 14px; padding: 14px 18px; border-radius: var(--r-4); border: 1px solid; align-items: center; }
+  .alert-icon { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 11px; font-weight: 600; }
+  .alert-crit { background: var(--sev-critical-bg); border-color: oklch(0.64 0.22 22 / 0.3); color: var(--text-primary); }
+  .alert-crit .alert-icon { border-color: var(--sev-critical); color: var(--sev-critical); }
+  .alert-warn { background: var(--warn-bg); border-color: oklch(0.80 0.14 90 / 0.3); color: var(--text-primary); }
+  .alert-warn .alert-icon { border-color: var(--warn); color: var(--warn); }
+  .alert-ok { background: var(--ok-bg); border-color: oklch(0.74 0.11 155 / 0.3); color: var(--text-primary); }
+  .alert-ok .alert-icon { border-color: var(--ok); color: var(--ok); }
+  .alert-info { background: var(--info-bg); border-color: oklch(0.70 0.06 230 / 0.3); color: var(--text-primary); }
+  .alert-info .alert-icon { border-color: var(--info); color: var(--info); }
+  .alert-title { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+  .alert-body { font-size: 12.5px; color: var(--text-secondary); margin-top: 2px; }
+
+  /* BANNER */
+  .banner { padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; gap: 20px; background: var(--signal-dim); border-bottom: 1px solid var(--signal-line); border-top: 1px solid var(--signal-line); }
+  .banner-text { font-size: 13px; color: var(--text-primary); }
+  .banner-text strong { color: var(--signal); font-family: var(--font-mono); font-weight: 500; }
+
+  /* SIDE NAV */
+  .sidenav { background: var(--ink-050); border: 1px solid var(--line-default); border-radius: var(--r-4); padding: 14px; width: 240px; font-size: 13px; }
+  .sidenav-section { margin-bottom: 16px; }
+  .sidenav-section:last-child { margin-bottom: 0; }
+  .sidenav-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); padding: 6px 10px; }
+  .sidenav-item { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: var(--r-3); color: var(--text-secondary); cursor: pointer; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+  .sidenav-item:hover { background: var(--ink-150); color: var(--text-primary); }
+  .sidenav-item.active { background: var(--ink-200); color: var(--text-primary); }
+  .sidenav-item.active::before { content:''; width: 2px; height: 14px; background: var(--signal); margin-left: -10px; margin-right: 8px; border-radius: 1px; }
+  .sidenav-item .count { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+
+  /* EMPTY STATE */
+  .empty { padding: 48px; text-align: center; border: 1px dashed var(--line-strong); border-radius: var(--r-4); background: var(--ink-050); }
+  .empty-mark { width: 32px; height: 32px; margin: 0 auto 18px; border: 1px solid var(--line-strong); border-radius: var(--r-3); position: relative; }
+  .empty-mark::after { content:''; position: absolute; inset: 10px; border: 1px solid var(--text-quaternary); border-radius: 2px; }
+  .empty-t { font-size: 15px; font-weight: 500; color: var(--text-primary); margin-bottom: 6px; }
+  .empty-d { font-size: 13px; color: var(--text-secondary); max-width: 40ch; margin: 0 auto 20px; line-height: 1.55; }
+
+  /* STATUS DOTS */
+  .status { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary); font-family: var(--font-mono); letter-spacing: 0.03em; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; position: relative; }
+  .status-dot::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; background: currentColor; opacity: 0.18; }
+  .status-live { color: var(--ok); }
+  .status-live .status-dot { background: var(--ok); }
+  .status-idle { color: var(--text-tertiary); }
+  .status-idle .status-dot { background: var(--text-tertiary); }
+  .status-err { color: var(--sev-critical); }
+  .status-err .status-dot { background: var(--sev-critical); }
+
+  /* SKELETON */
+  .skel { background: linear-gradient(90deg, var(--ink-150), var(--ink-200), var(--ink-150)); background-size: 200% 100%; animation: sk 1.6s infinite linear; border-radius: var(--r-2); }
+  @keyframes sk { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  /* SECTION HEADER */
+  .sh { display: flex; align-items: baseline; justify-content: space-between; padding: 20px 0 12px; border-bottom: 1px solid var(--line-subtle); margin-bottom: 20px; }
+  .sh-t { font-size: 18px; font-weight: 500; color: var(--text-primary); letter-spacing: -0.01em; }
+  .sh-m { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+
+  /* LAYOUT HELPER */
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .stack { display: grid; gap: 12px; }
+  .demo-block { background: var(--ink-100); border: 1px solid var(--line-default); border-radius: var(--r-4); padding: 24px; }
+
+  .cmp-head { display: grid; grid-template-columns: 200px 1fr; gap: 32px; padding-bottom: 20px; margin-bottom: 24px; border-bottom: 1px solid var(--line-subtle); }
+  .cmp-num { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.04em; }
+  .cmp-name { font-size: 22px; font-weight: 500; letter-spacing: -0.015em; color: var(--text-primary); }
+  .cmp-desc { margin-top: 6px; font-size: 13px; color: var(--text-secondary); max-width: 60ch; line-height: 1.55; }
+  .cmp { padding: 56px 0; border-top: 1px solid var(--line-default); }
+  .cmp:first-of-type { border-top: 0; }
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <div class="chrome-inner">
+    <div class="brand"><div class="brand-mark"></div><div class="brand-name">CheckoutLeak</div><div class="brand-slash">/</div><div class="brand-section">Vault — Design System</div></div>
+    <nav class="chrome-nav">
+      <a href="index.html">Overview</a><a href="tokens.html">Tokens</a>
+      <a href="typography.html">Typography</a>
+      <a href="components.html" class="active">Components</a><a href="states.html">States</a>
+      <a href="pages.html">Pages</a><a href="dashboard.html">Dashboard</a>
+      <a href="mobile.html">Mobile</a><a href="content.html">Voice</a>
+    </nav>
+    <div class="chrome-meta"><span class="live"></span><span>v0.1 · draft</span></div>
+  </div>
+</div>
+
+<div class="doc">
+
+  <header class="doc-header">
+    <div class="doc-crumb"><span class="dot"></span> 03 · Primitives</div>
+    <h1 class="doc-title"><span class="n">03</span>Components</h1>
+    <p class="doc-lede">Eighteen primitives. They are sharp, small, and built to recede. The interesting thing on any screen is the data, not the chrome that holds it.</p>
+  </header>
+
+  <!-- BUTTONS -->
+  <div class="cmp">
+    <div class="cmp-head">
+      <div><div class="cmp-num">C · 01</div></div>
+      <div><div class="cmp-name">Buttons</div><div class="cmp-desc">Four intents: primary, secondary, ghost, danger. Primary is a luminous neutral, not a brand color — this keeps the signal amber sacred. Danger is the only severity-colored button.</div></div>
+    </div>
+    <div class="demo-block stack">
+      <div class="row">
+        <button class="btn btn-primary">Resolve now</button>
+        <button class="btn btn-secondary">Open fix path</button>
+        <button class="btn btn-ghost">Dismiss</button>
+        <button class="btn btn-danger">Disconnect source</button>
+        <button class="btn btn-disabled" disabled>Awaiting scan</button>
+      </div>
+      <div class="row">
+        <button class="btn btn-primary btn-sm">Apply</button>
+        <button class="btn btn-primary">Apply</button>
+        <button class="btn btn-primary btn-lg">Apply</button>
+      </div>
+      <div class="row">
+        <button class="btn btn-primary">Resolve now<span class="btn-kbd">⌘↵</span></button>
+        <button class="btn btn-secondary">Open fix path<span class="btn-kbd">O</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- INPUTS -->
+  <div class="cmp">
+    <div class="cmp-head">
+      <div><div class="cmp-num">C · 02</div></div>
+      <div><div class="cmp-name">Text inputs, selects, toggles</div><div class="cmp-desc">Low-contrast well, hairline border, amber focus. Help text is mono — even when it's prose — to keep the form surface visually quiet.</div></div>
+    </div>
+    <div class="demo-block" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px;">
+      <div class="stack" style="gap: 16px;">
+        <div class="field">
+          <label class="field-label">Source domain</label>
+          <input class="field-input" value="north-goods.myshopify.com" />
+          <div class="field-help">ownership verified · 00:12 ago</div>
+        </div>
+        <div class="field">
+          <label class="field-label">API key</label>
+          <input class="field-input" placeholder="sk_live_•••" type="password" />
+          <div class="field-help field-err">Key lacks <span style="font-family:var(--font-mono)">events.read</span> scope</div>
+        </div>
+      </div>
+      <div class="stack" style="gap: 16px;">
+        <div class="field">
+          <label class="field-label">Scan window</label>
+          <div class="select-wrap">
+            <select class="field-input" style="appearance: none;">
+              <option>Last 30 days</option>
+              <option>Last 7 days</option>
+              <option>Last 24 hours</option>
+            </select>
+          </div>
+          <div class="field-help">rolling · recalculated hourly</div>
+        </div>
+        <div class="field">
+          <label class="field-label">Severity filter</label>
+          <div class="select-wrap">
+            <select class="field-input" style="appearance: none;">
+              <option>High &amp; critical</option>
+              <option>All</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="stack" style="gap: 14px;">
+        <div class="toggle on"><div class="toggle-track"><div class="toggle-thumb"></div></div><div class="toggle-label">Email alerts on critical</div></div>
+        <div class="toggle on"><div class="toggle-track"><div class="toggle-thumb"></div></div><div class="toggle-label">SMS on revenue loss &gt; $1k</div></div>
+        <div class="toggle"><div class="toggle-track"><div class="toggle-thumb"></div></div><div class="toggle-label">Slack digest · weekly</div></div>
+        <div class="toggle"><div class="toggle-track"><div class="toggle-thumb"></div></div><div class="toggle-label">PagerDuty integration</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PILLS / BADGES -->
+  <div class="cmp">
+    <div class="cmp-head">
+      <div><div class="cmp-num">C · 03</div></div>
+      <div><div class="cmp-name">Pills &amp; badges</div><div class="cmp-desc">Always mono, always uppercase, always small. Pills name states; they never name CTAs. Severity pills use the severity palette; status pills use the semantic palette.</div></div>
+    </div>
+    <div class="demo-block">
+      <div class="row">
+        <span class="pill pill-sev-low">Low</span>
+        <span class="pill pill-sev-med">Medium</span>
+        <span class="pill pill-sev-high">High</span>
+        <span class="pill pill-sev-crit">Critical</span>
+      </div>
+      <div class="row" style="margin-top: 14px;">
+        <span class="pill pill-ok">● Connected</span>
+        <span class="pill">● Idle</span>
+        <span class="pill pill-signal">Revenue at risk · $14,382</span>
+        <span class="pill">Stripe</span>
+        <span class="pill">Shopify</span>
+        <span class="pill">Webhook</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="cmp">
+    <div class="cmp-head">
+      <div><div class="cmp-num">C · 04</div></div>
+      <div><div class="cmp-name">Tabs</div><div class="cmp-desc">Underline in the signal color. Counts are mono pills that gain signal tint on the active tab. No pill tabs, no segmented controls — tabs are flat.</div></div>
+    </div>
+    <div class="demo-block">
+      <div class="tabs">
+        <div class="tab active">Open <span class="tab-count">14</span></div>
+        <div class="tab">Resolved <span class="tab-count">112</span></div>
+        <div class="tab">Snoozed <span class="tab-count">3</span></div>
+        <div class="tab">Rules <span class="tab-count">28</span></div>
+        <div class="tab">Audit log</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANELS -->
+  <div class="cmp">
+    <div class="cmp-head">
+      <div><div class="cmp-num">C · 05</div></div>
+      <div><div class="cmp-name">Panels</div><div class="cmp-desc">Vault uses panels, not cards. A panel is a surface shift plus a hairline border — never a shadow, never a gradient. Adjacent panels share borders rather than creating two separate edges.</div></div>
+    </div>
+    <div class="demo-block">
+      <div class="panel" style="max-width: 560px;">
+        <div class="panel-head">
+          <div class="panel-title">Source health</div>
+          <div class="panel-meta">Last scan · 00:14 ago</div>
+        </div>
+        <div class="panel-body">
+          <div class="stack">
+            <div class="row" style="justify-content: space-between;"><div class="status status-live"><span class="status-dot"></span>Stripe · api.stripe.com</div><div class="mono" style="font-size:12px; color: var(--text-tertiary);">p50 240ms · p99 890ms</div></div>
+            <div class="row" style="justify-content: space-between;"><div class="status status-live"><span class="status-dot"></span>Shopify · north-goods.myshopify.com</div><div class="mono" style="font-size:12px; color: var(--text-tertiary);">p50 120ms · p99 340ms</div></div>
+            <div class="row" style="justify-content: space-between;"><div class="status status-err"><span class="status-dot"></span>Webhook · events.checkoutleak.io</div><div class="mono" style="font-size:12px; color: var(--sev-critical);">38 dropped · retrying</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- METRICS -->
+  <div class="cmp">
+    <div class="cmp-head">
+      <div><div class="cmp-num">C · 06</div></div>
+      <div><div class="cmp-name">Metric modules</div><div class="cmp-desc">A label, a value, a delta. Currency values at risk take the signal color; everything else is neutral. No sparklines inside metric modules — that belongs in a chart panel.</div></div>
+    </div>
+    <div class="demo-block">
+      <div class="grid-4" style="background: var(--line-default);">
+        <div class="metric" style="background: var(--ink-100);">
+          <div class="metric-k">Revenue at risk · 30d</div>
+          <div class="metric-v signal">$84,120</div>
+          <div class="metric-d up">▲ $12,480 · 14.8% vs prior</div>
+        </div>
+        <div class="metric" style="background: var(--ink-100);">
+          <div class="metric-k">Open issues</div>
+          <div class="metric-v">14</div>
+          <div class="metric-d"><span class="pill pill-sev-crit" style="padding: 1px 6px;">2 crit</span> <span class="pill pill-sev-high" style="padding: 1px 6px;">5 high</span></div>
+        </div>
+        <div class="metric" style="background: var(--ink-100);">
+          <div class="metric-k">Sources monitored</div>
+          <div class="metric-v">3<span class="mono" style="color: var(--text-tertiary); font-size: 22px;"> / 4</span></div>
+          <div class="metric-d">1 awaiting connection</div>
+        </div>
+        <div class="metric" style="background: var(--ink-100);">
+          <div class="metric-k">Recovered · 30d</div>
+          <div class="metric-v">$38,940</div>
+          <div class="metric-d down">▼ from $52,210 queue</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLES -->
+  <div class="cmp">
+    <div class="cmp-head">
+      <div><div class="cmp-num">C · 07</div></div>
+      <div><div class="cmp-name">Tables &amp; event rows</div><div class="cmp-desc">Tables are the default pattern for any list with more than three columns. Event rows are used for issue queues — they carry a severity stripe on the left and a mono currency anchor on the right.</div></div>
+    </div>
+    <div class="demo-block stack" style="gap: 20px;">
+      <div class="panel" style="overflow: hidden;">
+        <table class="tbl">
+          <thead>
+            <tr><th style="width:80px;">Sev</th><th>Finding</th><th>Source</th><th>First seen</th><th class="num">Exposure</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="pill pill-sev-crit">Crit</span></td><td>Webhook signature failing · <span class="mono">invoice.payment_failed</span></td><td class="mono">north-goods</td><td class="mono">00:02:14 ago</td><td class="num" style="color: var(--signal);">$14,382.40</td></tr>
+            <tr><td><span class="pill pill-sev-high">High</span></td><td>3DS retry disabled on EU cohort</td><td class="mono">north-goods</td><td class="mono">18h ago</td><td class="num" style="color: var(--signal);">$6,940.00</td></tr>
+            <tr><td><span class="pill pill-sev-high">High</span></td><td>Subscription dunning halted after 1 attempt</td><td class="mono">polar-coffee</td><td class="mono">2d ago</td><td class="num" style="color: var(--signal);">$4,210.00</td></tr>
+            <tr><td><span class="pill pill-sev-med">Med</span></td><td>Abandoned setup intents &gt; 72h</td><td class="mono">north-goods</td><td class="mono">4d ago</td><td class="num" style="color: var(--text-secondary);">$2,210.00</td></tr>
+            <tr><td><span class="pill pill-sev-low">Low</span></td><td>Webhook latency 2.1× baseline</td><td class="mono">polar-coffee</td><td class="mono">6d ago</td><td class="num" style="color: var(--text-tertiary);">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="stack" style="gap: 0;">
+        <div class="event crit"><div></div><div><div class="event-title">Webhook signature failing · <span class="mono-inline">invoice.payment_failed</span></div><div class="event-sub">north-goods.myshopify.com · 38 events dropped · 00:02:14 ago</div></div><div class="event-amt">$14,382.40</div></div>
+        <div class="event high"><div></div><div><div class="event-title">Decline retry disabled on 3DS step-up</div><div class="event-sub">EU card cohort · 412 transactions · 18h</div></div><div class="event-amt">$6,940.00</div></div>
+        <div class="event med"><div></div><div><div class="event-title">Abandoned setup intents over 72h</div><div class="event-sub">Checkout → Billing · cohort not notified</div></div><div class="event-amt" style="color: var(--text-secondary);">$2,210.00</div></div>
+        <div class="event low"><div></div><div><div class="event-title">Webhook latency 2.1× baseline</div><div class="event-sub">polar-coffee · p99 · monitoring</div></div><div class="event-amt" style="color: var(--text-tertiary);">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALERTS / BANNERS -->
+  <div class="cmp">
+    <div class="cmp-head">
+      <div><div class="cmp-num">C · 08</div></div>
+      <div><div class="cmp-name">Alerts &amp; banners</div><div class="cmp-desc">Alerts live inline inside a page region. Banners live at the top of a surface and carry a CTA. Critical banners use the signal palette to anchor revenue numbers.</div></div>
+    </div>
+    <div class="demo-block stack">
+      <div class="banner">
+        <div class="banner-text">Coverage incomplete — <strong>Shopify not connected.</strong> Expected leak detection is partial until both sources are linked.</div>
+        <button class="btn btn-primary btn-sm">Connect Shopify</button>
+      </div>
+      <div class="alert alert-crit">
+        <div class="alert-icon">!</div>
+        <div><div class="alert-title">Active revenue loss detected</div><div class="alert-body">$14,382.40 exposed in the last 2 hours from <span class="mono">invoice.payment_failed</span> drops.</div></div>
+        <button class="btn btn-primary btn-sm">Resolve</button>
+      </div>
+      <div class="alert alert-warn">
+        <div class="alert-icon">!</div>
+        <div><div class="alert-title">Billing requires attention</div><div class="alert-body">Your card on file declined. Service continues for 3 days; then monitoring pauses.</div></div>
+        <button class="btn btn-secondary btn-sm">Update billing</button>
+      </div>
+      <div class="alert alert-info">
+        <div class="alert-icon">i</div>
+        <div><div class="alert-title">First scan in progress</div><div class="alert-body">Indexing last 30 days of checkout events. Findings appear as they land — usually within 4 minutes.</div></div>
+      </div>
+      <div class="alert alert-ok">
+        <div class="alert-icon">✓</div>
+        <div><div class="alert-title">Source connected</div><div class="alert-body"><span class="mono">north-goods.myshopify.com</span> verified · first scan queued</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <div class="cmp">
+    <div class="cmp-head">
+      <div><div class="cmp-num">C · 09</div></div>
+      <div><div class="cmp-name">Navigation</div><div class="cmp-desc">Top chrome is sticky, quiet, and under 56px tall. Side nav is grouped and uses a signal tick on the active item — never a full pill.</div></div>
+    </div>
+    <div class="demo-block" style="display: flex; gap: 24px; align-items: flex-start;">
+      <div class="sidenav">
+        <div class="sidenav-section">
+          <div class="sidenav-label">Workspace</div>
+          <div class="sidenav-item active">Dashboard<span class="count">14</span></div>
+          <div class="sidenav-item">Findings<span class="count">142</span></div>
+          <div class="sidenav-item">Fix plans<span class="count">6</span></div>
+          <div class="sidenav-item">Sources<span class="count">3</span></div>
+          <div class="sidenav-item">Rules</div>
+          <div class="sidenav-item">Audit log</div>
+        </div>
+        <div class="sidenav-section">
+          <div class="sidenav-label">Account</div>
+          <div class="sidenav-item">Billing</div>
+          <div class="sidenav-item">Team</div>
+          <div class="sidenav-item">Notifications</div>
+          <div class="sidenav-item">Settings</div>
+        </div>
+      </div>
+      <div class="stack" style="flex: 1;">
+        <div style="background: var(--ink-050); border: 1px solid var(--line-default); border-radius: var(--r-4); padding: 14px 20px; display: flex; align-items: center; gap: 24px;">
+          <div class="brand"><div class="brand-mark"></div><div class="brand-name">CheckoutLeak</div></div>
+          <div class="tabs" style="border: 0; margin-left: 24px;"><div class="tab active">Workspace</div><div class="tab">Fix plans</div><div class="tab">Sources</div></div>
+          <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
+            <div class="status status-live"><span class="status-dot"></span>Live · scan 00:14</div>
+            <button class="btn btn-secondary btn-sm">north-goods ▾</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION HEADER / STATUS / SKELETON / EMPTY -->
+  <div class="cmp">
+    <div class="cmp-head">
+      <div><div class="cmp-num">C · 10</div></div>
+      <div><div class="cmp-name">Section headers, status, skeletons, empty states</div><div class="cmp-desc">The quiet furniture of every page.</div></div>
+    </div>
+    <div class="demo-block stack" style="gap: 28px;">
+
+      <div>
+        <div class="sh"><div class="sh-t">Leak queue</div><div class="sh-m">14 open · updated 00:14 ago</div></div>
+        <div style="color: var(--text-secondary); font-size: 13px;">Section body lives here.</div>
+      </div>
+
+      <div class="row" style="gap: 24px;">
+        <div class="status status-live"><span class="status-dot"></span>Connected</div>
+        <div class="status status-idle"><span class="status-dot"></span>Idle · next scan 02:14</div>
+        <div class="status status-err"><span class="status-dot"></span>Disconnected · retry 00:06</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">Loading state</div><div class="panel-meta">indexing…</div></div>
+        <div class="panel-body stack" style="gap: 10px;">
+          <div class="skel" style="height: 14px; width: 60%;"></div>
+          <div class="skel" style="height: 14px; width: 40%;"></div>
+          <div class="skel" style="height: 14px; width: 75%;"></div>
+          <div class="skel" style="height: 14px; width: 30%;"></div>
+        </div>
+      </div>
+
+      <div class="empty">
+        <div class="empty-mark"></div>
+        <div class="empty-t">No issues detected</div>
+        <div class="empty-d">Last scan completed 00:14 ago. Next scan in 4 minutes. You'll receive an alert if anything changes.</div>
+        <button class="btn btn-secondary btn-sm">Run scan now</button>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

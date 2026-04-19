@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CheckoutLeak — Vault Design System</title>
+<link rel="stylesheet" href="shared/vault.css" />
+<style>
+  .hero {
+    padding: 120px 0 80px;
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 64px;
+    align-items: end;
+    border-bottom: 1px solid var(--line-default);
+  }
+  .hero-title {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 92px;
+    line-height: 0.95;
+    letter-spacing: -0.035em;
+    color: var(--text-primary);
+  }
+  .hero-title .sans {
+    font-family: var(--font-ui);
+    font-style: normal;
+    letter-spacing: -0.02em;
+  }
+  .hero-title .sig { color: var(--signal); }
+  .hero-sub {
+    margin-top: 24px;
+    font-size: 18px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    max-width: 48ch;
+  }
+  .hero-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-tertiary);
+    line-height: 1.9;
+    letter-spacing: 0.04em;
+  }
+  .hero-meta dt { color: var(--text-quaternary); text-transform: uppercase; font-size: 10px; }
+  .hero-meta dd { color: var(--text-secondary); margin-bottom: 10px; }
+
+  /* Directory grid */
+  .directory {
+    padding-top: 64px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--line-subtle);
+    border: 1px solid var(--line-default);
+    border-radius: var(--r-4);
+    overflow: hidden;
+  }
+  .dir-card {
+    background: var(--ink-100);
+    padding: 28px 24px;
+    display: grid;
+    gap: 12px;
+    transition: background var(--dur-fast) var(--ease);
+  }
+  .dir-card:hover { background: var(--ink-150); }
+  .dir-n { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.05em; }
+  .dir-t { font-size: 17px; font-weight: 500; letter-spacing: -0.01em; color: var(--text-primary); }
+  .dir-d { font-size: 13px; color: var(--text-secondary); line-height: 1.55; }
+  .dir-go { margin-top: 12px; font-family: var(--font-mono); font-size: 11px; color: var(--signal); letter-spacing: 0.04em; display: flex; align-items: center; gap: 6px; }
+  .dir-go::after { content: '→'; transition: transform var(--dur-fast) var(--ease); }
+  .dir-card:hover .dir-go::after { transform: translateX(3px); }
+
+  /* Principles list */
+  .principles { margin-top: 0; }
+
+  /* Specimen preview */
+  .preview {
+    padding-top: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--line-subtle);
+    border: 1px solid var(--line-default);
+    border-radius: var(--r-4);
+    overflow: hidden;
+    margin-top: 0;
+  }
+  .preview .p {
+    background: var(--ink-100);
+    padding: 32px;
+  }
+  .preview .lbl { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 16px; }
+
+  .metric-demo { display: grid; gap: 6px; }
+  .metric-demo .k { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.04em; text-transform: uppercase; }
+  .metric-demo .v { font-family: var(--font-mono); font-size: 44px; font-weight: 500; letter-spacing: -0.02em; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  .metric-demo .v .unit { color: var(--text-tertiary); font-size: 22px; margin-left: 4px; }
+  .metric-demo .delta { font-family: var(--font-mono); font-size: 12px; color: var(--sev-high); }
+
+  .issue-demo { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; padding: 14px 16px; border: 1px solid var(--line-default); border-radius: var(--r-3); background: var(--ink-050); }
+  .issue-demo + .issue-demo { margin-top: 8px; }
+  .issue-demo .sev { width: 6px; height: 28px; border-radius: 2px; }
+  .issue-demo .title { font-size: 13px; color: var(--text-primary); }
+  .issue-demo .sub { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+  .issue-demo .amt { font-family: var(--font-mono); font-size: 13px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <div class="chrome-inner">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-name">CheckoutLeak</div>
+      <div class="brand-slash">/</div>
+      <div class="brand-section">Vault — Design System</div>
+    </div>
+    <nav class="chrome-nav">
+      <a href="index.html" class="active">Overview</a>
+      <a href="tokens.html">Tokens</a>
+      <a href="typography.html">Typography</a>
+      <a href="components.html">Components</a>
+      <a href="states.html">States</a>
+      <a href="pages.html">Pages</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="mobile.html">Mobile</a>
+      <a href="content.html">Voice</a>
+    </nav>
+    <div class="chrome-meta">
+      <span class="live"></span>
+      <span>v0.1 · draft</span>
+    </div>
+  </div>
+</div>
+
+<div class="doc">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div>
+      <div class="doc-crumb"><span class="dot"></span> Direction · Vault</div>
+      <h1 class="hero-title">
+        <em>Quiet instruments</em><br />
+        <span class="sans">for loud <span class="sig">money.</span></span>
+      </h1>
+      <p class="hero-sub">
+        Vault is the design direction for CheckoutLeak — a private, operator-grade
+        revenue intelligence system. It is built around calm surfaces, tabular
+        numbers, and a single signal color reserved for money at risk.
+      </p>
+    </div>
+    <dl class="hero-meta">
+      <dt>System</dt><dd>Vault · v0.1.0</dd>
+      <dt>Owner</dt><dd>Product Design</dd>
+      <dt>Audience</dt><dd>Operators, Finance, RevOps</dd>
+      <dt>Surface</dt><dd>Web · iOS · Android</dd>
+      <dt>Updated</dt><dd>2026 · Q2</dd>
+    </dl>
+  </section>
+
+  <!-- DIRECTORY -->
+  <section class="section" style="padding-top: 56px;">
+    <div class="section-head">
+      <div class="section-ix">00 · Directory</div>
+      <div>
+        <div class="section-title">What's in the system</div>
+        <div class="section-kicker">Nine documents, read in order. Each one is implementable. No mood boards, no decoration.</div>
+      </div>
+    </div>
+    <div class="directory">
+      <a class="dir-card" href="tokens.html"><div class="dir-n">01 · Foundation</div><div class="dir-t">Tokens</div><div class="dir-d">Color, neutrals, severity, spacing, radius, border, shadow, motion, focus, layering.</div><div class="dir-go">Open</div></a>
+      <a class="dir-card" href="typography.html"><div class="dir-n">02 · Foundation</div><div class="dir-t">Typography</div><div class="dir-d">Display, titles, body, support, metadata, and the mono voice for money and logs.</div><div class="dir-go">Open</div></a>
+      <a class="dir-card" href="components.html"><div class="dir-n">03 · Primitives</div><div class="dir-t">Components</div><div class="dir-d">Buttons, inputs, tabs, pills, panels, tables, banners, nav, status indicators.</div><div class="dir-go">Open</div></a>
+      <a class="dir-card" href="states.html"><div class="dir-n">04 · Patterns</div><div class="dir-t">States</div><div class="dir-d">Ten product states from unauthenticated through mature workspace and degraded billing.</div><div class="dir-go">Open</div></a>
+      <a class="dir-card" href="pages.html"><div class="dir-n">05 · Patterns</div><div class="dir-t">Page Patterns</div><div class="dir-d">Marketing, pricing, auth, onboarding, findings, settings, notifications.</div><div class="dir-go">Open</div></a>
+      <a class="dir-card" href="dashboard.html"><div class="dir-n">06 · Patterns</div><div class="dir-t">Dashboard Grammar</div><div class="dir-d">Impact-first language: revenue at risk, leak queue, source health, next move.</div><div class="dir-go">Open</div></a>
+      <a class="dir-card" href="mobile.html"><div class="dir-n">07 · Surface</div><div class="dir-t">Mobile</div><div class="dir-d">Not a collapsed desktop. Compression, persistent CTA, density, touch targets.</div><div class="dir-go">Open</div></a>
+      <a class="dir-card" href="content.html"><div class="dir-n">08 · Voice</div><div class="dir-t">Content & UI Language</div><div class="dir-d">Precise, premium, commercially grounded. The phrases we say and the ones we never say.</div><div class="dir-go">Open</div></a>
+      <a class="dir-card" href="#implementation"><div class="dir-n">09 · Handoff</div><div class="dir-t">Implementation</div><div class="dir-d">Tokens, CSS variables, naming, theming rules, and review checklist.</div><div class="dir-go">Open</div></a>
+    </div>
+  </section>
+
+  <!-- PRINCIPLES -->
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">01 · Foundation</div>
+      <div>
+        <div class="section-title">Design principles</div>
+        <div class="section-kicker">Seven rules. Every screen must pass every rule. If a screen breaks one, it ships broken.</div>
+      </div>
+    </div>
+
+    <div class="principles">
+
+      <div class="principle">
+        <div class="principle-n">P1</div>
+        <div>
+          <div class="principle-t">Money is the loudest thing on screen.</div>
+          <div class="principle-d">The revenue-at-risk number is always the largest, cleanest type on any view it appears in. Charts, decoration, and chrome bend around it. If another element competes for the eye, it is wrong.</div>
+          <div class="principle-c"><span class="do">do</span> — set currency in mono, 44–72px, tabular. &nbsp; <span class="dont">don't</span> — dress it with gradients, sparkles, or "delight."</div>
+        </div>
+      </div>
+
+      <div class="principle">
+        <div class="principle-n">P2</div>
+        <div>
+          <div class="principle-t">Calm is the default. Urgency is earned.</div>
+          <div class="principle-d">Color and motion are reserved. A screen with no problems is nearly monochrome. When severity rises, the system brightens — never the reverse. A critical issue is allowed to interrupt; a medium one is not.</div>
+          <div class="principle-c"><span class="do">do</span> — reserve crimson for critical only. &nbsp; <span class="dont">don't</span> — color-code everything.</div>
+        </div>
+      </div>
+
+      <div class="principle">
+        <div class="principle-n">P3</div>
+        <div>
+          <div class="principle-t">One signal color. One job.</div>
+          <div class="principle-d">Amber signals revenue at risk. Nothing else uses it — not CTAs, not links, not tooltips, not marketing. A user learns this in the first ten seconds and trusts it for the next three years.</div>
+          <div class="principle-c"><span class="do">do</span> — amber = "money lives here." &nbsp; <span class="dont">don't</span> — amber a "subscribe" button.</div>
+        </div>
+      </div>
+
+      <div class="principle">
+        <div class="principle-n">P4</div>
+        <div>
+          <div class="principle-t">Hairlines over cards.</div>
+          <div class="principle-d">Panels are separated by a 1px hairline or a quiet surface shift — not elevation, not shadow, not rounded boxes floating on a tinted background. Card-chaos is the visual tell of a dashboard that doesn't know what matters.</div>
+          <div class="principle-c"><span class="do">do</span> — separate with <span class="mono">line-default</span>. &nbsp; <span class="dont">don't</span> — nest cards inside cards inside cards.</div>
+        </div>
+      </div>
+
+      <div class="principle">
+        <div class="principle-n">P5</div>
+        <div>
+          <div class="principle-t">Numbers live in mono.</div>
+          <div class="principle-d">Currency, counts, percentages, timestamps, store IDs, transaction references, webhook payloads — all tabular monospace. Prose lives in sans. This creates an instant visual taxonomy: the user's eye finds data without reading.</div>
+          <div class="principle-c"><span class="do">do</span> — $14,382.40 in mono, tabular. &nbsp; <span class="dont">don't</span> — prose with a number dropped in.</div>
+        </div>
+      </div>
+
+      <div class="principle">
+        <div class="principle-n">P6</div>
+        <div>
+          <div class="principle-t">Every screen answers four questions.</div>
+          <div class="principle-d">Where am I? What has happened? What is the next move? What happens after I take it? If a screen cannot answer one of these in under two seconds of eye-tracking, it is incomplete. This rule governs every state pattern in the system.</div>
+          <div class="principle-c"><span class="do">do</span> — put the next move within arm's reach. &nbsp; <span class="dont">don't</span> — end a screen without a verb.</div>
+        </div>
+      </div>
+
+      <div class="principle">
+        <div class="principle-n">P7</div>
+        <div>
+          <div class="principle-t">The product looks the same when it's working.</div>
+          <div class="principle-d">A healthy workspace is quiet, almost empty. Resist the urge to fill it with charts, streaks, or celebration. An operator tool that congratulates itself is a tool that has lost the plot. The reward for a clean store is silence.</div>
+          <div class="principle-c"><span class="do">do</span> — "No issues detected. Last scan 00:14 ago." &nbsp; <span class="dont">don't</span> — confetti, trophies, "great job!"</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- VISUAL DIRECTION PREVIEW -->
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">02 · Direction</div>
+      <div>
+        <div class="section-title">Visual direction, at a glance</div>
+        <div class="section-kicker">Four specimens — palette, a metric, an issue row, and a line of voice. Everything else in the system compounds from these.</div>
+      </div>
+    </div>
+
+    <div class="preview">
+      <div class="p">
+        <div class="lbl">Surface ladder</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line-default);border:1px solid var(--line-default);border-radius:var(--r-3);overflow:hidden;">
+          <div style="background:var(--ink-050);height:80px;"></div>
+          <div style="background:var(--ink-100);height:80px;"></div>
+          <div style="background:var(--ink-150);height:80px;"></div>
+          <div style="background:var(--ink-200);height:80px;"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin-top:8px;font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);letter-spacing:0.04em;">
+          <div>050 · canvas</div><div>100 · panel</div><div>150 · raised</div><div>200 · well</div>
+        </div>
+      </div>
+
+      <div class="p">
+        <div class="lbl">Signal — Money at risk</div>
+        <div class="metric-demo">
+          <div class="k">Revenue at risk · 30d</div>
+          <div class="v" style="color: var(--signal);">$84,120<span class="unit">.40</span></div>
+          <div class="delta">▲ $12,480 vs prior period · 14.8%</div>
+        </div>
+      </div>
+
+      <div class="p">
+        <div class="lbl">Severity, in one row</div>
+        <div class="issue-demo">
+          <div class="sev" style="background: var(--sev-critical);"></div>
+          <div>
+            <div class="title">Stripe webhook signature failing · invoice.payment_failed</div>
+            <div class="sub">north-goods.myshopify.com · 38 events dropped · 00:02:14 ago</div>
+          </div>
+          <div class="amt" style="color: var(--signal);">$14,382.40</div>
+        </div>
+        <div class="issue-demo">
+          <div class="sev" style="background: var(--sev-high);"></div>
+          <div>
+            <div class="title">Decline retry disabled on 3DS step-up</div>
+            <div class="sub">EU card cohort · 412 transactions affected · 18h</div>
+          </div>
+          <div class="amt" style="color: var(--signal);">$6,940.00</div>
+        </div>
+        <div class="issue-demo">
+          <div class="sev" style="background: var(--sev-medium);"></div>
+          <div>
+            <div class="title">Abandoned setup intents over 72h</div>
+            <div class="sub">Checkout → Billing · cohort not notified</div>
+          </div>
+          <div class="amt" style="color: var(--text-secondary);">$2,210.00</div>
+        </div>
+      </div>
+
+      <div class="p">
+        <div class="lbl">Voice</div>
+        <div style="font-family: var(--font-display); font-style: italic; font-size: 34px; line-height: 1.1; letter-spacing: -0.02em; color: var(--text-primary);">
+          "Coverage incomplete. Your Stripe account is connected; Shopify is not. Expected leak detection is partial until both are linked."
+        </div>
+        <div style="margin-top:16px;font-family:var(--font-mono);font-size:11px;color:var(--text-tertiary);letter-spacing:0.04em;">
+          · precise · · no apology · · next-move oriented ·
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL NOTE -->
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">—</div>
+      <div>
+        <div class="section-title">A note on scope</div>
+        <div class="section-kicker">Vault is a working system, not a pitch. Every token, component, and pattern in the following pages compiles to CSS. If it can't be shipped, it isn't in here.</div>
+      </div>
+    </div>
+
+    <div style="font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); line-height: 1.8; padding: 24px; border: 1px solid var(--line-default); border-radius: var(--r-4); background: var(--ink-050);">
+      <span style="color: var(--text-quaternary);"># vault.config</span><br/>
+      system       <span style="color: var(--signal);">"vault"</span><br/>
+      version      <span style="color: var(--signal);">"0.1.0"</span><br/>
+      audience     operator, finance, revops<br/>
+      feel         private, premium, controlled, calm<br/>
+      not          marketing-dashboard, startup-saas, ai-consumer<br/>
+      signal       oklch(0.78 0.13 75) <span style="color: var(--text-quaternary);"># amber, revenue-at-risk only</span><br/>
+      severity     low → medium → high → critical<br/>
+      numerics     mono, tabular, always<br/>
+      motion       120ms, cubic-bezier(.2,0,0,1), never bouncy
+    </div>
+  </section>
+
+</div>
+
+</body>
+</html>

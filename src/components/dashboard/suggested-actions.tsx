@@ -1,21 +1,9 @@
 import Link from "next/link"
-import { ArrowRight, Clock3 } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 
+import { MetaPill, UrgencyPill } from "@/components/dashboard/vault-primitives"
 import { formatCompactCurrency } from "@/lib/format"
-import { cn } from "@/lib/utils"
 import type { SuggestedAction } from "@/types/domain"
-
-const urgencyStyles: Record<SuggestedAction["urgency"], string> = {
-  do_now: "text-destructive",
-  this_week: "text-amber-300",
-  watch: "text-sky-300",
-}
-
-const urgencyLabels: Record<SuggestedAction["urgency"], string> = {
-  do_now: "Do now",
-  this_week: "This week",
-  watch: "Watch",
-}
 
 type SuggestedActionItem = SuggestedAction & { fixPlanHref: string }
 
@@ -27,9 +15,7 @@ export function SuggestedActions({ actions }: { actions: SuggestedActionItem[] }
           <p className="data-mono text-primary">Action Queue</p>
           <h3 className="mt-1 text-base font-semibold tracking-tight sm:text-lg">Suggested Actions</h3>
         </div>
-        <p className="rounded-md border border-primary/35 bg-primary/10 px-2 py-1 text-xs text-primary">
-          Execute top to bottom
-        </p>
+        <MetaPill className="text-primary">Execute top to bottom</MetaPill>
       </div>
 
       <div className="mt-4 space-y-2.5 sm:mt-5 sm:space-y-3">
@@ -44,24 +30,14 @@ export function SuggestedActions({ actions }: { actions: SuggestedActionItem[] }
                 <h4 className="text-sm font-semibold sm:text-[0.95rem]">{action.title}</h4>
                 <p className="text-sm text-muted-foreground">{action.description}</p>
               </div>
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-md border border-current/30 px-2 py-1 text-[11px] uppercase",
-                  urgencyStyles[action.urgency]
-                )}
-              >
-                <Clock3 className="h-3 w-3" />
-                {urgencyLabels[action.urgency]}
-              </span>
+              <UrgencyPill urgency={action.urgency} />
             </div>
 
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-2.5 text-xs sm:mt-4 sm:pt-3">
-              <span className="text-primary">
+              <span className="font-mono text-signal">
                 {formatCompactCurrency(action.estimatedMonthlyRevenueImpact)} / month
               </span>
-              <span className="rounded-md border border-border/70 px-2 py-1 text-muted-foreground">
-                Confidence: High
-              </span>
+              <MetaPill>Confidence: High</MetaPill>
               <Link
                 href={action.fixPlanHref}
                 className="inline-flex items-center gap-1 rounded-md border border-border/60 px-2.5 py-1.5 text-foreground transition-colors hover:border-primary/35 hover:text-primary"

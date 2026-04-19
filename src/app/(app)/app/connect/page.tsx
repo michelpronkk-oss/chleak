@@ -17,7 +17,7 @@ const statusMessage: Record<string, string> = {
   state_mismatch: "Connection state did not match this session. Retry the connection.",
   webhook_registration_failed:
     "Shopify connected, but webhook registration needs attention. Review setup and retry.",
-  connected: "Source connected. CheckoutLeak is preparing your first scan.",
+  connected: "Source connected — first scan queued.",
   disconnected: "Shopify has been disconnected. Reconnect when ready.",
   disconnect_failed: "Shopify disconnect failed. Retry in a moment.",
 }

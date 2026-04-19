@@ -8,6 +8,14 @@ import { PendingScanLiveRefresh } from "@/components/dashboard/pending-scan-live
 import { RevenueOpportunityPanel } from "@/components/dashboard/revenue-opportunity-panel"
 import { ScanActivity } from "@/components/dashboard/scan-activity"
 import { SuggestedActions } from "@/components/dashboard/suggested-actions"
+import {
+  MetaPill,
+  QueueEventRow,
+  SeverityPill,
+  cleanPrimaryCopy,
+  formatImpactLabel,
+  formatSourceLabel,
+} from "@/components/dashboard/vault-primitives"
 import { ProcessingStagePanel } from "@/components/dashboard/processing-stage-panel"
 import { formatCompactCurrency } from "@/lib/format"
 import { getDashboardJourneyData } from "@/server/services/app-service"
@@ -15,14 +23,6 @@ import {
   getFallbackFixPlanHref,
   getFixPlanHrefForIssue,
 } from "@/server/services/fix-plan-service"
-
-function formatImpactLabel(value: number) {
-  return value > 0 ? formatCompactCurrency(value) : "Impact pending"
-}
-
-function cleanPrimaryCopy(text: string) {
-  return text.replace(/^simulation:\s*/i, "")
-}
 
 export default async function DashboardOverviewPage() {
   const journey = await getDashboardJourneyData()
@@ -53,12 +53,12 @@ export default async function DashboardOverviewPage() {
             {journey.sourceLabel} authorization in progress
           </h1>
           <p className="max-w-xl text-sm text-muted-foreground sm:text-base">
-            Complete the connection setup to authorize data access and activate your first scan.
+            Authorize data access to complete setup. First scan queues immediately on confirmation.
           </p>
         </section>
         <section className="surface-card p-5 sm:p-6">
           <p className="text-sm leading-[1.72] text-muted-foreground">
-            Open the connection flow to finish authorization and verify data access scope. CheckoutLeak will begin scanning immediately after confirmation.
+            Authorization incomplete. Open the connect flow to verify data access scope and queue the first scan.
           </p>
           <Link
             href="/app/connect"
@@ -84,7 +84,7 @@ export default async function DashboardOverviewPage() {
         </section>
         <section className="surface-card p-5 sm:p-6 lg:p-7">
           <p className="text-sm text-muted-foreground">
-            Review the connection flow and retry authorization from the connect page.
+            Retry authorization from the connect flow.
           </p>
           <Link
             href="/app/connect"
@@ -110,7 +110,7 @@ export default async function DashboardOverviewPage() {
             {journey.sourceLabel} source connected. First scan running.
           </h1>
           <p className="max-w-xl text-sm text-muted-foreground sm:text-base">
-            CheckoutLeak is processing your checkout and billing data. First findings will be available shortly, ranked by revenue impact.
+            First scan in progress. Findings appear as they land, ranked by exposure.
           </p>
         </section>
 
@@ -124,7 +124,7 @@ export default async function DashboardOverviewPage() {
               "Starting first scan...",
               "Reviewing source configuration...",
               "Checking signal readiness...",
-              "Preparing monitoring baseline...",
+              "Building monitoring baseline...",
             ]}
           />
           <ul className="space-y-2.5">
@@ -174,7 +174,7 @@ export default async function DashboardOverviewPage() {
             {journey.sourceLabel} scan completed. Initial leakage detected.
           </h1>
           <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-            CheckoutLeak found the first high-impact opportunities and ranked what should be fixed first.
+            First scan complete. Findings ranked by exposure.
           </p>
         </section>
 
@@ -184,12 +184,8 @@ export default async function DashboardOverviewPage() {
             <h2 className="mt-2 text-xl font-semibold tracking-tight">{primaryIssue.title}</h2>
             <p className="mt-2 text-sm text-muted-foreground">{primaryIssue.whyItMatters}</p>
             <div className="mt-4 flex flex-wrap gap-2 text-xs">
-              <span className="rounded-md border border-border/70 px-2 py-1 text-muted-foreground">
-                {primaryIssue.severity.toUpperCase()} severity
-              </span>
-              <span className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1 text-primary">
-                {primaryIssue.source}
-              </span>
+              <SeverityPill severity={primaryIssue.severity} />
+              <MetaPill>{formatSourceLabel(primaryIssue.source)}</MetaPill>
             </div>
           </div>
           <div className="rounded-xl border border-border/70 bg-background/35 p-4">
@@ -198,7 +194,7 @@ export default async function DashboardOverviewPage() {
               {formatImpactLabel(primaryIssue.estimatedMonthlyRevenueImpact)}
             </p>
             <p className="mt-3 text-xs text-muted-foreground">
-              First scan surfaced {firstSnapshot.summary.activeIssues} immediate issues.
+              First scan: {firstSnapshot.summary.activeIssues} findings.
             </p>
             <Link
               href={primaryFixPlanHref}
@@ -217,18 +213,13 @@ export default async function DashboardOverviewPage() {
           </div>
           <div className="mt-4 space-y-3">
             {firstSnapshot.issues.map((issue) => (
-              <div
+              <QueueEventRow
                 key={issue.id}
-                className="rounded-xl border border-border/70 bg-background/35 p-4"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold tracking-tight">{issue.title}</h3>
-                  <p className="text-sm font-semibold text-destructive">
-                    {formatImpactLabel(issue.estimatedMonthlyRevenueImpact)}
-                  </p>
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">{cleanPrimaryCopy(issue.recommendedAction)}</p>
-              </div>
+                severity={issue.severity}
+                title={issue.title}
+                meta={cleanPrimaryCopy(issue.recommendedAction)}
+                amount={formatImpactLabel(issue.estimatedMonthlyRevenueImpact)}
+              />
             ))}
           </div>
 
@@ -261,7 +252,7 @@ export default async function DashboardOverviewPage() {
             {journey.sourceLabel} source connected. Monitoring is active.
           </h1>
           <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-            First scan completed successfully, but there is not enough commercial activity yet for meaningful leakage analysis.
+            First scan complete — insufficient signal for leakage analysis. Monitoring continues.
           </p>
         </section>
 
@@ -269,10 +260,10 @@ export default async function DashboardOverviewPage() {
           <article className="surface-card-strong p-5 sm:p-6 lg:p-7">
             <p className="data-mono text-primary">No-Signal Outcome</p>
             <h2 className="mt-2 text-lg font-semibold tracking-tight">
-              Data pipeline is healthy. Analysis depth will increase with activity.
+              Data pipeline healthy. Coverage increases with activity.
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              CheckoutLeak will continue monitoring checkout and billing signals automatically as new activity arrives.
+              Monitoring continues. Checkout and billing coverage active.
             </p>
           </article>
 
@@ -301,7 +292,7 @@ export default async function DashboardOverviewPage() {
 
         <section className="surface-card p-5 sm:p-6 lg:p-7">
           <p className="text-sm text-muted-foreground">
-            No meaningful commercial signal was detected yet. Monitoring stays active and leakage scoring will update automatically as activity appears.
+            No leakage signal detected. Monitoring active.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link
@@ -326,7 +317,7 @@ export default async function DashboardOverviewPage() {
             {journey.snapshot.organization.name} is currently clean.
           </h1>
           <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-            CheckoutLeak analyzed available commercial signal and found no material leakage issues at this time.
+            No leaks detected. Coverage active.
           </p>
         </section>
 
@@ -334,17 +325,17 @@ export default async function DashboardOverviewPage() {
           <article className="surface-card-strong p-5 sm:p-6 lg:p-7">
             <p className="data-mono text-primary">Monitoring Status</p>
             <h2 className="mt-2 text-lg font-semibold tracking-tight">
-              Monitoring active with no material findings.
+              No leaks detected. Monitoring active.
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Source coverage is healthy and ongoing scan cycles will surface new issues automatically if risk appears.
+              Coverage healthy. Scan cycle continues.
             </p>
           </article>
 
           <article className="surface-card p-4 sm:p-5 lg:p-6">
             <p className="data-mono text-primary">Next Operator Move</p>
             <p className="mt-3 text-sm text-muted-foreground">
-              Keep sources connected and review store status periodically. No immediate corrective action is required.
+              No corrective action required. Keep sources connected and review store status periodically.
             </p>
             <div className="mt-5 flex flex-wrap gap-2.5">
               <Link
@@ -403,28 +394,26 @@ export default async function DashboardOverviewPage() {
           <p className="data-mono text-muted-foreground">Command Summary</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
-              <p className="text-sm text-muted-foreground">Estimated monthly leakage</p>
-              <p className="mt-1 text-3xl font-semibold tracking-tight text-destructive">
+              <p className="text-sm text-muted-foreground">Revenue at risk · 30d</p>
+              <p className="mt-1 font-mono text-3xl font-semibold tracking-tight text-signal tabular-nums">
                 {formatCompactCurrency(snapshot.summary.estimatedMonthlyLeakage)}
               </p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Active issues</p>
+              <p className="text-sm text-muted-foreground">Active findings</p>
               <p className="mt-1 text-3xl font-semibold tracking-tight">
                 {snapshot.summary.activeIssues}
               </p>
             </div>
           </div>
           <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-border/60 pt-4 text-xs">
-            <span className="rounded-md border border-border/70 px-2 py-1 text-muted-foreground">
+            <MetaPill>
               Highest impact: {formatImpactLabel(primaryIssue.estimatedMonthlyRevenueImpact)}
-            </span>
-            <span className="rounded-md border border-border/70 px-2 py-1 text-muted-foreground">
+            </MetaPill>
+            <MetaPill>
               Monitored stores: {snapshot.summary.monitoredStores}
-            </span>
-            <span className="rounded-md border border-primary/35 bg-primary/10 px-2 py-1 text-primary">
-              Confidence weighted prioritization enabled
-            </span>
+            </MetaPill>
+            <MetaPill className="text-primary">Confidence weighted prioritization enabled</MetaPill>
           </div>
         </article>
 
@@ -433,6 +422,9 @@ export default async function DashboardOverviewPage() {
           <h3 className="mt-2 text-lg font-semibold tracking-tight">
             {primaryIssue.title}
           </h3>
+          <div className="mt-2">
+            <SeverityPill severity={primaryIssue.severity} />
+          </div>
           <p className="mt-2 text-sm text-muted-foreground">
             {cleanPrimaryCopy(primaryIssue.recommendedAction)}
           </p>
@@ -455,7 +447,7 @@ export default async function DashboardOverviewPage() {
 
           <section className="surface-card space-y-4 p-4 sm:p-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold">Issue Feed</h2>
+              <h2 className="text-base font-semibold">Findings</h2>
               <p className="data-mono text-muted-foreground">
                 {snapshot.issues.length} items
               </p>
@@ -471,7 +463,7 @@ export default async function DashboardOverviewPage() {
                 ))
               ) : (
                 <div className="surface-card border-dashed p-8 text-center text-sm text-muted-foreground">
-                  No issues detected yet. Monitoring is active and issue insights will appear automatically as source activity grows.
+                  No findings. Monitoring active.
                 </div>
               )}
             </div>

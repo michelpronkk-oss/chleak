@@ -1,4 +1,3 @@
-import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 
@@ -51,7 +50,7 @@ const detectionCategories = [
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-4 font-mono text-[0.72rem] tracking-[0.12em] uppercase text-primary/65 sm:mb-5">
+    <p className="vault-eyebrow mb-4 sm:mb-5">
       {children}
     </p>
   )
@@ -60,7 +59,7 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 function SectionRule() {
   return (
     <div className="mx-auto max-w-6xl px-5 sm:px-8">
-      <div className="h-px bg-gradient-to-r from-transparent via-border/45 to-transparent" />
+      <div className="h-px bg-border/85" />
     </div>
   )
 }
@@ -115,7 +114,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
       />
 
       {/* Hero */}
-      <section className="relative mx-auto flex min-h-[calc(100svh-3.25rem)] w-full max-w-6xl flex-col px-5 pt-9 min-[390px]:pt-10 sm:block sm:min-h-0 sm:px-8 sm:pb-20 sm:pt-16 lg:pb-24 lg:pt-20">
+      <section className="relative mx-auto flex min-h-[calc(100svh-3.25rem)] w-full max-w-6xl flex-col px-5 pt-[calc(env(safe-area-inset-top)+2.75rem)] min-[390px]:pt-[calc(env(safe-area-inset-top)+3rem)] sm:block sm:min-h-0 sm:px-8 sm:pb-20 sm:pt-16 lg:pb-24 lg:pt-20">
         <div
           aria-hidden
           className="pointer-events-none absolute left-1/2 top-[-34px] hidden h-[640px] w-[1280px] -translate-x-1/2 blur-[96px] lg:block"
@@ -127,39 +126,31 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
 
         <div className="relative mx-auto flex-1 max-w-2xl text-center">
           <FadeIn delay={0.02}>
-            <div className="mb-5 sm:hidden">
-              <div className="inline-flex items-center gap-2.5 rounded-full border border-border/55 bg-card/25 px-3 py-1.5">
-                <Image
-                  src="/logo.png"
-                  alt="CheckoutLeak"
-                  width={18}
-                  height={18}
-                  className="rounded-sm object-contain"
-                  priority
-                />
-                <p className="text-[0.7rem] font-medium tracking-[0.06em] text-foreground/92">
-                  Checkout<span className="text-primary/75">Leak</span>
-                </p>
+            <div className="mb-7 sm:hidden">
+              <div className="vault-kicker-pill">
+                <span className="h-1 w-1 rounded-full bg-signal" />
+                Private / operator-grade
               </div>
             </div>
           </FadeIn>
 
           <FadeIn delay={0.04}>
-            <p className="mb-4 font-mono text-[0.65rem] tracking-[0.14em] uppercase text-primary/60 sm:mb-5 sm:text-[0.7rem]">
+            <p className="vault-eyebrow mb-5 sm:mb-5 sm:text-[0.7rem]">
               Private operator intelligence
             </p>
           </FadeIn>
 
           <FadeIn delay={0.08}>
             <h1 className="text-[2rem] font-semibold leading-[1.06] tracking-[-0.04em] text-foreground sm:text-[3.2rem] sm:leading-[1.02] lg:text-[4.35rem]">
-              Detect where revenue
+              <span className="font-display text-[1.04em] font-normal italic">Quiet instruments</span>
               <br />
-              is <span className="text-primary/60">leaking.</span>
+              <span className="font-normal">for loud </span>
+              <span className="font-normal text-signal">money.</span>
             </h1>
           </FadeIn>
 
           <FadeIn delay={0.12}>
-            <p className="mx-auto mt-4 max-w-[32ch] text-[0.92rem] leading-[1.7] text-muted-foreground sm:mt-5 sm:max-w-[44ch] sm:text-[1.04rem] sm:leading-[1.86]">
+            <p className="mx-auto mt-5 max-w-[32ch] text-[0.92rem] leading-[1.7] text-muted-foreground sm:mt-5 sm:max-w-[44ch] sm:text-[1.04rem] sm:leading-[1.86]">
               Surface the highest-impact checkout and billing issues across Shopify and Stripe. Ranked by monthly recovery. Actioned in order.
             </p>
           </FadeIn>
@@ -169,13 +160,13 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
               {isApproved ? (
                 <Link
                   href="/api/app/access?next=/app&intent=app&source=hero_open_app"
-                  className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold transition-all hover:-translate-y-px hover:opacity-90"
+                  className="marketing-primary-cta inline-flex items-center gap-2 rounded-md px-6 py-3 text-sm font-medium"
                 >
                   Open app <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               ) : isPending ? (
                 <div className="mx-auto text-center">
-                  <p className="font-mono text-[0.6rem] tracking-[0.1em] uppercase text-primary/60">
+                  <p className="font-mono text-[0.6rem] tracking-[0.08em] uppercase text-muted-foreground/70">
                     Access request
                   </p>
                   <p className="mt-2 text-[0.93rem] font-medium text-foreground">
@@ -195,7 +186,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
         </div>
 
         {/* Support strip — compositional anchor at the fold, mobile only */}
-        <div className="pb-7 pt-8 sm:hidden">
+        <div className="pb-5 pt-6 sm:hidden">
           <MobileHeroSupportStrip />
         </div>
       </section>
@@ -218,9 +209,9 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
             </p>
           </div>
 
-          <div className="hero-console-float rounded-xl border border-border/70 bg-card/45 p-3.5 sm:p-5 lg:p-6">
+          <div className="hero-console-float rounded-lg border border-border bg-card p-3.5 sm:p-5 lg:p-6">
             <div className="flex items-center justify-between gap-3">
-              <p className="font-mono text-[0.68rem] tracking-[0.1em] uppercase text-primary/70">
+              <p className="font-mono text-[0.68rem] tracking-[0.08em] uppercase text-muted-foreground/78">
                 Private Leak Console
               </p>
               <p className="flex items-center gap-1.5 font-mono text-[0.67rem] text-muted-foreground/55">
@@ -243,7 +234,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                         {signal.finding}
                       </p>
                     </div>
-                    <p className="shrink-0 font-mono text-[0.74rem] tracking-[0.05em] text-primary sm:text-[0.78rem]">
+                    <p className="shrink-0 font-mono text-[0.74rem] tracking-[0.05em] text-signal sm:text-[0.78rem]">
                       {signal.impact}
                     </p>
                   </div>
@@ -348,11 +339,11 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                   ].join(" ")}
                   style={{
                     border: plan.recommended
-                      ? "1px solid oklch(0.7899 0.1378 186.74 / 0.28)"
-                      : "1px solid oklch(0.3776 0.0204 254.66 / 0.35)",
+                      ? "1px solid var(--signal-line)"
+                      : "1px solid var(--line-default)",
                     background: plan.recommended
-                      ? "oklch(0.2329 0.0161 259.92 / 0.65)"
-                      : "oklch(0.2329 0.0161 259.92 / 0.28)",
+                      ? "linear-gradient(180deg, var(--signal-dim), var(--ink-100) 58%)"
+                      : "var(--ink-100)",
                   }}
                 >
                   {plan.recommended ? (
@@ -379,7 +370,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium text-foreground">{plan.name}</p>
                     {plan.recommended ? (
-                      <span className="font-mono text-[0.65rem] tracking-[0.1em] uppercase text-primary/80">
+                      <span className="font-mono text-[0.65rem] tracking-[0.08em] uppercase text-signal">
                         Recommended
                       </span>
                     ) : null}
@@ -414,8 +405,8 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                       href={cta.href}
                       className={
                         cta.primary
-                          ? "marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-px hover:opacity-90 sm:px-5 sm:py-3"
-                          : "inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border/60 bg-card/25 px-4 py-2.5 text-sm font-semibold text-muted-foreground sm:px-5 sm:py-3"
+                          ? "marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium sm:px-5 sm:py-3"
+                          : "vault-secondary-cta w-full gap-2 rounded-md px-4 py-2.5 text-sm font-medium text-muted-foreground sm:px-5 sm:py-3"
                       }
                     >
                       {cta.label}
@@ -467,7 +458,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                 <div className="mt-6">
                   <Link
                     href="/api/app/access?next=/app&intent=app&source=closing_open_app"
-                    className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold transition-all hover:-translate-y-px hover:opacity-90"
+                    className="marketing-primary-cta inline-flex items-center gap-2 rounded-md px-6 py-3 text-sm font-medium"
                   >
                     Open app <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
@@ -495,7 +486,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                 <div className="mt-6">
                   <Link
                     href="/request-access"
-                    className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold transition-all hover:-translate-y-px hover:opacity-90"
+                    className="marketing-primary-cta inline-flex items-center gap-2 rounded-md px-6 py-3 text-sm font-medium"
                   >
                     Request Access <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
@@ -508,5 +499,3 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
     </div>
   )
 }
-
-

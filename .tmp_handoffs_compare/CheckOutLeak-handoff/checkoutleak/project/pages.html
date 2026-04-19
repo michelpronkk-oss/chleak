@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Pages · Vault</title>
+<link rel="stylesheet" href="shared/vault.css" />
+<style>
+  .mockup { border: 1px solid var(--line-default); border-radius: var(--r-4); overflow: hidden; background: var(--ink-050); margin-bottom: 48px; }
+  .mockup-head { padding: 14px 20px; border-bottom: 1px solid var(--line-default); background: var(--ink-100); display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+  .mockup-label { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--text-primary); }
+  .mockup-n { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.05em; padding: 2px 8px; border: 1px solid var(--line-default); border-radius: var(--r-3); background: var(--ink-050); }
+  .mockup-desc { font-size: 12.5px; color: var(--text-secondary); font-family: var(--font-ui); max-width: 50ch; }
+  .frame { background: var(--ink-000); min-height: 500px; position: relative; }
+
+  /* Marketing */
+  .mkt-nav { padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line-subtle); }
+  .mkt-links { display: flex; gap: 24px; font-size: 13px; color: var(--text-secondary); }
+  .mkt-hero { padding: 100px 40px 120px; text-align: left; max-width: 820px; margin: 0 auto; position: relative; }
+  .mkt-kicker { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.08em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; border: 1px solid var(--line-default); border-radius: var(--r-3); }
+  .mkt-title { font-family: var(--font-display); font-style: italic; font-size: 82px; line-height: 0.95; letter-spacing: -0.035em; color: var(--text-primary); margin-top: 28px; }
+  .mkt-title .sans { font-family: var(--font-ui); font-style: normal; letter-spacing: -0.025em; }
+  .mkt-title .sig { color: var(--signal); }
+  .mkt-sub { font-size: 17px; color: var(--text-secondary); line-height: 1.55; margin-top: 24px; max-width: 52ch; }
+  .mkt-cta { margin-top: 32px; display: flex; gap: 12px; align-items: center; }
+  .mkt-stats { margin-top: 80px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line-default); border: 1px solid var(--line-default); border-radius: var(--r-4); overflow: hidden; max-width: 820px; }
+  .mkt-stat { background: var(--ink-100); padding: 24px; }
+  .mkt-stat .k { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
+  .mkt-stat .v { font-family: var(--font-mono); font-size: 32px; color: var(--signal); margin-top: 8px; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .mkt-stat .d { font-size: 12px; color: var(--text-secondary); margin-top: 6px; line-height: 1.5; }
+
+  /* Pricing */
+  .pr-head { padding: 60px 40px 40px; text-align: center; }
+  .pr-k { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.08em; text-transform: uppercase; }
+  .pr-t { font-family: var(--font-display); font-style: italic; font-size: 52px; letter-spacing: -0.025em; color: var(--text-primary); margin-top: 12px; }
+  .pr-sub { font-size: 15px; color: var(--text-secondary); margin-top: 12px; }
+  .pr-grid { padding: 0 40px 60px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: var(--line-default); border: 1px solid var(--line-default); border-radius: var(--r-4); overflow: hidden; }
+  .pr-col { background: var(--ink-100); padding: 32px 28px; position: relative; }
+  .pr-col.featured { background: var(--ink-150); }
+  .pr-col.featured::before { content: 'Recommended'; position: absolute; top: 12px; right: 12px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; padding: 2px 8px; color: var(--signal); border: 1px solid var(--signal-line); border-radius: var(--r-3); background: var(--signal-dim); text-transform: uppercase; }
+  .pr-name { font-size: 18px; font-weight: 500; color: var(--text-primary); }
+  .pr-price { font-family: var(--font-mono); font-size: 42px; color: var(--text-primary); margin-top: 14px; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .pr-price .unit { font-size: 16px; color: var(--text-tertiary); margin-left: 4px; }
+  .pr-desc { font-size: 13px; color: var(--text-secondary); margin-top: 10px; line-height: 1.55; min-height: 60px; }
+  .pr-feat { list-style: none; margin-top: 20px; padding: 20px 0 0; border-top: 1px solid var(--line-subtle); display: grid; gap: 10px; }
+  .pr-feat li { font-size: 13px; color: var(--text-secondary); padding-left: 18px; position: relative; }
+  .pr-feat li::before { content: ''; position: absolute; left: 0; top: 8px; width: 8px; height: 1px; background: var(--text-tertiary); }
+  .pr-btn { margin-top: 24px; width: 100%; padding: 10px; background: var(--ink-200); border: 1px solid var(--line-default); border-radius: var(--r-3); color: var(--text-primary); font-size: 13px; font-weight: 500; cursor: pointer; }
+  .pr-btn.primary { background: var(--text-primary); color: var(--text-inverse); border-color: var(--text-primary); }
+
+  /* Auth */
+  .auth-wrap { padding: 80px 0; display: flex; justify-content: center; }
+  .auth-card { width: 400px; padding: 36px; border: 1px solid var(--line-default); border-radius: var(--r-4); background: var(--ink-100); }
+  .auth-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
+  .auth-title { font-size: 22px; font-weight: 500; color: var(--text-primary); letter-spacing: -0.015em; }
+  .auth-sub { font-size: 13px; color: var(--text-secondary); margin-top: 6px; }
+  .auth-field { margin-top: 18px; }
+  .auth-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; display: block; margin-bottom: 6px; }
+  .auth-input { width: 100%; background: var(--ink-050); border: 1px solid var(--line-default); border-radius: var(--r-3); padding: 9px 12px; font-size: 13px; color: var(--text-primary); }
+  .auth-btn { margin-top: 20px; width: 100%; padding: 10px; background: var(--text-primary); color: var(--text-inverse); border-radius: var(--r-3); font-size: 13px; font-weight: 500; border: 0; cursor: pointer; }
+  .auth-alt { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line-subtle); font-size: 12.5px; color: var(--text-tertiary); font-family: var(--font-mono); letter-spacing: 0.02em; text-align: center; }
+
+  /* Onboarding */
+  .ob { padding: 60px 80px; max-width: 760px; margin: 0 auto; }
+  .ob-steps { display: flex; gap: 0; margin-bottom: 40px; font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+  .ob-steps .s { padding: 10px 16px; border-bottom: 2px solid var(--line-default); flex: 1; }
+  .ob-steps .s.active { color: var(--signal); border-color: var(--signal); }
+  .ob-steps .s.done { color: var(--text-secondary); border-color: var(--text-tertiary); }
+  .ob-title { font-family: var(--font-display); font-style: italic; font-size: 44px; letter-spacing: -0.025em; color: var(--text-primary); line-height: 1.05; }
+  .ob-sub { font-size: 14px; color: var(--text-secondary); margin-top: 14px; max-width: 56ch; line-height: 1.55; }
+  .ob-sources { margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line-default); border: 1px solid var(--line-default); border-radius: var(--r-4); overflow: hidden; }
+  .ob-source { background: var(--ink-100); padding: 24px; }
+  .ob-source .name { font-size: 16px; font-weight: 500; color: var(--text-primary); }
+  .ob-source .desc { font-size: 12.5px; color: var(--text-secondary); margin-top: 6px; line-height: 1.55; }
+  .ob-source .status { margin-top: 16px; font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); display: flex; align-items: center; gap: 8px; }
+  .ob-source button { margin-top: 14px; }
+
+  /* Billing */
+  .bl { padding: 40px; display: grid; grid-template-columns: 240px 1fr; gap: 40px; }
+  .bl-nav { font-size: 13px; display: grid; gap: 4px; }
+  .bl-nav a { padding: 6px 10px; border-radius: var(--r-3); color: var(--text-secondary); }
+  .bl-nav a.active { background: var(--ink-200); color: var(--text-primary); }
+  .bl-main { display: grid; gap: 24px; }
+  .bl-panel { background: var(--ink-100); border: 1px solid var(--line-default); border-radius: var(--r-4); padding: 24px; }
+  .bl-panel h3 { font-size: 15px; font-weight: 500; color: var(--text-primary); letter-spacing: -0.01em; }
+  .bl-panel .sub { font-size: 12.5px; color: var(--text-secondary); margin-top: 4px; }
+  .bl-plan { display: flex; justify-content: space-between; align-items: baseline; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line-subtle); }
+  .bl-plan .lhs { display: grid; gap: 4px; }
+  .bl-plan .name { font-family: var(--font-mono); font-size: 12px; color: var(--text-primary); letter-spacing: 0.04em; text-transform: uppercase; }
+  .bl-plan .meta { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+  .bl-plan .price { font-family: var(--font-mono); font-size: 28px; color: var(--text-primary); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .bl-card { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; }
+  .bl-card .pan { font-family: var(--font-mono); font-size: 13px; color: var(--text-primary); }
+
+  /* Findings detail */
+  .fd { padding: 32px 40px; }
+  .fd-crumb { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.04em; }
+  .fd-title { font-size: 28px; font-weight: 500; color: var(--text-primary); letter-spacing: -0.02em; margin-top: 8px; line-height: 1.2; }
+  .fd-title .mono { font-family: var(--font-mono); font-weight: 500; }
+  .fd-meta { display: flex; gap: 28px; margin-top: 18px; padding: 16px 0; border-top: 1px solid var(--line-subtle); border-bottom: 1px solid var(--line-subtle); }
+  .fd-meta .k { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
+  .fd-meta .v { font-family: var(--font-mono); font-size: 16px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .fd-body { margin-top: 24px; display: grid; grid-template-columns: 1fr 320px; gap: 32px; }
+  .fd-fix { padding: 20px; background: var(--ink-100); border: 1px solid var(--line-default); border-radius: var(--r-4); }
+  .fd-fix h4 { font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 12px; }
+  .fd-step { padding: 10px 0; border-top: 1px solid var(--line-subtle); font-size: 13px; color: var(--text-secondary); display: grid; grid-template-columns: 24px 1fr; gap: 12px; }
+  .fd-step:first-child { border-top: 0; }
+  .fd-step .n { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); padding-top: 2px; }
+  .fd-log { background: var(--ink-050); border: 1px solid var(--line-default); border-radius: var(--r-4); padding: 16px; font-family: var(--font-mono); font-size: 11px; line-height: 1.7; color: var(--text-secondary); }
+
+  /* Settings */
+  .set { padding: 32px 40px; }
+  .set-row { padding: 18px 0; border-top: 1px solid var(--line-subtle); display: grid; grid-template-columns: 240px 1fr auto; gap: 24px; align-items: center; }
+  .set-row:first-child { border-top: 0; }
+  .set-k { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+  .set-d { font-size: 12.5px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5; }
+
+  .btn-mini { padding: 6px 12px; background: var(--ink-200); border: 1px solid var(--line-default); border-radius: var(--r-3); color: var(--text-primary); font-size: 12px; font-weight: 500; cursor: pointer; }
+  .btn-mini.primary { background: var(--text-primary); color: var(--text-inverse); border-color: var(--text-primary); }
+
+  .tg { width: 32px; height: 18px; border-radius: 999px; background: var(--ink-300); position: relative; display: inline-block; }
+  .tg::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: var(--text-primary); border-radius: 50%; }
+  .tg.on { background: var(--signal); }
+  .tg.on::after { left: 16px; background: var(--text-inverse); }
+
+  /* Notifications */
+  .nt { padding: 32px 40px; }
+  .nt-row { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; padding: 16px 20px; border: 1px solid var(--line-default); border-radius: var(--r-4); background: var(--ink-100); align-items: center; margin-bottom: 10px; }
+  .nt-ic { width: 32px; height: 32px; border-radius: 50%; border: 1px solid; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <div class="chrome-inner">
+    <div class="brand"><div class="brand-mark"></div><div class="brand-name">CheckoutLeak</div><div class="brand-slash">/</div><div class="brand-section">Vault — Design System</div></div>
+    <nav class="chrome-nav">
+      <a href="index.html">Overview</a><a href="tokens.html">Tokens</a>
+      <a href="typography.html">Typography</a><a href="components.html">Components</a>
+      <a href="states.html">States</a>
+      <a href="pages.html" class="active">Pages</a>
+      <a href="dashboard.html">Dashboard</a><a href="mobile.html">Mobile</a><a href="content.html">Voice</a>
+    </nav>
+    <div class="chrome-meta"><span class="live"></span><span>v0.1 · draft</span></div>
+  </div>
+</div>
+
+<div class="doc">
+
+  <header class="doc-header">
+    <div class="doc-crumb"><span class="dot"></span> 05 · Patterns</div>
+    <h1 class="doc-title"><span class="n">05</span>Page patterns</h1>
+    <p class="doc-lede">Seven canonical page layouts. Each composes primitives from Components. Full dashboard grammar has its own page.</p>
+  </header>
+
+  <!-- MARKETING -->
+  <div class="mockup">
+    <div class="mockup-head">
+      <div class="mockup-label"><span class="mockup-n">P · 01</span>Marketing homepage</div>
+      <div class="mockup-desc">Editorial hero. One signal stat grid. Resist illustrations.</div>
+    </div>
+    <div class="frame">
+      <div class="mkt-nav">
+        <div class="brand"><div class="brand-mark"></div><div class="brand-name">CheckoutLeak</div></div>
+        <div class="mkt-links"><span>Product</span><span>Pricing</span><span>Log</span><span>Sign in</span></div>
+        <button class="btn-mini primary">Start audit</button>
+      </div>
+      <div class="mkt-hero">
+        <span class="mkt-kicker"><span style="width:4px; height:4px; background: var(--signal); border-radius: 50%;"></span>Private · operator-grade</span>
+        <div class="mkt-title"><em>Quiet instruments</em><br/><span class="sans">for loud <span class="sig">money.</span></span></div>
+        <div class="mkt-sub">CheckoutLeak detects revenue leakage across Shopify and Stripe — in checkout, payment setup, failed charges, and billing recovery. Invite-only.</div>
+        <div class="mkt-cta"><button class="btn-mini primary" style="padding: 10px 18px; font-size: 13px;">Request access</button><button class="btn-mini" style="padding: 10px 18px; font-size: 13px;">Read the audit</button></div>
+        <div class="mkt-stats">
+          <div class="mkt-stat"><div class="k">Avg. leak surface</div><div class="v">$84k<span class="unit" style="color: var(--text-tertiary); font-size: 16px; margin-left: 4px;">/ mo</span></div><div class="d">Median operator workspace, first 30 days.</div></div>
+          <div class="mkt-stat"><div class="k">Time to first finding</div><div class="v">00:04:12</div><div class="d">From connect to first critical, p50.</div></div>
+          <div class="mkt-stat"><div class="k">Recovered · customer base</div><div class="v">$14.2m</div><div class="d">Trailing 12 months across all workspaces.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRICING -->
+  <div class="mockup">
+    <div class="mockup-head">
+      <div class="mockup-label"><span class="mockup-n">P · 02</span>Pricing</div>
+      <div class="mockup-desc">Three tiers. Prices in mono. Recommended tier carries one signal pill.</div>
+    </div>
+    <div class="frame">
+      <div class="pr-head">
+        <div class="pr-k">Pricing</div>
+        <div class="pr-t">Priced to the money it finds.</div>
+        <div class="pr-sub">Three plans. Upgrade or cancel inside the workspace. Invoiced annually.</div>
+      </div>
+      <div class="pr-grid">
+        <div class="pr-col">
+          <div class="pr-name">Operator</div>
+          <div class="pr-price">$299<span class="unit">/mo</span></div>
+          <div class="pr-desc">For a single Shopify + Stripe account pair under $5m ARR.</div>
+          <ul class="pr-feat">
+            <li>Up to 2 sources</li>
+            <li>Hourly scans</li>
+            <li>Email + Slack alerts</li>
+            <li>30-day leak history</li>
+          </ul>
+          <button class="pr-btn">Select</button>
+        </div>
+        <div class="pr-col featured">
+          <div class="pr-name">Floor</div>
+          <div class="pr-price">$899<span class="unit">/mo</span></div>
+          <div class="pr-desc">For operators running real volume across multiple checkouts.</div>
+          <ul class="pr-feat">
+            <li>Up to 8 sources</li>
+            <li>5-minute scans</li>
+            <li>SMS + PagerDuty on critical</li>
+            <li>12-month leak history + audit</li>
+            <li>Fix-path playbooks</li>
+          </ul>
+          <button class="pr-btn primary">Select</button>
+        </div>
+        <div class="pr-col">
+          <div class="pr-name">Vault</div>
+          <div class="pr-price">Contact</div>
+          <div class="pr-desc">For platforms, multi-brand groups, and regulated environments.</div>
+          <ul class="pr-feat">
+            <li>Unlimited sources</li>
+            <li>Custom detection rules</li>
+            <li>SSO / SCIM · on-prem option</li>
+            <li>24/7 incident channel</li>
+          </ul>
+          <button class="pr-btn">Contact sales</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUTH -->
+  <div class="mockup">
+    <div class="mockup-head">
+      <div class="mockup-label"><span class="mockup-n">P · 03</span>Auth — sign in / create account</div>
+      <div class="mockup-desc">Single-column card. Centered. No illustration, no testimonial sidebar.</div>
+    </div>
+    <div class="frame">
+      <div class="auth-wrap">
+        <div class="auth-card">
+          <div class="auth-brand"><div class="brand-mark"></div><div class="brand-name">CheckoutLeak</div></div>
+          <div class="auth-title">Sign in</div>
+          <div class="auth-sub">Use the email associated with your workspace.</div>
+          <div class="auth-field"><label class="auth-label">Email</label><input class="auth-input" value="ops@north-goods.com" /></div>
+          <div class="auth-field"><label class="auth-label">Password</label><input class="auth-input" type="password" value="••••••••••" /></div>
+          <button class="auth-btn">Continue</button>
+          <div class="auth-alt">SSO · passkey · magic link</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ONBOARDING -->
+  <div class="mockup">
+    <div class="mockup-head">
+      <div class="mockup-label"><span class="mockup-n">P · 04</span>Onboarding — connect source</div>
+      <div class="mockup-desc">Two steps. Primary action: connect Stripe. Second source connected inside workspace.</div>
+    </div>
+    <div class="frame">
+      <div class="ob">
+        <div class="ob-steps">
+          <div class="s done">01 · Account</div>
+          <div class="s active">02 · Connect source</div>
+          <div class="s">03 · First scan</div>
+        </div>
+        <div class="ob-title">Connect a source.</div>
+        <div class="ob-sub">Connect Stripe or Shopify to begin. You can connect the second from within the workspace — leak detection sharpens with both linked.</div>
+        <div class="ob-sources">
+          <div class="ob-source">
+            <div class="name">Stripe</div>
+            <div class="desc">Read events, charges, invoices, setup intents, webhooks. Read-only scope — we never issue charges.</div>
+            <div class="status"><span style="width: 6px; height: 6px; background: var(--text-tertiary); border-radius: 50%;"></span>Not connected</div>
+            <button class="btn-mini primary">Connect Stripe</button>
+          </div>
+          <div class="ob-source">
+            <div class="name">Shopify</div>
+            <div class="desc">Read orders, checkouts, abandoned carts, customer events. Uses custom app install with read_orders scope.</div>
+            <div class="status"><span style="width: 6px; height: 6px; background: var(--text-tertiary); border-radius: 50%;"></span>Not connected</div>
+            <button class="btn-mini">Connect Shopify</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FINDINGS DETAIL -->
+  <div class="mockup">
+    <div class="mockup-head">
+      <div class="mockup-label"><span class="mockup-n">P · 05</span>Findings / issue detail</div>
+      <div class="mockup-desc">Exposure front, fix path on the right, technical evidence below.</div>
+    </div>
+    <div class="frame">
+      <div class="fd">
+        <div class="fd-crumb">Workspace · Findings · CHK-2884</div>
+        <div class="fd-title">Stripe webhook signature failing on <span class="mono">invoice.payment_failed</span></div>
+        <div class="fd-meta">
+          <div><div class="k">Severity</div><div class="v" style="color: var(--sev-critical);">Critical</div></div>
+          <div><div class="k">Exposure · 30d</div><div class="v" style="color: var(--signal);">$14,382.40</div></div>
+          <div><div class="k">First seen</div><div class="v" style="color: var(--text-secondary);">00:02:14 ago</div></div>
+          <div><div class="k">Source</div><div class="v" style="color: var(--text-secondary);">north-goods</div></div>
+          <div><div class="k">Events dropped</div><div class="v" style="color: var(--text-secondary);">38</div></div>
+        </div>
+        <div class="fd-body">
+          <div>
+            <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.55;">Stripe is rejecting your webhook signature on <span class="mono" style="color: var(--text-primary);">invoice.payment_failed</span> events. Your billing recovery pipeline hasn't received 38 events in the past 2 hours — so failed charges are not being retried and customers are not being notified. Exposure compounds at ~$7k/hr based on your current failure rate.</div>
+            <div class="fd-log" style="margin-top: 18px;"><span style="color: var(--text-quaternary);">14:02:38.412</span> POST /wh · sig <span style="color: var(--sev-critical);">401 invalid_signature</span> evt_1Pq3Y2<br/><span style="color: var(--text-quaternary);">14:02:39.001</span> POST /wh · sig <span style="color: var(--sev-critical);">401 invalid_signature</span> evt_1Pq3Y4<br/><span style="color: var(--text-quaternary);">14:02:40.218</span> POST /wh · sig <span style="color: var(--sev-critical);">401 invalid_signature</span> evt_1Pq3Y7<br/><span style="color: var(--text-quaternary);">14:02:41.885</span> POST /wh · sig <span style="color: var(--sev-critical);">401 invalid_signature</span> evt_1Pq3Y9<br/><span style="color: var(--text-quaternary);">…36 more dropped</span></div>
+          </div>
+          <div class="fd-fix">
+            <h4>Recommended fix path</h4>
+            <div class="fd-step"><div class="n">01</div><div><div style="color: var(--text-primary);">Rotate webhook signing secret</div><div style="color: var(--text-tertiary); font-size: 11.5px; margin-top: 2px;">Stripe dashboard → Developers → Webhooks</div></div></div>
+            <div class="fd-step"><div class="n">02</div><div><div style="color: var(--text-primary);">Update <span class="mono">STRIPE_WEBHOOK_SECRET</span> in prod</div><div style="color: var(--text-tertiary); font-size: 11.5px; margin-top: 2px;">Redeploy handlers</div></div></div>
+            <div class="fd-step"><div class="n">03</div><div><div style="color: var(--text-primary);">Replay dropped events</div><div style="color: var(--text-tertiary); font-size: 11.5px; margin-top: 2px;">38 queued · ~2 min replay</div></div></div>
+            <div style="display: flex; gap: 8px; margin-top: 16px;"><button class="btn-mini primary">Replay now</button><button class="btn-mini">Open playbook</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BILLING -->
+  <div class="mockup">
+    <div class="mockup-head">
+      <div class="mockup-label"><span class="mockup-n">P · 06</span>Billing</div>
+      <div class="mockup-desc">Plan + card on file + invoices. No upsells.</div>
+    </div>
+    <div class="frame">
+      <div class="bl">
+        <div class="bl-nav">
+          <a>Plan &amp; billing</a>
+          <a class="active">Payment method</a>
+          <a>Invoices</a>
+          <a>Team</a>
+          <a>Notifications</a>
+          <a>Security</a>
+        </div>
+        <div class="bl-main">
+          <div class="bl-panel">
+            <h3>Plan</h3>
+            <div class="sub">Upgrade or cancel at any time. Prorated.</div>
+            <div class="bl-plan">
+              <div class="lhs"><div class="name">Floor</div><div class="meta">renews 2026-05-14 · annual</div></div>
+              <div class="price">$10,788<span style="font-size: 13px; color: var(--text-tertiary); margin-left: 4px;">/yr</span></div>
+            </div>
+            <div style="margin-top: 14px; display: flex; gap: 8px;"><button class="btn-mini">Change plan</button><button class="btn-mini">Cancel</button></div>
+          </div>
+          <div class="bl-panel">
+            <h3>Payment method</h3>
+            <div class="sub">One card on file. Receipts mailed to ops@north-goods.com.</div>
+            <div class="bl-card" style="margin-top: 8px; border-top: 1px solid var(--line-subtle); padding-top: 16px;">
+              <div><div class="pan">•••• 4242 · exp 04/28</div><div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-top: 4px;">Visa · added 2025-09-02</div></div>
+              <button class="btn-mini">Replace</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS / NOTIFICATIONS -->
+  <div class="mockup">
+    <div class="mockup-head">
+      <div class="mockup-label"><span class="mockup-n">P · 07</span>Settings &amp; notifications</div>
+      <div class="mockup-desc">Row-based settings. Value on the left, control on the right.</div>
+    </div>
+    <div class="frame">
+      <div class="set">
+        <div class="set-row">
+          <div><div class="set-k">Workspace name</div><div class="set-d">Shown in the top chrome and invoice headers.</div></div>
+          <div><input class="auth-input" value="north-goods · ops" style="max-width: 280px;" /></div>
+          <button class="btn-mini">Save</button>
+        </div>
+        <div class="set-row">
+          <div><div class="set-k">Email alerts on critical</div><div class="set-d">Delivered to all workspace members within 30 seconds.</div></div>
+          <div><span class="tg on"></span></div>
+          <div class="mono" style="font-size: 11px; color: var(--text-tertiary);">on</div>
+        </div>
+        <div class="set-row">
+          <div><div class="set-k">SMS on revenue loss &gt; $1,000</div><div class="set-d">Uses the number on your profile. Twilio delivery.</div></div>
+          <div><span class="tg on"></span></div>
+          <div class="mono" style="font-size: 11px; color: var(--text-tertiary);">on</div>
+        </div>
+        <div class="set-row">
+          <div><div class="set-k">Slack digest · weekly</div><div class="set-d">Summary posted to #ops each Monday 09:00 local.</div></div>
+          <div><span class="tg"></span></div>
+          <div class="mono" style="font-size: 11px; color: var(--text-tertiary);">off</div>
+        </div>
+        <div class="set-row">
+          <div><div class="set-k">PagerDuty integration</div><div class="set-d">Open PD incident on any critical finding.</div></div>
+          <div><span class="tg"></span></div>
+          <button class="btn-mini">Connect</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

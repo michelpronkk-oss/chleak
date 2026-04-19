@@ -1,15 +1,8 @@
 import { Activity } from "lucide-react"
 
+import { ScanStatePill } from "@/components/dashboard/vault-primitives"
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
-import { cn } from "@/lib/utils"
 import type { Scan } from "@/types/domain"
-
-const statusStyles: Record<Scan["status"], string> = {
-  queued: "text-sky-300",
-  running: "text-primary",
-  completed: "text-emerald-300",
-  failed: "text-destructive",
-}
 
 export function ScanActivity({ scans }: { scans: Scan[] }) {
   return (
@@ -26,9 +19,7 @@ export function ScanActivity({ scans }: { scans: Scan[] }) {
           >
             <div className="flex items-center justify-between gap-2">
               <p className="font-medium">Scan {scan.id.slice(-4)}</p>
-              <span className={cn("text-xs uppercase", statusStyles[scan.status])}>
-                {scan.status}
-              </span>
+              <ScanStatePill status={scan.status} />
             </div>
             <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
               <span>{formatRelativeTimestamp(scan.scannedAt)}</span>
@@ -37,7 +28,7 @@ export function ScanActivity({ scans }: { scans: Scan[] }) {
                   {scan.detectedIssuesCount} issues | {formatCompactCurrency(scan.estimatedMonthlyLeakage)}
                 </span>
               ) : (
-                <span>Analyzing checkout and billing events</span>
+                <span>Scanning checkout and billing events</span>
               )}
             </div>
           </li>

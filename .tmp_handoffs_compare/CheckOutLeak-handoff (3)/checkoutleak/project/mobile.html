@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mobile · Vault</title>
+<link rel="stylesheet" href="shared/vault.css" />
+<style>
+  .phones { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+  .phone-wrap { display: grid; gap: 16px; }
+  .phone { width: 100%; max-width: 320px; margin: 0 auto; border: 1px solid var(--line-strong); border-radius: 32px; background: var(--ink-000); overflow: hidden; aspect-ratio: 9/19.5; position: relative; }
+  .phone-notch { height: 28px; background: transparent; position: relative; }
+  .phone-notch::after { content: ''; position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 60px; height: 14px; background: oklch(0.1 0.004 250); border-radius: 10px; }
+  .phone-status { padding: 4px 20px; display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 10px; color: var(--text-primary); }
+  .phone-body { padding: 16px 16px 72px; height: calc(100% - 60px); overflow: hidden; }
+
+  .m-top { display: flex; align-items: center; justify-content: space-between; padding-bottom: 14px; border-bottom: 1px solid var(--line-subtle); }
+  .m-brand { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-primary); font-weight: 500; }
+  .m-brand .bm { width: 12px; height: 12px; border: 1px solid var(--text-primary); position: relative; }
+  .m-brand .bm::after { content: ''; position: absolute; top: 2px; right: 2px; width: 4px; height: 4px; background: var(--signal); border-radius: 50%; }
+  .m-avatar { width: 24px; height: 24px; background: var(--ink-200); border: 1px solid var(--line-default); border-radius: 50%; font-size: 10px; font-family: var(--font-mono); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; }
+
+  .m-metric { padding: 20px 0 16px; border-bottom: 1px solid var(--line-subtle); }
+  .m-metric .k { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); }
+  .m-metric .v { font-family: var(--font-mono); font-size: 38px; color: var(--signal); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: 1; margin-top: 6px; }
+  .m-metric .d { font-family: var(--font-mono); font-size: 11px; color: var(--sev-high); margin-top: 8px; }
+
+  .m-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 14px 0 16px; border-bottom: 1px solid var(--line-subtle); }
+  .m-stats .cell { padding: 4px 0; }
+  .m-stats .k { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); }
+  .m-stats .v { font-family: var(--font-mono); font-size: 16px; color: var(--text-primary); font-variant-numeric: tabular-nums; margin-top: 4px; }
+
+  .m-sec { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); padding: 14px 0 8px; display: flex; justify-content: space-between; }
+
+  .m-ev { display: grid; grid-template-columns: 3px 1fr auto; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line-subtle); }
+  .m-ev:last-child { border-bottom: 0; }
+  .m-ev .s { background: currentColor; border-radius: 2px; }
+  .m-ev .t { font-size: 12px; color: var(--text-primary); line-height: 1.35; }
+  .m-ev .sub { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); margin-top: 3px; }
+  .m-ev .a { font-family: var(--font-mono); font-size: 12px; color: var(--signal); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .m-tab {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: var(--ink-050); border-top: 1px solid var(--line-default);
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0));
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+  }
+  .m-tab-item { padding: 8px 4px; text-align: center; font-size: 10px; color: var(--text-tertiary); font-family: var(--font-mono); letter-spacing: 0.04em; }
+  .m-tab-item.active { color: var(--signal); }
+  .m-tab-item .ic { width: 18px; height: 18px; margin: 0 auto 4px; border: 1px solid currentColor; border-radius: 3px; }
+
+  .m-cta {
+    position: absolute; bottom: 72px; left: 16px; right: 16px;
+    background: var(--text-primary); color: var(--text-inverse);
+    padding: 12px; border-radius: var(--r-3); font-size: 13px; font-weight: 500;
+    text-align: center;
+  }
+
+  .phone-label { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.04em; text-align: center; }
+
+  /* Detail screen */
+  .m-detail-title { font-size: 17px; font-weight: 500; color: var(--text-primary); letter-spacing: -0.01em; line-height: 1.25; margin-top: 10px; }
+  .m-detail-title .mono { font-family: var(--font-mono); font-size: 15px; }
+  .m-detail-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line-subtle); margin-top: 10px; }
+  .m-detail-meta .k { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); }
+  .m-detail-meta .v { font-family: var(--font-mono); font-size: 14px; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .m-fix-step { display: grid; grid-template-columns: 16px 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line-subtle); font-size: 12px; color: var(--text-secondary); }
+  .m-fix-step .n { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); }
+
+  /* Empty / no source */
+  .m-empty { padding: 20px; text-align: center; border: 1px dashed var(--line-strong); border-radius: var(--r-4); background: var(--ink-050); margin-top: 18px; }
+  .m-empty .t { font-size: 14px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px; }
+  .m-empty .d { font-size: 11.5px; color: var(--text-secondary); line-height: 1.5; }
+
+  /* rules */
+  .rules-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 48px; }
+  .rule-card { padding: 24px; border: 1px solid var(--line-default); border-radius: var(--r-4); background: var(--ink-100); }
+  .rule-n { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); letter-spacing: 0.05em; }
+  .rule-t { font-size: 15px; font-weight: 500; color: var(--text-primary); margin-top: 6px; letter-spacing: -0.005em; }
+  .rule-d { font-size: 13px; color: var(--text-secondary); margin-top: 8px; line-height: 1.55; }
+  .rule-spec { margin-top: 14px; font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); background: var(--ink-050); border: 1px solid var(--line-default); border-radius: var(--r-3); padding: 10px 12px; line-height: 1.7; }
+  .rule-spec b { color: var(--text-secondary); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <div class="chrome-inner">
+    <div class="brand"><div class="brand-mark"></div><div class="brand-name">CheckoutLeak</div><div class="brand-slash">/</div><div class="brand-section">Vault — Design System</div></div>
+    <nav class="chrome-nav">
+      <a href="index.html">Overview</a><a href="tokens.html">Tokens</a>
+      <a href="typography.html">Typography</a><a href="components.html">Components</a>
+      <a href="states.html">States</a><a href="pages.html">Pages</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="mobile.html" class="active">Mobile</a>
+      <a href="content.html">Voice</a>
+    </nav>
+    <div class="chrome-meta"><span class="live"></span><span>v0.1 · draft</span></div>
+  </div>
+</div>
+
+<div class="doc">
+
+  <header class="doc-header">
+    <div class="doc-crumb"><span class="dot"></span> 07 · Surface</div>
+    <h1 class="doc-title"><span class="n">07</span>Mobile</h1>
+    <p class="doc-lede">Mobile CheckoutLeak is an alert console, not a dashboard. The operator is not analyzing on a phone — they are triaging. Density compresses, primary actions pin to thumb-reach, and the leak queue becomes the home screen.</p>
+  </header>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">07.1</div>
+      <div>
+        <div class="section-title">Three canonical screens</div>
+        <div class="section-kicker">Home, finding detail, and an empty / incomplete-coverage state. Every other mobile view composes from these.</div>
+      </div>
+    </div>
+
+    <div class="phones">
+      <div class="phone-wrap">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-status"><span>9:41</span><span>●●● 5G</span></div>
+          <div class="phone-body">
+            <div class="m-top">
+              <div class="m-brand"><div class="bm"></div>CheckoutLeak</div>
+              <div class="m-avatar">NG</div>
+            </div>
+
+            <div class="m-metric">
+              <div class="k">Revenue at risk · 30d</div>
+              <div class="v">$84,120</div>
+              <div class="d">▲ 14.8% vs prior</div>
+            </div>
+
+            <div class="m-stats">
+              <div class="cell"><div class="k">Open</div><div class="v">14</div></div>
+              <div class="cell"><div class="k">Crit</div><div class="v" style="color: var(--sev-critical);">2</div></div>
+              <div class="cell"><div class="k">Scan</div><div class="v" style="color: var(--ok); font-size: 13px;">live</div></div>
+            </div>
+
+            <div class="m-sec"><span>Leak queue</span><span>by $</span></div>
+
+            <div class="m-ev"><div class="s" style="color: var(--sev-critical);"></div><div><div class="t">Webhook signature failing</div><div class="sub">invoice.payment_failed · 38</div></div><div class="a">$14.3k</div></div>
+            <div class="m-ev"><div class="s" style="color: var(--sev-critical);"></div><div><div class="t">Setup intent requires_action</div><div class="sub">62 customers · EU</div></div><div class="a">$9.8k</div></div>
+            <div class="m-ev"><div class="s" style="color: var(--sev-high);"></div><div><div class="t">3DS retry disabled</div><div class="sub">EU card cohort · 412 tx</div></div><div class="a">$6.9k</div></div>
+            <div class="m-ev"><div class="s" style="color: var(--sev-high);"></div><div><div class="t">Dunning halted</div><div class="sub">polar-coffee · subs</div></div><div class="a">$4.2k</div></div>
+          </div>
+          <div class="m-cta">Resolve top finding</div>
+          <div class="m-tab">
+            <div class="m-tab-item active"><div class="ic"></div>Leaks</div>
+            <div class="m-tab-item"><div class="ic"></div>Sources</div>
+            <div class="m-tab-item"><div class="ic"></div>Recovered</div>
+            <div class="m-tab-item"><div class="ic"></div>More</div>
+          </div>
+        </div>
+        <div class="phone-label">M · 01 · Home (leak queue)</div>
+      </div>
+
+      <div class="phone-wrap">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-status"><span>9:42</span><span>●●● 5G</span></div>
+          <div class="phone-body">
+            <div class="m-top">
+              <div style="font-size: 12px; color: var(--text-secondary);">← Queue</div>
+              <div style="font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary);">CHK-2884</div>
+            </div>
+
+            <div style="margin-top: 16px;">
+              <span style="font-family: var(--font-mono); font-size: 10px; padding: 2px 6px; border-radius: var(--r-3); color: var(--sev-critical); border: 1px solid oklch(0.64 0.22 22 / 0.35); background: var(--sev-critical-bg); letter-spacing: 0.04em;">CRITICAL</span>
+              <div class="m-detail-title">Stripe webhook signature failing on <span class="mono">invoice.payment_failed</span></div>
+            </div>
+
+            <div class="m-detail-meta">
+              <div><div class="k">Exposure</div><div class="v" style="color: var(--signal);">$14,382</div></div>
+              <div><div class="k">First seen</div><div class="v" style="color: var(--text-secondary);">00:02 ago</div></div>
+              <div><div class="k">Dropped</div><div class="v" style="color: var(--text-secondary);">38</div></div>
+              <div><div class="k">Source</div><div class="v" style="color: var(--text-secondary); font-size: 11px;">north-goods</div></div>
+            </div>
+
+            <div class="m-sec" style="padding-top: 16px;"><span>Fix path</span><span>~4 min</span></div>
+
+            <div class="m-fix-step"><div class="n">01</div><div>Rotate webhook signing secret</div></div>
+            <div class="m-fix-step"><div class="n">02</div><div>Update <span class="mono" style="color: var(--text-primary);">STRIPE_WEBHOOK_SECRET</span> in prod</div></div>
+            <div class="m-fix-step"><div class="n">03</div><div>Replay 38 dropped events</div></div>
+          </div>
+          <div class="m-cta">Open playbook</div>
+          <div class="m-tab">
+            <div class="m-tab-item active"><div class="ic"></div>Leaks</div>
+            <div class="m-tab-item"><div class="ic"></div>Sources</div>
+            <div class="m-tab-item"><div class="ic"></div>Recovered</div>
+            <div class="m-tab-item"><div class="ic"></div>More</div>
+          </div>
+        </div>
+        <div class="phone-label">M · 02 · Finding detail</div>
+      </div>
+
+      <div class="phone-wrap">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-status"><span>9:43</span><span>●●● 5G</span></div>
+          <div class="phone-body">
+            <div class="m-top">
+              <div class="m-brand"><div class="bm"></div>CheckoutLeak</div>
+              <div class="m-avatar">NG</div>
+            </div>
+
+            <div class="m-metric">
+              <div class="k">Revenue at risk · 30d</div>
+              <div class="v" style="color: var(--text-primary);">$0.00</div>
+              <div class="d" style="color: var(--ok);">All clear · no issues</div>
+            </div>
+
+            <div class="m-stats">
+              <div class="cell"><div class="k">Open</div><div class="v">0</div></div>
+              <div class="cell"><div class="k">Scan</div><div class="v" style="color: var(--ok); font-size: 13px;">live</div></div>
+              <div class="cell"><div class="k">Next</div><div class="v" style="font-size: 13px; color: var(--text-secondary);">04:00</div></div>
+            </div>
+
+            <div class="m-sec"><span>Coverage</span><span>partial</span></div>
+
+            <div class="m-empty">
+              <div class="t">Shopify not connected</div>
+              <div class="d">Leak detection is partial until both sources are linked. You can connect from your desktop workspace.</div>
+            </div>
+
+            <div style="margin-top: 20px; font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); line-height: 1.8;">
+              <div style="display: flex; justify-content: space-between;"><span style="color: var(--ok);">● Stripe · connected</span><span>p99 · 890ms</span></div>
+              <div style="display: flex; justify-content: space-between; margin-top: 4px;"><span>● Shopify · not connected</span><span>—</span></div>
+            </div>
+          </div>
+          <div class="m-tab">
+            <div class="m-tab-item active"><div class="ic"></div>Leaks</div>
+            <div class="m-tab-item"><div class="ic"></div>Sources</div>
+            <div class="m-tab-item"><div class="ic"></div>Recovered</div>
+            <div class="m-tab-item"><div class="ic"></div>More</div>
+          </div>
+        </div>
+        <div class="phone-label">M · 03 · All clear / incomplete coverage</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="section-ix">07.2</div>
+      <div>
+        <div class="section-title">Mobile rules</div>
+        <div class="section-kicker">Mobile is a different product, not a smaller product.</div>
+      </div>
+    </div>
+
+    <div class="rules-grid">
+      <div class="rule-card">
+        <div class="rule-n">M · R1</div>
+        <div class="rule-t">Spacing compresses, type does not shrink below 12px.</div>
+        <div class="rule-d">Padding drops one step: desktop 24 → mobile 16; desktop 16 → mobile 12. Type scale stays. The primary metric stays at 34–38px.</div>
+        <div class="rule-spec"><b>spec —</b> panel padding 16px · section gap 14px · body 13px · meta 10px min</div>
+      </div>
+      <div class="rule-card">
+        <div class="rule-n">M · R2</div>
+        <div class="rule-t">Bottom tab bar, never a hamburger.</div>
+        <div class="rule-d">Four tabs: Leaks, Sources, Recovered, More. Leaks is always the default landing tab. The tab bar is the operator's root navigation; secondary routes live inside tabs.</div>
+        <div class="rule-spec"><b>spec —</b> 4 items · 56px tall + safe-area · active item uses signal color for icon + label</div>
+      </div>
+      <div class="rule-card">
+        <div class="rule-n">M · R3</div>
+        <div class="rule-t">Panels stack linearly. No side-by-side on phone.</div>
+        <div class="rule-d">The desktop 2-column grid collapses to a single column in this order: primary metric → stats row → queue → next move → source health. Source health is always below the fold.</div>
+        <div class="rule-spec"><b>spec —</b> single column · never horizontal scroll · panel boundaries hairline only</div>
+      </div>
+      <div class="rule-card">
+        <div class="rule-n">M · R4</div>
+        <div class="rule-t">The primary CTA pins above the tab bar.</div>
+        <div class="rule-d">The single "resolve top finding" or "open fix path" action floats in the thumb zone. It is never scrolled off-screen. On the all-clear state, the CTA disappears entirely rather than rewording to "scan now."</div>
+        <div class="rule-spec"><b>spec —</b> pinned bottom · 16px inset · 44px min hit · hidden when no action applies</div>
+      </div>
+      <div class="rule-card">
+        <div class="rule-n">M · R5</div>
+        <div class="rule-t">Currency truncates with a 'k' or 'm' above $10,000.</div>
+        <div class="rule-d">On mobile, $14,382.40 renders as $14.3k. Full precision remains available on the detail screen. Truncation is a mobile rule, never a desktop one — never lose digits on desktop.</div>
+        <div class="rule-spec"><b>spec —</b> &lt; $10k → full · $10k–$1m → $14.3k · &gt; $1m → $4.2m</div>
+      </div>
+      <div class="rule-card">
+        <div class="rule-n">M · R6</div>
+        <div class="rule-t">Touch targets are 44 × 44px minimum.</div>
+        <div class="rule-d">This applies to every interactive element — queue rows, toggles, tab items, severity pills. A row smaller than 44px tall gets vertical padding, not a smaller font.</div>
+        <div class="rule-spec"><b>spec —</b> row min-height 56px · tap padding overrides design padding · no 12px-tall controls</div>
+      </div>
+      <div class="rule-card">
+        <div class="rule-n">M · R7</div>
+        <div class="rule-t">What collapses, what stays.</div>
+        <div class="rule-d">Collapses: the workspace side-nav (becomes 'More'), the evidence log (behind a tap), the severity legend (behind Help). Stays persistent: the primary metric, the queue, the source-health dot summary.</div>
+        <div class="rule-spec"><b>spec —</b> persistent: metric, queue, health dots · collapsed: nav, evidence, legend, rules</div>
+      </div>
+      <div class="rule-card">
+        <div class="rule-n">M · R8</div>
+        <div class="rule-t">Push notifications match severity.</div>
+        <div class="rule-d">Critical → interruptive push with amount in the title. High → silent push with badge. Medium / low → no push; digest only. A push notification from CheckoutLeak is an operator promise: "this was worth waking up for."</div>
+        <div class="rule-spec"><b>spec —</b> crit · interrupt + amount · high · silent + badge · med / low · digest</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
