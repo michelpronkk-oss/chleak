@@ -5,7 +5,7 @@ export const pricingPlans: PricingPlan[] = [
     id: "starter",
     name: "Starter",
     monthlyPrice: 149,
-    summary: "Checkout leak detection for growing Shopify stores.",
+    summary: "Single-store checkout and billing detection.",
     highlight: "1 monitored store",
     features: [
       "Checkout funnel leak detection",
@@ -19,7 +19,7 @@ export const pricingPlans: PricingPlan[] = [
     id: "growth",
     name: "Growth",
     monthlyPrice: 399,
-    summary: "Full leak coverage for operators running multiple stores.",
+    summary: "Detection across up to three Shopify stores.",
     highlight: "Up to 3 monitored stores",
     features: [
       "Daily automated scans",
@@ -34,7 +34,7 @@ export const pricingPlans: PricingPlan[] = [
     id: "pro",
     name: "Pro",
     monthlyPrice: 899,
-    summary: "Complete coverage and dedicated support for high-GMV operations.",
+    summary: "Full coverage for unlimited stores and scale.",
     highlight: "Unlimited monitored stores",
     features: [
       "Near real-time scanning",

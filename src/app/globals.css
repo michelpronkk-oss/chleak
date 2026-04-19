@@ -274,9 +274,8 @@
   body {
     @apply bg-background text-foreground;
     background-image:
-      radial-gradient(1100px 680px at 88% -12%, oklch(0.78 0.13 75 / 0.07), transparent 62%),
-      radial-gradient(860px 520px at 14% -16%, oklch(0.70 0.06 230 / 0.1), transparent 62%),
-      linear-gradient(180deg, oklch(0.11 0.006 250 / 0.2), transparent 48%);
+      radial-gradient(1100px 680px at 88% -12%, oklch(0.78 0.13 75 / 0.055), transparent 62%),
+      linear-gradient(180deg, oklch(0.11 0.006 250 / 0.22), transparent 50%);
   }
   html {
     @apply font-sans;
@@ -555,16 +554,13 @@
 
 @keyframes heroImpactPulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(70, 225, 215, 0.05);
-    border-color: color-mix(in oklab, var(--color-primary) 30%, transparent);
+    border-color: color-mix(in oklab, var(--signal) 18%, transparent);
   }
   50% {
-    box-shadow: 0 0 0 1px rgba(70, 225, 215, 0.14), 0 0 26px rgba(70, 225, 215, 0.12);
-    border-color: color-mix(in oklab, var(--color-primary) 48%, transparent);
+    border-color: color-mix(in oklab, var(--signal) 32%, transparent);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(70, 225, 215, 0.05);
-    border-color: color-mix(in oklab, var(--color-primary) 30%, transparent);
+    border-color: color-mix(in oklab, var(--signal) 18%, transparent);
   }
 }
 

@@ -103,24 +103,14 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
 
   return (
     <div className="relative" style={{ overflowX: "clip" }}>
-      <div
-        aria-hidden
-        className="pointer-events-none absolute right-0 top-0 -z-10 h-[900px] w-[900px]"
-        style={{
-          transform: "translate(30%, -30%)",
-          background:
-            "radial-gradient(ellipse at center, rgba(70,225,215,0.08), transparent 70%)",
-        }}
-      />
-
       {/* Hero */}
       <section className="relative mx-auto flex min-h-[calc(100svh-3.25rem)] w-full max-w-6xl flex-col px-5 pt-[calc(env(safe-area-inset-top)+2.75rem)] min-[390px]:pt-[calc(env(safe-area-inset-top)+3rem)] sm:block sm:min-h-0 sm:px-8 sm:pb-20 sm:pt-16 lg:pb-24 lg:pt-20">
         <div
           aria-hidden
-          className="pointer-events-none absolute left-1/2 top-[-34px] hidden h-[640px] w-[1280px] -translate-x-1/2 blur-[96px] lg:block"
+          className="pointer-events-none absolute left-1/2 top-0 hidden h-[560px] w-[1200px] -translate-x-1/2 blur-[120px] lg:block"
           style={{
             background:
-              "radial-gradient(130% 92% at 50% 44%, rgba(70,225,215,0.02) 0%, rgba(70,225,215,0.011) 36%, rgba(70,225,215,0.004) 58%, rgba(70,225,215,0) 82%), radial-gradient(145% 102% at 50% 58%, rgba(56,113,190,0.014) 0%, rgba(56,113,190,0.005) 46%, rgba(56,113,190,0) 78%)",
+              "radial-gradient(70% 50% at 50% 0%, oklch(0.78 0.13 75 / 0.03), transparent 100%)",
           }}
         />
 
@@ -142,16 +132,16 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
 
           <FadeIn delay={0.08}>
             <h1 className="text-[2rem] font-semibold leading-[1.06] tracking-[-0.04em] text-foreground sm:text-[3.2rem] sm:leading-[1.02] lg:text-[4.35rem]">
-              <span className="font-display text-[1.04em] font-normal italic">Quiet instruments</span>
+              <span className="font-display text-[1.04em] font-normal italic">Revenue leaks,</span>
               <br />
-              <span className="font-normal">for loud </span>
-              <span className="font-normal text-signal">money.</span>
+              <span className="font-normal">ranked by </span>
+              <span className="font-normal text-signal">recovery.</span>
             </h1>
           </FadeIn>
 
           <FadeIn delay={0.12}>
             <p className="mx-auto mt-5 max-w-[32ch] text-[0.92rem] leading-[1.7] text-muted-foreground sm:mt-5 sm:max-w-[44ch] sm:text-[1.04rem] sm:leading-[1.86]">
-              Surface the highest-impact checkout and billing issues across Shopify and Stripe. Ranked by monthly recovery. Actioned in order.
+              Checkout and billing leaks ranked by monthly revenue exposure. Each finding includes root cause, impact estimate, and fix path. Shopify and Stripe.
             </p>
           </FadeIn>
 
@@ -296,7 +286,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
           <div className="mt-6 sm:mt-8">
             <Link
               href="/product"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-primary transition-opacity hover:opacity-70"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               Review what gets detected <ArrowRight className="h-3.5 w-3.5" />
             </Link>
@@ -353,7 +343,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                         className="absolute inset-x-0 top-0 h-px rounded-t-xl"
                         style={{
                           background:
-                            "linear-gradient(to right, transparent, oklch(0.7899 0.1378 186.74 / 0.55), transparent)",
+                            "linear-gradient(to right, transparent, oklch(0.78 0.13 75 / 0.45), transparent)",
                         }}
                       />
                       <div
@@ -361,7 +351,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                         className="pointer-events-none absolute inset-0 -z-10 rounded-xl"
                         style={{
                           background:
-                            "radial-gradient(ellipse at 50% 0%, rgba(70,225,215,0.07), transparent 65%)",
+                            "radial-gradient(ellipse at 50% 0%, oklch(0.78 0.13 75 / 0.06), transparent 65%)",
                         }}
                       />
                     </>
@@ -376,21 +366,22 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
                     ) : null}
                   </div>
 
-                  <div className="mt-3">
-                    <span className="font-mono text-[1.9rem] font-semibold leading-none tracking-[-0.02em] text-foreground">
+                  <div className="mt-3 flex items-baseline gap-1.5">
+                    <span className="font-mono text-[1.9rem] font-medium leading-none tracking-[-0.02em] text-foreground">
                       ${plan.monthlyPrice}
                     </span>
-                    <span className="ml-1.5 text-sm text-muted-foreground">/mo</span>
+                    <span className="text-sm text-muted-foreground">/mo</span>
                   </div>
 
-                  <p className="mt-2 text-[0.84rem] leading-[1.62] text-muted-foreground sm:text-sm">
+                  <p className="mt-1.5 font-mono text-[0.63rem] tracking-[0.06em] uppercase text-muted-foreground/50">
+                    {plan.highlight}
+                  </p>
+
+                  <p className="mt-2 min-h-[2.75rem] text-[0.84rem] leading-[1.62] text-muted-foreground sm:min-h-[2.85rem] sm:text-sm">
                     {plan.summary}
                   </p>
 
-                  <div
-                    className="my-3.5 h-px"
-                    style={{ background: "oklch(0.3776 0.0204 254.66 / 0.35)" }}
-                  />
+                  <div className="my-4 h-px" style={{ background: "var(--line-subtle)" }} />
 
                   <ul className="flex-1 space-y-2">
                     {plan.features.map((feature) => (
@@ -434,15 +425,7 @@ export default async function MarketingHomePage({ accessState }: MarketingHomePa
               className="pointer-events-none absolute inset-0 -z-10"
               style={{
                 background:
-                  "radial-gradient(ellipse at 50% 0%, rgba(70,225,215,0.06), transparent 70%)",
-              }}
-            />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 -z-10"
-              style={{
-                background:
-                  "radial-gradient(ellipse at 50% 100%, rgba(56,113,190,0.04), transparent 70%)",
+                  "radial-gradient(ellipse at 50% 0%, oklch(0.78 0.13 75 / 0.04), transparent 70%)",
               }}
             />
 
