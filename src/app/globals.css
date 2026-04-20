@@ -391,6 +391,7 @@
   }
 
   .vault-panel-shell {
+    position: relative;
     border: 1px solid var(--line-default);
     border-radius: var(--r-4);
     background: var(--ink-100);

@@ -22,7 +22,7 @@ const revenueBandOptions = [
   { value: "20m_plus", label: "$20M+ / year" },
 ]
 
-const inputClass = "w-full h-auto px-3.5 py-3 text-sm text-foreground outline-none transition-colors"
+const inputClass = "w-full h-auto px-3.5 py-3 text-base sm:text-sm text-foreground outline-none transition-colors"
 
 const labelClass =
   "mb-1.5 block font-mono text-[0.62rem] tracking-[0.08em] uppercase text-muted-foreground/62"

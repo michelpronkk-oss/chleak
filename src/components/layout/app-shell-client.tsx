@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { motion } from "motion/react"
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -66,11 +67,14 @@ export function AppShellClient({
   liveMonitors,
 }: AppShellClientProps) {
   const pathname = usePathname()
-  const signOutFormId = "app-shell-signout-form"
+
+  async function handleSignOut() {
+    await fetch("/api/auth/sign-out?next=/", { method: "POST" }).catch(() => {})
+    window.location.assign("/")
+  }
 
   return (
     <div className="relative min-h-screen">
-      <form id={signOutFormId} action="/api/auth/sign-out?next=/" method="POST" className="hidden" />
       {/* Desktop sidebar */}
       <aside className="hidden w-64 flex-col border-r border-border/60 bg-sidebar/60 px-4 py-5 backdrop-blur lg:fixed lg:inset-y-0 lg:flex xl:w-72">
         <div className="px-1">
@@ -88,7 +92,7 @@ export function AppShellClient({
               className={cn(
                 "relative flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] transition-colors",
                 isNavActive(pathname, item.href)
-                  ? "bg-sidebar-accent/80 text-sidebar-accent-foreground font-medium before:absolute before:-left-2 before:top-2 before:bottom-2 before:w-[2px] before:rounded-full before:bg-foreground/30"
+                  ? "bg-sidebar-accent/80 text-foreground font-medium before:absolute before:-left-2 before:top-2 before:bottom-2 before:w-[2px] before:rounded-full before:bg-signal/70"
                   : "text-muted-foreground hover:bg-sidebar-accent/40 hover:text-foreground"
               )}
             >
@@ -193,7 +197,7 @@ export function AppShellClient({
                   <DropdownMenuItem
                     className="py-2"
                     variant="destructive"
-                    render={<button type="submit" form={signOutFormId} />}
+                    onClick={handleSignOut}
                   >
                     <LogOut className="h-4 w-4" />
                     Sign out
@@ -205,7 +209,15 @@ export function AppShellClient({
         </header>
 
         <main className="app-shell-main min-h-[calc(100vh-3.5rem)] px-4 py-5 sm:min-h-[calc(100vh-4rem)] sm:px-6 sm:py-6 lg:px-8 lg:py-7">
-          <div className="mx-auto max-w-7xl">{children}</div>
+          <motion.div
+            key={pathname}
+            className="mx-auto max-w-7xl"
+            initial={{ opacity: 0, y: 9 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: [0.22, 0.61, 0.36, 1] }}
+          >
+            {children}
+          </motion.div>
         </main>
       </div>
 
@@ -219,7 +231,7 @@ export function AppShellClient({
               className={cn(
                 "flex flex-1 flex-col items-center gap-1 rounded-lg px-2 py-2 text-[10px] font-medium transition-colors",
                 isNavActive(pathname, item.href)
-                  ? "bg-sidebar-accent/80 text-foreground font-medium"
+                  ? "bg-sidebar-accent/70 text-foreground font-medium"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >

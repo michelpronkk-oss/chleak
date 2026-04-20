@@ -12,6 +12,24 @@ export default function AuthLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <div className="relative min-h-screen" style={{ overflowX: "clip" }}>
+      {/* Ambient dot-grid */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px)",
+          backgroundSize: "28px 28px",
+          opacity: 0.032,
+          maskImage: "radial-gradient(ellipse 90% 70% at 50% 30%, black 20%, transparent 80%)",
+          WebkitMaskImage: "radial-gradient(ellipse 90% 70% at 50% 30%, black 20%, transparent 80%)",
+        }}
+      />
+      {/* Amber bloom */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[900px] -translate-x-1/2 blur-[120px]"
+        style={{ background: "radial-gradient(60% 50% at 50% 0%, oklch(0.78 0.13 75 / 0.055), transparent 100%)" }}
+      />
       <header className="relative z-10 border-b border-border/40">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-5 sm:h-16 sm:px-8">
           <CheckoutLeakLogo />

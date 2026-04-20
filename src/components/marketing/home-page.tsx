@@ -5,6 +5,7 @@ import { FadeIn } from "@/components/motion/fade-in"
 import { HeroSignalRail } from "@/components/marketing/hero-signal-rail"
 import { KickerDot } from "@/components/marketing/kicker-dot"
 import { RequestAccessForm } from "@/components/marketing/request-access-form"
+import { SignalConsole } from "@/components/marketing/signal-console"
 import { pricingPlans } from "@/data/mock/pricing"
 import type { PublicAccessState } from "@/lib/auth/public-access"
 
@@ -13,16 +14,25 @@ const signals = [
     label: "Checkout completion variance",
     finding: "Shipping step friction on mobile checkout traffic",
     impact: "High priority",
+    severity: "high" as const,
   },
   {
     label: "Wallet method mismatch",
     finding: "iOS high-intent sessions without wallet coverage",
     impact: "Coverage gap",
+    severity: "medium" as const,
   },
   {
     label: "Failed renewal recovery",
     finding: "Recoverable renewal failures without smart retries",
     impact: "Recovery gap",
+    severity: "medium" as const,
+  },
+  {
+    label: "Payment method decline rate",
+    finding: "Elevated card declines on cross-border traffic segment",
+    impact: "Recovery gap",
+    severity: "medium" as const,
   },
 ]
 
@@ -95,8 +105,8 @@ function getPricingCta(input: { accessState: PublicAccessState; isAuthenticated:
   }
 
   return {
-    label: "Request Access",
-    href: `/api/app/access?next=/request-access&intent=choose-plan&plan=${input.planId}`,
+    label: "Request access",
+    href: `/request-access?plan=${input.planId}`,
     primary: true,
   }
 }
@@ -112,15 +122,28 @@ export default async function MarketingHomePage({ accessState, isAuthenticated }
 
   return (
     <div className="relative" style={{ overflowX: "clip" }}>
+      {/* Hero dot-grid — full-bleed, fades to bottom */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[calc(100svh+4rem)]"
+        style={{
+          backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px)",
+          backgroundSize: "28px 28px",
+          opacity: 0.045,
+          maskImage: "linear-gradient(to bottom, black 30%, transparent 88%)",
+          WebkitMaskImage: "linear-gradient(to bottom, black 30%, transparent 88%)",
+        }}
+      />
+
       {/* Hero */}
       <section className="relative mx-auto flex min-h-[calc(100svh-1rem)] w-full max-w-6xl flex-col px-5 pt-[calc(env(safe-area-inset-top)+2.75rem)] min-[390px]:pt-[calc(env(safe-area-inset-top)+3rem)] sm:block sm:min-h-0 sm:px-8 sm:pb-20 sm:pt-16 lg:pb-24 lg:pt-20">
-        {/* Desktop hero bloom — near-invisible ambient depth, desktop only */}
+        {/* Hero bloom */}
         <div
           aria-hidden
-          className="pointer-events-none absolute left-1/2 top-0 hidden h-[480px] w-[1000px] -translate-x-1/2 blur-[130px] lg:block"
+          className="pointer-events-none absolute left-1/2 top-0 hidden h-[560px] w-[1100px] -translate-x-1/2 blur-[140px] lg:block"
           style={{
             background:
-              "radial-gradient(70% 50% at 50% 0%, oklch(0.78 0.13 75 / 0.025), transparent 100%)",
+              "radial-gradient(70% 50% at 50% 0%, oklch(0.78 0.13 75 / 0.072), transparent 100%)",
           }}
         />
 
@@ -218,44 +241,9 @@ export default async function MarketingHomePage({ accessState, isAuthenticated }
               Illustrative output showing how issues are prioritized for operator action.
             </p>
           </div>
-
-          <div className="hero-console-float rounded-lg border border-border bg-card p-3.5 sm:p-5 lg:p-6">
-            <div className="flex items-center justify-between gap-3">
-              <p className="font-mono text-[0.68rem] tracking-[0.08em] uppercase text-muted-foreground/78">
-                Private Leak Console
-              </p>
-              <p className="flex items-center gap-1.5 font-mono text-[0.67rem] text-muted-foreground/55">
-                <span className="hero-live-indicator h-1.5 w-1.5 rounded-full bg-primary/65" />
-                ranked by impact
-              </p>
-            </div>
-
-            <div className="mt-3 h-px bg-gradient-to-r from-transparent via-border/45 to-transparent" />
-
-            <div className="mt-1.5">
-              {signals.map((signal, index) => (
-                <div key={signal.label}>
-                  <div className="flex items-center gap-2 py-2.5 sm:grid sm:grid-cols-[1.2fr_2fr_auto] sm:items-center sm:gap-4 sm:py-3.5">
-                    <div className="min-w-0 flex-1 sm:contents">
-                      <p className="truncate font-mono text-[0.62rem] tracking-[0.09em] uppercase text-muted-foreground/50 sm:text-[0.67rem]">
-                        {signal.label}
-                      </p>
-                      <p className="mt-0.5 text-[0.82rem] leading-[1.5] text-foreground/90 sm:mt-0 sm:text-sm">
-                        {signal.finding}
-                      </p>
-                    </div>
-                    <p className="shrink-0 font-mono text-[0.74rem] tracking-[0.05em] text-signal sm:text-[0.78rem]">
-                      {signal.impact}
-                    </p>
-                  </div>
-                  {index < signals.length - 1 ? (
-                    <div className="h-px bg-border/22" />
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          </div>
         </FadeIn>
+
+        <SignalConsole signals={signals} />
       </section>
 
       <SectionRule />

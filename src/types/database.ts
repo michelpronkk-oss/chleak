@@ -28,6 +28,8 @@ export type Database = {
           approved_by: string | null
           approval_email_sent_at: string | null
           request_received_email_sent_at: string | null
+          rejected_at: string | null
+          rejection_email_sent_at: string | null
         }
         Insert: {
           id?: string
@@ -47,6 +49,8 @@ export type Database = {
           approved_by?: string | null
           approval_email_sent_at?: string | null
           request_received_email_sent_at?: string | null
+          rejected_at?: string | null
+          rejection_email_sent_at?: string | null
         }
         Update: {
           id?: string
@@ -66,6 +70,8 @@ export type Database = {
           approved_by?: string | null
           approval_email_sent_at?: string | null
           request_received_email_sent_at?: string | null
+          rejected_at?: string | null
+          rejection_email_sent_at?: string | null
         }
         Relationships: []
       }

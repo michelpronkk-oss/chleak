@@ -1,5 +1,3 @@
-"use server"
-
 import { NextResponse } from "next/server"
 
 import { PUBLIC_ACCESS_EMAIL_COOKIE } from "@/lib/auth/public-access"
