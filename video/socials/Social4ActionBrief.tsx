@@ -6,6 +6,7 @@
 import React from "react"
 import { AbsoluteFill } from "remotion"
 import { useTransparentLogo } from "../hooks/useTransparentLogo"
+import { SocialDotLayer } from "../components/SocialDotLayer"
 import { C, F } from "../components/tokens"
 
 function DetailRow({ label, value, valueColor = C.text }: { label: string; value: string; valueColor?: string }) {
@@ -60,6 +61,7 @@ export function Social4ActionBrief() {
         background: "radial-gradient(circle at 50% 50%, transparent 54%, rgba(0,0,0,0.20) 100%)",
         pointerEvents: "none",
       }} />
+      <SocialDotLayer />
 
       {/* Headline */}
       <div style={{ textAlign: "center", marginBottom: 28, position: "relative", zIndex: 1 }}>

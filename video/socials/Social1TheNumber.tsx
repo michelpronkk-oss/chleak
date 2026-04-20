@@ -6,6 +6,7 @@
 import React from "react"
 import { AbsoluteFill } from "remotion"
 import { useTransparentLogo } from "../hooks/useTransparentLogo"
+import { SocialDotLayer } from "../components/SocialDotLayer"
 import { C, F } from "../components/tokens"
 
 const findings = [
@@ -46,6 +47,7 @@ export function Social1TheNumber() {
         background: "radial-gradient(circle at 50% 50%, transparent 55%, rgba(0,0,0,0.22) 100%)",
         pointerEvents: "none",
       }} />
+      <SocialDotLayer />
 
       {/* Wordmark row */}
       <div style={{

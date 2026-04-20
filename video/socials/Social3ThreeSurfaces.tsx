@@ -6,6 +6,7 @@
 import React from "react"
 import { AbsoluteFill } from "remotion"
 import { useTransparentLogo } from "../hooks/useTransparentLogo"
+import { SocialDotLayer } from "../components/SocialDotLayer"
 import { C, F } from "../components/tokens"
 
 const surfaces = [
@@ -64,6 +65,7 @@ export function Social3ThreeSurfaces() {
         background: "radial-gradient(circle at 50% 50%, transparent 54%, rgba(0,0,0,0.20) 100%)",
         pointerEvents: "none",
       }} />
+      <SocialDotLayer />
 
       {/* Header */}
       <div style={{ textAlign: "center", marginBottom: 32, position: "relative", zIndex: 1, width: "100%" }}>

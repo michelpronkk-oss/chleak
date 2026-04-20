@@ -6,6 +6,7 @@
 import React from "react"
 import { AbsoluteFill } from "remotion"
 import { useTransparentLogo } from "../hooks/useTransparentLogo"
+import { SocialDotLayer } from "../components/SocialDotLayer"
 import { C, F } from "../components/tokens"
 
 const findings = [
@@ -44,6 +45,7 @@ export function Social2RankedPanel() {
         background: "radial-gradient(circle at 50% 50%, transparent 52%, rgba(0,0,0,0.20) 100%)",
         pointerEvents: "none",
       }} />
+      <SocialDotLayer />
 
       {/* Headline */}
       <div style={{ textAlign: "center", marginBottom: 28, position: "relative", zIndex: 1 }}>

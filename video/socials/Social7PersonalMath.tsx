@@ -5,6 +5,7 @@
  */
 import React from "react"
 import { AbsoluteFill } from "remotion"
+import { SocialDotLayer } from "../components/SocialDotLayer"
 import { C, F } from "../components/tokens"
 
 export function Social7PersonalMath() {
@@ -33,6 +34,7 @@ export function Social7PersonalMath() {
         background: "radial-gradient(circle at 50% 50%, transparent 52%, rgba(0,0,0,0.22) 100%)",
         pointerEvents: "none",
       }} />
+      <SocialDotLayer />
 
       {/* Top label */}
       <div style={{ position: "relative", zIndex: 1 }}>

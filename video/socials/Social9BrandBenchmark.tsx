@@ -6,6 +6,7 @@
 import React from "react"
 import { AbsoluteFill } from "remotion"
 import { useTransparentLogo } from "../hooks/useTransparentLogo"
+import { SocialDotLayer } from "../components/SocialDotLayer"
 import { C, F } from "../components/tokens"
 
 export function Social9BrandBenchmark() {
@@ -37,6 +38,7 @@ export function Social9BrandBenchmark() {
         background: "radial-gradient(circle at 50% 50%, transparent 52%, rgba(0,0,0,0.20) 100%)",
         pointerEvents: "none",
       }} />
+      <SocialDotLayer />
 
       {/* Eyebrow */}
       <div style={{

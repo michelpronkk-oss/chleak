@@ -6,6 +6,7 @@
 import React from "react"
 import { AbsoluteFill } from "remotion"
 import { useTransparentLogo } from "../hooks/useTransparentLogo"
+import { SocialDotLayer } from "../components/SocialDotLayer"
 import { C, F } from "../components/tokens"
 
 const lines = [
@@ -42,6 +43,7 @@ export function Social5Editorial() {
         background: "radial-gradient(circle at 50% 50%, transparent 52%, rgba(0,0,0,0.18) 100%)",
         pointerEvents: "none",
       }} />
+      <SocialDotLayer />
 
       {/* Top — wordmark */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, position: "relative", zIndex: 1 }}>

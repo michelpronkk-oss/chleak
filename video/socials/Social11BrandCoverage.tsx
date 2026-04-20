@@ -6,6 +6,7 @@
 import React from "react"
 import { AbsoluteFill } from "remotion"
 import { useTransparentLogo } from "../hooks/useTransparentLogo"
+import { SocialDotLayer } from "../components/SocialDotLayer"
 import { C, F } from "../components/tokens"
 
 const surfaces = [
@@ -61,6 +62,7 @@ export function Social11BrandCoverage() {
         background: "radial-gradient(circle at 50% 50%, transparent 52%, rgba(0,0,0,0.22) 100%)",
         pointerEvents: "none",
       }} />
+      <SocialDotLayer />
 
       {/* Header */}
       <div style={{ textAlign: "center", marginBottom: 32, position: "relative", zIndex: 1 }}>

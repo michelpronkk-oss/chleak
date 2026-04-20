@@ -1,21 +1,16 @@
 import Link from "next/link"
 
 import { CheckoutLeakLogo } from "@/components/brand/logo"
+import { getPublicAccessState } from "@/lib/auth/public-access"
 import { getServerSession } from "@/lib/auth/session"
 
-const productLinks = [
+const baseProductLinks = [
   { label: "Product", href: "/product" },
   { label: "Pricing", href: "/pricing" },
 ]
 
-const openAppLink = {
-  label: "Open app",
-  href: "/api/app/access?next=/app&source=footer_open_app",
-}
-
 const companyLinks = [
   { label: "Contact", href: "/contact" },
-  { label: "Request Access", href: "/request-access" },
 ]
 
 const legalLinks = [
@@ -24,15 +19,20 @@ const legalLinks = [
 ]
 
 export async function MarketingFooter() {
-  const session = await getServerSession()
+  const [session, accessState] = await Promise.all([
+    getServerSession(),
+    getPublicAccessState(),
+  ])
   const isAuthenticated = session !== null
 
-  const resolvedProductLinks = isAuthenticated
-    ? [...productLinks, openAppLink]
-    : productLinks
+  const ctaLink = isAuthenticated
+    ? { label: "Open app", href: "/api/app/access?next=/app&source=footer_cta" }
+    : accessState === "approved"
+      ? { label: "Sign in", href: "/auth/sign-in" }
+      : { label: "Request Access", href: "/request-access" }
 
   const footerGroups = [
-    { title: "Product", links: resolvedProductLinks },
+    { title: "Product", links: [...baseProductLinks, ctaLink] },
     { title: "Company", links: companyLinks },
     { title: "Legal", links: legalLinks },
   ]
