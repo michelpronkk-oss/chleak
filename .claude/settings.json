@@ -3,7 +3,8 @@
     "allow": [
       "Read(//c/c/Users/miche/Desktop/Checkoutleak/**)",
       "Bash(npx tsc *)",
-      "Bash(node -e \"require\\('motion/react'\\)\")"
+      "Bash(node -e \"require\\('motion/react'\\)\")",
+      "Bash(python3 -c \" import sys, json lines = sys.stdin.read\\(\\).strip\\(\\).split\\('\\\\n'\\) for line in lines[-20:]: try: obj = json.loads\\(line\\) if obj.get\\('type'\\) in ['human', 'assistant']: role = obj.get\\('type', ''\\) content = obj.get\\('content', ''\\) if isinstance\\(content, list\\): for c in content: if isinstance\\(c, dict\\) and c.get\\('type'\\) == 'text': print\\(f'[{role}]: {c[\\\\\"text\\\\\"][:300]}'\\) elif isinstance\\(content, str\\): print\\(f'[{role}]: {content[:300]}'\\) except: pass \")"
     ],
     "additionalDirectories": [
       "c:\\Users\\miche\\Desktop\\Checkoutleak\\src\\app\\api\\internal\\access-requests\\[id]"

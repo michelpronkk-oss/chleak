@@ -129,7 +129,7 @@ export default async function MarketingHomePage({ accessState, isAuthenticated }
         style={{
           backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px)",
           backgroundSize: "28px 28px",
-          opacity: 0.045,
+          opacity: 0.075,
           maskImage: "linear-gradient(to bottom, black 30%, transparent 88%)",
           WebkitMaskImage: "linear-gradient(to bottom, black 30%, transparent 88%)",
         }}

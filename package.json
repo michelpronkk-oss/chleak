@@ -6,11 +6,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "video:preview": "remotion studio video/index.tsx",
+    "video:render": "remotion render video/index.tsx CheckoutLeakVideo out/checkoutleak.mp4",
+    "video:render:mobile": "remotion render video/index.tsx CheckoutLeakMobile out/checkoutleak-mobile.mp4",
+    "social:render": "remotion still video/index.tsx Social1TheNumber --output=out/social-1-number.jpg && remotion still video/index.tsx Social2RankedPanel --output=out/social-2-panel.jpg && remotion still video/index.tsx Social3ThreeSurfaces --output=out/social-3-surfaces.jpg && remotion still video/index.tsx Social4ActionBrief --output=out/social-4-brief.jpg && remotion still video/index.tsx Social5Editorial --output=out/social-5-editorial.jpg && remotion still video/index.tsx Social6PersonalContrarian --output=out/social-6-contrarian.jpg && remotion still video/index.tsx Social7PersonalMath --output=out/social-7-math.jpg && remotion still video/index.tsx Social8PersonalList --output=out/social-8-list.jpg && remotion still video/index.tsx Social9BrandBenchmark --output=out/social-9-benchmark.jpg && remotion still video/index.tsx Social10BrandWeekly --output=out/social-10-weekly.jpg && remotion still video/index.tsx Social11BrandCoverage --output=out/social-11-coverage.jpg"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.0",
     "@hookform/resolvers": "^5.2.2",
+    "@remotion/cli": "^4.0.450",
+    "@remotion/player": "^4.0.450",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.3",
     "class-variance-authority": "^0.7.1",
@@ -26,6 +32,7 @@
     "react-dom": "19.2.4",
     "react-hook-form": "^7.72.1",
     "recharts": "^3.8.1",
+    "remotion": "^4.0.450",
     "resend": "^6.12.0",
     "shadcn": "^4.3.0",
     "sonner": "^2.0.7",

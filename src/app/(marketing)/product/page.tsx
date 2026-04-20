@@ -51,21 +51,21 @@ const softwareSchema = {
 
 const detectionSurfaces = [
   {
-    title: "Checkout leakage",
+    title: "Checkout intelligence",
     description:
-      "Step-level conversion breaks by device, market, and session quality so operators can isolate where intent is lost.",
+      "Conversion breaks resolved to the step, device, and market segment where intent is lost. Each finding carries a monthly exposure estimate, not just a drop-off rate.",
     signal: "Shipping step drop-off variance",
   },
   {
-    title: "Payment coverage mismatch",
+    title: "Payment coverage",
     description:
-      "Wallet and local method gaps where high-intent traffic is not matched with the right payment options.",
+      "Method availability mapped against live traffic composition. Wallet gaps, local method deficits, and high-intent sessions without a matching option surface as ranked revenue findings.",
     signal: "iOS wallet coverage gap",
   },
   {
-    title: "Billing recovery leakage",
+    title: "Billing recovery",
     description:
-      "Failed renewal and dunning inefficiencies quantified as recoverable monthly revenue exposure.",
+      "Failed renewals and retry inefficiency quantified as recoverable exposure. Dunning logic that underperforms against volume stops being invisible and becomes a ranked line item.",
     signal: "Retry cadence underperforming",
   },
 ]
@@ -215,12 +215,12 @@ export default async function ProductPage() {
         {/* Detection surfaces */}
         <section className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-8 sm:py-16 lg:py-20">
           <InViewReveal>
-            <p className="vault-eyebrow mb-3">Detection surfaces</p>
+            <p className="vault-eyebrow mb-3">Recovery signal families</p>
             <h2 className="text-[1.55rem] font-semibold leading-[1.13] tracking-[-0.03em] sm:text-[2.05rem] lg:text-[2.35rem]">
-              What gets detected.
+              Three surfaces. Every finding ranked by exposure.
             </h2>
-            <p className="mt-3 max-w-[42ch] text-[0.9rem] leading-[1.75] text-muted-foreground sm:mt-4 sm:text-[0.97rem]">
-              Three signal families. Each produces ranked findings with impact estimates and a next action.
+            <p className="mt-3 max-w-[44ch] text-[0.9rem] leading-[1.75] text-muted-foreground sm:mt-4 sm:text-[0.97rem]">
+              CheckoutLeak analyzes checkout behavior, payment method coverage, and billing recovery as a unified system. Each finding carries a monthly impact estimate and a next action.
             </p>
           </InViewReveal>
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

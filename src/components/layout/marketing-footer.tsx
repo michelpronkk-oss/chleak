@@ -1,36 +1,42 @@
 import Link from "next/link"
 
 import { CheckoutLeakLogo } from "@/components/brand/logo"
+import { getServerSession } from "@/lib/auth/session"
 
-const footerGroups = [
-  {
-    title: "Product",
-    links: [
-      { label: "Product", href: "/product" },
-      { label: "Pricing", href: "/pricing" },
-      {
-        label: "Open app",
-        href: "/api/app/access?next=/app&source=footer_open_app",
-      },
-    ],
-  },
-  {
-    title: "Company",
-    links: [
-      { label: "Contact", href: "/contact" },
-      { label: "Request Access", href: "/request-access" },
-    ],
-  },
-  {
-    title: "Legal",
-    links: [
-      { label: "Terms of Use", href: "/terms" },
-      { label: "Privacy Policy", href: "/privacy" },
-    ],
-  },
+const productLinks = [
+  { label: "Product", href: "/product" },
+  { label: "Pricing", href: "/pricing" },
 ]
 
-export function MarketingFooter() {
+const openAppLink = {
+  label: "Open app",
+  href: "/api/app/access?next=/app&source=footer_open_app",
+}
+
+const companyLinks = [
+  { label: "Contact", href: "/contact" },
+  { label: "Request Access", href: "/request-access" },
+]
+
+const legalLinks = [
+  { label: "Terms of Use", href: "/terms" },
+  { label: "Privacy Policy", href: "/privacy" },
+]
+
+export async function MarketingFooter() {
+  const session = await getServerSession()
+  const isAuthenticated = session !== null
+
+  const resolvedProductLinks = isAuthenticated
+    ? [...productLinks, openAppLink]
+    : productLinks
+
+  const footerGroups = [
+    { title: "Product", links: resolvedProductLinks },
+    { title: "Company", links: companyLinks },
+    { title: "Legal", links: legalLinks },
+  ]
+
   return (
     <footer className="border-t border-border py-8 sm:py-10">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
@@ -60,10 +66,7 @@ export function MarketingFooter() {
                 <ul className="mt-3 space-y-2.5">
                   {group.links.map((link) => (
                     <li key={link.label}>
-                      <Link
-                        href={link.href}
-                        className="vault-link text-sm"
-                      >
+                      <Link href={link.href} className="vault-link text-sm">
                         {link.label}
                       </Link>
                     </li>
