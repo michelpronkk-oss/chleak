@@ -42,7 +42,7 @@ export function buildRequestReceivedTemplate(input: RequestReceivedTemplateInput
                   <p style="margin:0 0 22px 0;font-family:monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:#c89a10;">Request received</p>
                   <h1 style="margin:0 0 20px 0;font-size:21px;font-weight:600;letter-spacing:-0.025em;line-height:1.25;color:#dde3f0;">Your request is on file.</h1>
                   <p style="margin:0 0 14px 0;font-size:14px;line-height:1.78;color:#5a6a88;">Hi ${input.fullName},</p>
-                  <p style="margin:0 0 14px 0;font-size:14px;line-height:1.78;color:#5a6a88;">Every submission is reviewed manually before access is granted. No automated queue, no auto-approvals — a real person reads every request.</p>
+                  <p style="margin:0 0 14px 0;font-size:14px;line-height:1.78;color:#5a6a88;">Every submission is reviewed manually before access is granted. No automated queue, no auto-approvals. A real person reads every request.</p>
                   <p style="margin:0 0 0 0;font-size:14px;line-height:1.78;color:#5a6a88;">If your application is a fit, we will reach out directly at this address. No action is needed from you at this stage.</p>
 
                   <!-- Divider -->
@@ -168,7 +168,7 @@ export function buildAccessRejectionTemplate(input: AccessRejectionTemplateInput
             <p style="margin:0 0 10px 0;font-family:monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#4a5a7a;">Access review complete</p>
             <h1 style="margin:0 0 14px 0;font-size:22px;font-weight:600;letter-spacing:-0.025em;line-height:1.2;color:#e8ecf4;">We're not moving forward.</h1>
             <p style="margin:0 0 16px 0;font-size:14px;line-height:1.75;color:#6c7898;">Hi ${input.fullName},</p>
-            <p style="margin:0 0 16px 0;font-size:14px;line-height:1.75;color:#6c7898;">We reviewed your request and it's not a fit for early access at this time. This is not a reflection of your business — we're onboarding a narrow set of operators in this phase.</p>
+            <p style="margin:0 0 16px 0;font-size:14px;line-height:1.75;color:#6c7898;">We reviewed your request and it's not a fit for early access at this time. This is not a reflection of your business. We are onboarding a narrow set of operators in this phase.</p>
             <p style="margin:0 0 0 0;font-size:14px;line-height:1.75;color:#6c7898;">You're welcome to reapply if your situation changes or when we open broader access.</p>
             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
               <tr><td style="height:1px;background-color:#1e2640;font-size:0;line-height:0;">&nbsp;</td></tr>
