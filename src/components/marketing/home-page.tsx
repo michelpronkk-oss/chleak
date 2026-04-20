@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react"
 
 import { FadeIn } from "@/components/motion/fade-in"
 import { HeroSignalRail } from "@/components/marketing/hero-signal-rail"
+import { KickerDot } from "@/components/marketing/kicker-dot"
 import { RequestAccessForm } from "@/components/marketing/request-access-form"
 import { pricingPlans } from "@/data/mock/pricing"
 import type { PublicAccessState } from "@/lib/auth/public-access"
@@ -127,7 +128,7 @@ export default async function MarketingHomePage({ accessState, isAuthenticated }
           <FadeIn delay={0.02}>
             <div className="mb-6 sm:mb-8">
               <div className="vault-kicker-pill">
-                <span className="h-1 w-1 rounded-full bg-signal" />
+                <KickerDot />
                 Private / operator-grade
               </div>
             </div>
