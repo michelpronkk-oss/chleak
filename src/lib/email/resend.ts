@@ -19,7 +19,7 @@ interface SendEmailBaseInput {
 
 function getResendConfig() {
   const apiKey = process.env.RESEND_API_KEY
-  const fromEmail = process.env.RESEND_FROM_EMAIL
+  const fromEmail = process.env.RESEND_FROM_EMAIL ?? process.env.RESEND_FROM
 
   return {
     apiKey,
