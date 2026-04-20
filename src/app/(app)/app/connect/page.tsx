@@ -12,6 +12,7 @@ import { getConnectJourneyData } from "@/server/services/app-service"
 import { DisconnectButton } from "./disconnect-button"
 import { PostOauthHandoff } from "./post-oauth-handoff"
 import { ShopifyConnectSubmitButton } from "./shopify-connect-submit-button"
+import { StripeConnectSubmitButton } from "./stripe-connect-submit-button"
 
 const statusMessage: Record<string, string> = {
   setup_required: "Stripe connect setup is incomplete in this environment.",
@@ -295,13 +296,7 @@ export default async function ConnectPage({
             ) : data.stripeConfigured ? (
               <form method="GET" action="/api/integrations/stripe/connect">
                 <input type="hidden" name="orgId" value={data.organization.id} />
-                <button
-                  type="submit"
-                  className="marketing-primary-cta inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-transform hover:-translate-y-px sm:w-auto"
-                >
-                  Connect Stripe
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </button>
+                <StripeConnectSubmitButton />
               </form>
             ) : (
               <div className="space-y-3 rounded-lg border border-border/60 bg-background/30 p-4">

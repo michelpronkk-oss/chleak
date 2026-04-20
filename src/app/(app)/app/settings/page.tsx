@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 import { SubmitButton } from "@/components/ui/submit-button"
 import { getSettingsData } from "@/server/services/app-service"
 import { updateOperatorProfile, updateWorkspaceSettings } from "./actions"
+import { SignOutButton } from "./sign-out-button"
 
 const timezones = [
   "UTC",
@@ -246,12 +247,7 @@ export default async function SettingsPage() {
         </header>
         <div className="px-4 py-4 sm:px-5">
           <form action="/api/auth/sign-out?next=/" method="POST">
-            <button
-              type="submit"
-              className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-2.5 text-sm text-destructive transition-opacity hover:opacity-85"
-            >
-              Sign out
-            </button>
+            <SignOutButton />
           </form>
         </div>
       </section>
