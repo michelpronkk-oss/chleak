@@ -73,9 +73,9 @@ export async function POST(request: Request) {
       .single()
 
     if (error) {
-      // Unique constraint = duplicate email; silently succeed, do not resend email
+      // Unique constraint = duplicate email; silently succeed, surface existing flag to client
       if (error.code === "23505") {
-        const response = NextResponse.json({ success: true })
+        const response = NextResponse.json({ success: true, existing: true })
         setAccessCookie(response, email)
         return response
       }
