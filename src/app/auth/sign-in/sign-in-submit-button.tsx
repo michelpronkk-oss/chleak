@@ -1,10 +1,19 @@
 "use client"
 
+import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { Loader2 } from "lucide-react"
-import { useState } from "react"
 
 export function SignInSubmitButton() {
   const [pending, setPending] = useState(false)
+  const searchParams = useSearchParams()
+
+  // When the magic-link route redirects back to this page (soft navigation via
+  // App Router), searchParams change — that signals the round-trip completed.
+  // Reset pending so the button returns to its normal state.
+  useEffect(() => {
+    setPending(false)
+  }, [searchParams])
 
   return (
     <button

@@ -93,7 +93,7 @@ export default async function SignInPage({
                 defaultValue={email}
                 required
                 autoComplete="email"
-                className="vault-input w-full rounded-lg px-3.5 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/45 focus:border-border"
+                className="vault-input w-full rounded-lg px-3.5 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground/45 focus:border-border sm:text-sm"
                 placeholder="you@brand.com"
               />
             </div>
