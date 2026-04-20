@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 
 import { sanitizeNextPath } from "@/lib/auth/navigation"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { SignInSubmitButton } from "./sign-in-submit-button"
 
 const errorMessage: Record<string, string> = {
   missing_email: "Enter your approved email to continue.",
@@ -92,16 +93,11 @@ export default async function SignInPage({
                 defaultValue={email}
                 required
                 autoComplete="email"
-                className="vault-input w-full rounded-lg px-3.5 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground/45 focus:border-border"
+                className="vault-input w-full rounded-lg px-3.5 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/45 focus:border-border"
                 placeholder="you@brand.com"
               />
             </div>
-            <button
-              type="submit"
-              className="marketing-primary-cta mt-1 inline-flex w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-medium"
-            >
-              Email me a sign-in link
-            </button>
+            <SignInSubmitButton />
           </form>
         </div>
       </div>

@@ -229,7 +229,9 @@ export default async function BillingPage({
             </div>
             <div className="rounded-md border border-border/70 bg-background/35 p-4">
               <p className="text-sm text-muted-foreground">Plan fit</p>
-              <p className="mt-1 text-sm">Growth tier aligns with current source footprint.</p>
+              <p className="mt-1 text-sm capitalize">
+                {data.subscription?.plan ?? "No plan"} | {data.monitoredStores} source{data.monitoredStores !== 1 ? "s" : ""} monitored
+              </p>
             </div>
           </div>
           <div className="px-4 pb-4 sm:px-5">

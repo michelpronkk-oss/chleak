@@ -2,7 +2,7 @@ import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 
 import { FadeIn } from "@/components/motion/fade-in"
-import { MobileHeroSupportStrip } from "@/components/marketing/mobile-hero-support-strip"
+import { HeroSignalRail } from "@/components/marketing/hero-signal-rail"
 import { RequestAccessForm } from "@/components/marketing/request-access-form"
 import { pricingPlans } from "@/data/mock/pricing"
 import type { PublicAccessState } from "@/lib/auth/public-access"
@@ -195,11 +195,8 @@ export default async function MarketingHomePage({ accessState, isAuthenticated }
               )}
             </div>
           </FadeIn>
-        </div>
 
-        {/* Support strip — compositional anchor at the fold, mobile only */}
-        <div className="pb-9 pt-6 sm:hidden">
-          <MobileHeroSupportStrip />
+          <HeroSignalRail />
         </div>
       </section>
 

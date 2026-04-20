@@ -9,6 +9,7 @@ export const metadata: Metadata = {
 
 import { cn } from "@/lib/utils"
 import { getConnectJourneyData } from "@/server/services/app-service"
+import { DisconnectButton } from "./disconnect-button"
 import { PostOauthHandoff } from "./post-oauth-handoff"
 import { ShopifyConnectSubmitButton } from "./shopify-connect-submit-button"
 
@@ -229,7 +230,7 @@ export default async function ConnectPage({
                 name="shop"
                 defaultValue={shopFromParams ?? data.shopifySourceState.shopDomain ?? ""}
                 placeholder="your-store.myshopify.com"
-                className="vault-input w-full rounded-lg px-3.5 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground/40"
+                className="vault-input w-full rounded-lg px-3.5 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/40"
                 required
                 autoCapitalize="none"
                 autoCorrect="off"
@@ -251,12 +252,7 @@ export default async function ConnectPage({
           {data.shopifySourceState.status !== "not_connected" ? (
             <form method="POST" action="/api/integrations/shopify/disconnect" className="mt-2">
               <input type="hidden" name="next" value="/app/connect?provider=shopify&status=disconnected" />
-              <button
-                type="submit"
-                className="inline-flex w-full items-center justify-center rounded-lg border border-border/60 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground sm:w-auto"
-              >
-                Disconnect Shopify
-              </button>
+              <DisconnectButton label="Disconnect Shopify" />
             </form>
           ) : null}
 

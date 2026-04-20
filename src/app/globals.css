@@ -540,6 +540,35 @@
   }
 }
 
+/* App shell safe-area support for iOS notch/home-indicator */
+.app-shell-main {
+  padding-bottom: 6rem;
+}
+@media (min-width: 1024px) {
+  .app-shell-main {
+    padding-bottom: 2rem;
+  }
+}
+@supports (padding: env(safe-area-inset-bottom)) {
+  .app-shell-main {
+    padding-bottom: max(6rem, calc(env(safe-area-inset-bottom) + 5rem));
+  }
+  @media (min-width: 1024px) {
+    .app-shell-main {
+      padding-bottom: 2rem;
+    }
+  }
+}
+
+.app-shell-mobile-nav {
+  bottom: 0.75rem;
+}
+@supports (bottom: max(0.75rem, env(safe-area-inset-bottom))) {
+  .app-shell-mobile-nav {
+    bottom: max(0.75rem, calc(env(safe-area-inset-bottom) + 0.25rem));
+  }
+}
+
 @keyframes heroConsoleFloat {
   0% {
     transform: translateY(0);

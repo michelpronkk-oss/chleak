@@ -204,13 +204,13 @@ export function AppShellClient({
           </div>
         </header>
 
-        <main className="min-h-[calc(100vh-3.5rem)] px-4 py-5 pb-24 sm:min-h-[calc(100vh-4rem)] sm:px-6 sm:py-6 lg:px-8 lg:py-7 lg:pb-8">
+        <main className="app-shell-main min-h-[calc(100vh-3.5rem)] px-4 py-5 sm:min-h-[calc(100vh-4rem)] sm:px-6 sm:py-6 lg:px-8 lg:py-7">
           <div className="mx-auto max-w-7xl">{children}</div>
         </main>
       </div>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed inset-x-3 bottom-3 z-30 rounded-xl border border-border/60 bg-card/95 p-1.5 backdrop-blur lg:hidden">
+      <nav className="app-shell-mobile-nav fixed inset-x-3 z-30 rounded-xl border border-border/60 bg-card/95 p-1.5 backdrop-blur lg:hidden">
         <div className="flex items-center">
           {navigationItems.map((item) => (
             <Link

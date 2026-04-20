@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Settings",
 }
 
+import { SubmitButton } from "@/components/ui/submit-button"
 import { getSettingsData } from "@/server/services/app-service"
 import { updateOperatorProfile, updateWorkspaceSettings } from "./actions"
 
@@ -122,12 +123,7 @@ export default async function SettingsPage() {
             </div>
           </div>
           <div className="border-t border-border/60 px-4 py-3 sm:px-5">
-            <button
-              type="submit"
-              className="rounded-md border border-border/70 bg-background/40 px-4 py-2 text-sm text-foreground transition-colors hover:bg-background/70"
-            >
-              Save profile
-            </button>
+            <SubmitButton label="Save profile" />
           </div>
         </form>
       </section>
@@ -238,12 +234,7 @@ export default async function SettingsPage() {
             </div>
           </div>
           <div className="border-t border-border/60 px-4 py-3 sm:px-5">
-            <button
-              type="submit"
-              className="rounded-md border border-border/70 bg-background/40 px-4 py-2 text-sm text-foreground transition-colors hover:bg-background/70"
-            >
-              Save workspace settings
-            </button>
+            <SubmitButton label="Save workspace settings" />
           </div>
         </form>
       </section>
