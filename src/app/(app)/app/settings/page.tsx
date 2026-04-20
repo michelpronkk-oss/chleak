@@ -246,9 +246,7 @@ export default async function SettingsPage() {
           <p className="vault-panel-meta">Session</p>
         </header>
         <div className="px-4 py-4 sm:px-5">
-          <form action="/api/auth/sign-out?next=/" method="POST">
-            <SignOutButton />
-          </form>
+          <SignOutButton />
         </div>
       </section>
     </div>

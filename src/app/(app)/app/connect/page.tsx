@@ -251,10 +251,13 @@ export default async function ConnectPage({
           </form>
 
           {data.shopifySourceState.status !== "not_connected" ? (
-            <form method="POST" action="/api/integrations/shopify/disconnect" className="mt-2">
-              <input type="hidden" name="next" value="/app/connect?provider=shopify&status=disconnected" />
-              <DisconnectButton label="Disconnect Shopify" />
-            </form>
+            <div className="mt-2">
+              <DisconnectButton
+                label="Disconnect Shopify"
+                action="/api/integrations/shopify/disconnect"
+                next="/app/connect?provider=shopify&status=disconnected"
+              />
+            </div>
           ) : null}
 
           {data.shopifySourceState.shopDomain ? (

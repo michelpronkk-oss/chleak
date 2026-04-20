@@ -2,7 +2,7 @@ import { redirect } from "next/navigation"
 
 import { sanitizeNextPath } from "@/lib/auth/navigation"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { SignInSubmitButton } from "./sign-in-submit-button"
+import { SignInForm } from "./sign-in-form"
 
 const errorMessage: Record<string, string> = {
   missing_email: "Enter your approved email to continue.",
@@ -79,29 +79,9 @@ export default async function SignInPage({
             </div>
           ) : null}
 
-          <form method="POST" action="/api/auth/magic-link" className="mt-6 space-y-4">
-            <input type="hidden" name="next" value={next} />
-            {selectedPlan ? <input type="hidden" name="plan" value={selectedPlan} /> : null}
-            <div className="space-y-2">
-              <label htmlFor="email" className="block text-xs text-muted-foreground">
-                Approved work email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                defaultValue={email}
-                required
-                autoComplete="email"
-                className="vault-input w-full rounded-lg px-3.5 py-3 text-base outline-none transition-colors placeholder:text-muted-foreground/45 focus:border-border sm:text-sm"
-                placeholder="you@brand.com"
-              />
-            </div>
-            <SignInSubmitButton />
-          </form>
+          <SignInForm next={next} plan={selectedPlan} defaultEmail={email} />
         </div>
       </div>
     </div>
   )
 }
-
