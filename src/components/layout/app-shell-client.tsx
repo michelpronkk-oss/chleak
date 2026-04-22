@@ -2,12 +2,14 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useState } from "react"
 import { motion } from "motion/react"
 import {
   AlertTriangle,
   ArrowUpRight,
   CreditCard,
   LayoutDashboard,
+  Loader2,
   LogOut,
   Settings,
   Store,
@@ -69,10 +71,20 @@ export function AppShellClient({
   liveMonitors,
 }: AppShellClientProps) {
   const pathname = usePathname()
+  const [isLeavingDemo, setIsLeavingDemo] = useState(false)
 
   async function handleSignOut() {
     await fetch("/api/auth/sign-out?next=/", { method: "POST" }).catch(() => {})
     window.location.assign("/")
+  }
+
+  function handleLeaveDemo() {
+    if (isLeavingDemo) return
+
+    setIsLeavingDemo(true)
+    // Use a full document navigation so cookie mutations from the route handler
+    // are always applied before re-entering /app.
+    window.location.assign("/api/mock/onboarding?state=empty&next=/app")
   }
 
   return (
@@ -221,12 +233,15 @@ export function AppShellClient({
               <p>
                 Demo workspace active. Data shown here is simulated and not from your live sources.
               </p>
-              <Link
-                href="/api/mock/onboarding?state=empty&next=/app"
-                className="rounded-md border border-amber-300/40 px-3 py-1.5 text-xs font-medium text-amber-200 transition-colors hover:text-amber-100"
+              <button
+                type="button"
+                onClick={handleLeaveDemo}
+                disabled={isLeavingDemo}
+                className="inline-flex items-center gap-1.5 rounded-md border border-amber-300/40 px-3 py-1.5 text-xs font-medium text-amber-200 transition-colors hover:text-amber-100 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                Return to live workspace
-              </Link>
+                {isLeavingDemo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                {isLeavingDemo ? "Returning..." : "Return to live workspace"}
+              </button>
             </section>
           )}
           <motion.div
