@@ -47,13 +47,6 @@ export function Social4ActionBrief() {
       position: "relative",
       overflow: "hidden",
     }}>
-      {/* Top bloom */}
-      <div style={{
-        position: "absolute", top: -80, left: "50%", transform: "translateX(-50%)",
-        width: 800, height: 420,
-        background: "radial-gradient(50% 45% at 50% 0%, rgba(200,154,16,0.09), transparent 100%)",
-        filter: "blur(64px)", pointerEvents: "none",
-      }} />
 
       {/* Corner vignette */}
       <div style={{

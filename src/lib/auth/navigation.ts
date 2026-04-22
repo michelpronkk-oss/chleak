@@ -20,6 +20,9 @@ export function sanitizeNextPath(input: string | null | undefined, fallback = "/
     return fallback
   }
 
+  if (input.startsWith("//")) {
+    return fallback
+  }
+
   return input
 }
-

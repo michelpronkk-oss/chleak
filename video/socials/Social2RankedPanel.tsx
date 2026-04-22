@@ -31,13 +31,6 @@ export function Social2RankedPanel() {
       position: "relative",
       overflow: "hidden",
     }}>
-      {/* Top bloom */}
-      <div style={{
-        position: "absolute", top: -60, left: "50%", transform: "translateX(-50%)",
-        width: 960, height: 460,
-        background: "radial-gradient(50% 45% at 50% 0%, rgba(200,154,16,0.10), transparent 100%)",
-        filter: "blur(72px)", pointerEvents: "none",
-      }} />
 
       {/* Corner vignette */}
       <div style={{

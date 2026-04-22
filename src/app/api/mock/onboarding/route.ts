@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 
+import { sanitizeNextPath } from "@/lib/auth/navigation"
 import {
   ONBOARDING_STATE_COOKIE,
   isOnboardingState,
@@ -14,17 +15,13 @@ import {
 export async function GET(request: Request) {
   const url = new URL(request.url)
   const state = url.searchParams.get("state")
-  const next = url.searchParams.get("next") ?? "/app"
+  const next = sanitizeNextPath(url.searchParams.get("next"), "/app")
 
   if (!state || !isOnboardingState(state)) {
     return NextResponse.json(
       { message: "Invalid onboarding state." },
       { status: 400 }
     )
-  }
-
-  if (!next.startsWith("/")) {
-    return NextResponse.json({ message: "Invalid redirect path." }, { status: 400 })
   }
 
   const response = NextResponse.redirect(new URL(next, url.origin))

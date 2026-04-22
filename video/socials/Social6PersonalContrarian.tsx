@@ -20,13 +20,6 @@ export function Social6PersonalContrarian() {
       position: "relative",
       overflow: "hidden",
     }}>
-      {/* Left-side bloom */}
-      <div style={{
-        position: "absolute", left: -280, top: "15%",
-        width: 800, height: 800,
-        background: "radial-gradient(circle, rgba(200,154,16,0.07) 0%, rgba(200,154,16,0.025) 45%, rgba(200,154,16,0.005) 70%, transparent 100%)",
-        filter: "blur(120px)", pointerEvents: "none",
-      }} />
 
       {/* Corner vignette */}
       <div style={{

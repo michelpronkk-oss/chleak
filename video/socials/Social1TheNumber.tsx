@@ -33,13 +33,6 @@ export function Social1TheNumber() {
         overflow: "hidden",
       }}
     >
-      {/* Top bloom */}
-      <div style={{
-        position: "absolute", top: -100, left: "50%", transform: "translateX(-50%)",
-        width: 860, height: 520,
-        background: "radial-gradient(50% 50% at 50% 0%, rgba(200,154,16,0.11), transparent 100%)",
-        filter: "blur(72px)", pointerEvents: "none",
-      }} />
 
       {/* Corner vignette */}
       <div style={{

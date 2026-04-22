@@ -27,13 +27,6 @@ export function Social8PersonalList() {
       position: "relative",
       overflow: "hidden",
     }}>
-      {/* Bottom-right bloom */}
-      <div style={{
-        position: "absolute", right: -200, bottom: -100,
-        width: 700, height: 700,
-        background: "radial-gradient(circle, rgba(200,154,16,0.06) 0%, rgba(200,154,16,0.015) 50%, transparent 100%)",
-        filter: "blur(120px)", pointerEvents: "none",
-      }} />
 
       {/* Corner vignette */}
       <div style={{

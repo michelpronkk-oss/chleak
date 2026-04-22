@@ -24,13 +24,6 @@ export function Social9BrandBenchmark() {
       position: "relative",
       overflow: "hidden",
     }}>
-      {/* Top bloom */}
-      <div style={{
-        position: "absolute", top: -100, left: "50%", transform: "translateX(-50%)",
-        width: 900, height: 560,
-        background: "radial-gradient(ellipse, rgba(200,154,16,0.09) 0%, rgba(200,154,16,0.025) 50%, transparent 100%)",
-        filter: "blur(100px)", pointerEvents: "none",
-      }} />
 
       {/* Corner vignette */}
       <div style={{

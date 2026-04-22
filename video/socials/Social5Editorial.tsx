@@ -29,13 +29,6 @@ export function Social5Editorial() {
       position: "relative",
       overflow: "hidden",
     }}>
-      {/* Right-side bloom — oversized so edges never land on canvas */}
-      <div style={{
-        position: "absolute", right: -320, top: "10%",
-        width: 900, height: 900,
-        background: "radial-gradient(circle, rgba(200,154,16,0.09) 0%, rgba(200,154,16,0.04) 40%, rgba(200,154,16,0.01) 65%, transparent 100%)",
-        filter: "blur(120px)", pointerEvents: "none",
-      }} />
 
       {/* Corner vignette */}
       <div style={{

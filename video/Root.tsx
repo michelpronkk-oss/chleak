@@ -14,6 +14,11 @@ import { Social8PersonalList } from "./socials/Social8PersonalList"
 import { Social9BrandBenchmark } from "./socials/Social9BrandBenchmark"
 import { Social10BrandWeekly } from "./socials/Social10BrandWeekly"
 import { Social11BrandCoverage } from "./socials/Social11BrandCoverage"
+import { Social12XHook } from "./socials/Social12XHook"
+import { Social13XGap } from "./socials/Social13XGap"
+import { Social14XProcess } from "./socials/Social14XProcess"
+import { Social15XBeforeAfter } from "./socials/Social15XBeforeAfter"
+import { Social16XPhilosophy } from "./socials/Social16XPhilosophy"
 
 export function RemotionRoot() {
   return (
@@ -154,6 +159,105 @@ export function RemotionRoot() {
         fps={30}
         width={1080}
         height={1080}
+      />
+
+      {/* ── X personal — 1080×1080 ─────────────────────────── */}
+
+      <Composition id="Social12XHook" component={Social12XHook} durationInFrames={1} fps={30} width={1080} height={1080} />
+      <Composition id="Social13XGap" component={Social13XGap} durationInFrames={1} fps={30} width={1080} height={1080} />
+      <Composition id="Social14XProcess" component={Social14XProcess} durationInFrames={1} fps={30} width={1080} height={1080} />
+      <Composition id="Social15XBeforeAfter" component={Social15XBeforeAfter} durationInFrames={1} fps={30} width={1080} height={1080} />
+      <Composition id="Social16XPhilosophy" component={Social16XPhilosophy} durationInFrames={1} fps={30} width={1080} height={1080} />
+
+      {/* ── Instagram 4:5 stills — 1080×1350 ───────────────── */}
+
+      <Composition
+        id="Social1TheNumber-45"
+        component={Social1TheNumber}
+        durationInFrames={1}
+        fps={30}
+        width={1080}
+        height={1350}
+      />
+      <Composition
+        id="Social2RankedPanel-45"
+        component={Social2RankedPanel}
+        durationInFrames={1}
+        fps={30}
+        width={1080}
+        height={1350}
+      />
+      <Composition
+        id="Social3ThreeSurfaces-45"
+        component={Social3ThreeSurfaces}
+        durationInFrames={1}
+        fps={30}
+        width={1080}
+        height={1350}
+      />
+      <Composition
+        id="Social4ActionBrief-45"
+        component={Social4ActionBrief}
+        durationInFrames={1}
+        fps={30}
+        width={1080}
+        height={1350}
+      />
+      <Composition
+        id="Social5Editorial-45"
+        component={Social5Editorial}
+        durationInFrames={1}
+        fps={30}
+        width={1080}
+        height={1350}
+      />
+      <Composition
+        id="Social6PersonalContrarian-45"
+        component={Social6PersonalContrarian}
+        durationInFrames={1}
+        fps={30}
+        width={1080}
+        height={1350}
+      />
+      <Composition
+        id="Social7PersonalMath-45"
+        component={Social7PersonalMath}
+        durationInFrames={1}
+        fps={30}
+        width={1080}
+        height={1350}
+      />
+      <Composition
+        id="Social8PersonalList-45"
+        component={Social8PersonalList}
+        durationInFrames={1}
+        fps={30}
+        width={1080}
+        height={1350}
+      />
+      <Composition
+        id="Social9BrandBenchmark-45"
+        component={Social9BrandBenchmark}
+        durationInFrames={1}
+        fps={30}
+        width={1080}
+        height={1350}
+      />
+      <Composition
+        id="Social10BrandWeekly-45"
+        component={Social10BrandWeekly}
+        durationInFrames={1}
+        fps={30}
+        width={1080}
+        height={1350}
+      />
+      <Composition
+        id="Social11BrandCoverage-45"
+        component={Social11BrandCoverage}
+        durationInFrames={1}
+        fps={30}
+        width={1080}
+        height={1350}
       />
     </>
   )

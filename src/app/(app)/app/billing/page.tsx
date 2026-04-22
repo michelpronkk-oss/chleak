@@ -136,8 +136,15 @@ export default async function BillingPage({
             Billing access is enforced by subscription state synced from Dodo webhooks. If checkout completed recently, refresh this page after a few seconds.
           </p>
           <Link
-            href="/contact#demo"
+            href="/api/mock/onboarding?state=demo&next=/app"
             className="vault-link mt-4 inline-flex items-center gap-1 text-sm"
+          >
+            Continue with demo data
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+          <Link
+            href="/contact#demo"
+            className="vault-link mt-3 inline-flex items-center gap-1 text-sm"
           >
             Request production billing setup
             <ArrowRight className="h-3.5 w-3.5" />
@@ -247,4 +254,3 @@ export default async function BillingPage({
     </div>
   )
 }
-

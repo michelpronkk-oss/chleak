@@ -428,11 +428,26 @@ function deriveOnboardingStateFromSignals(input: {
   hasPlan: boolean
   signals: BackendSourceSignals | null
 }): OnboardingState {
+  if (input.cookieState === "demo") {
+    return "demo"
+  }
+
   if (!input.hasPlan) {
-    return input.cookieState === "demo" ? "demo" : "empty"
+    return "empty"
   }
 
   if (isConnectingState(input.cookieState)) {
+    return input.cookieState
+  }
+
+  if (
+    (isPendingScanState(input.cookieState) ||
+      input.cookieState === "first_results_shopify" ||
+      input.cookieState === "first_results_stripe" ||
+      input.cookieState === "completed_shopify" ||
+      input.cookieState === "completed_stripe") &&
+    (!input.signals || input.signals.providers.length === 0)
+  ) {
     return input.cookieState
   }
 
@@ -856,13 +871,14 @@ async function getJourneyContext() {
   const organizationId = membership.organizationId
   const planState = await getPlanStateForOrganization(organizationId)
   const entitlement = getPlanEntitlement(planState)
-  const hasPlan = entitlement.hasActiveAccess
+  const hasEntitledPlan = entitlement.hasActiveAccess
   const backendSignals = await loadBackendSourceSignals(organizationId)
   const state = deriveOnboardingStateFromSignals({
     cookieState,
-    hasPlan,
+    hasPlan: hasEntitledPlan,
     signals: backendSignals,
   })
+  const hasPlan = hasEntitledPlan || state === "demo"
   const commercialAccessState = deriveCommercialAccessState({
     hasIdentity: true,
     hasPlan,
@@ -891,7 +907,11 @@ async function getJourneyContext() {
           ? "Initial scan in progress"
           : "Connected and monitoring",
     }
-  } else if (providerFromState !== "shopify" && cookieState !== "connecting_shopify") {
+  } else if (
+    providerFromState !== "shopify" &&
+    cookieState !== "connecting_shopify" &&
+    state !== "demo"
+  ) {
     shopifySourceState = {
       status: "not_connected",
       shopDomain: null,
@@ -915,7 +935,11 @@ async function getJourneyContext() {
           ? "Initial billing scan in progress"
           : "Connected and monitoring",
     }
-  } else if (providerFromState !== "stripe" && cookieState !== "connecting_stripe") {
+  } else if (
+    providerFromState !== "stripe" &&
+    cookieState !== "connecting_stripe" &&
+    state !== "demo"
+  ) {
     stripeSourceState = {
       status: "not_connected",
       accountId: null,
