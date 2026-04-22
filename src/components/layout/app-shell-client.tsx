@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils"
 
 interface AppShellClientProps {
   children: React.ReactNode
+  isDemoMode: boolean
   user: {
     fullName: string
     email: string
@@ -62,6 +63,7 @@ function isNavActive(pathname: string, href: string) {
 
 export function AppShellClient({
   children,
+  isDemoMode,
   user,
   activeIssueCount,
   liveMonitors,
@@ -120,7 +122,7 @@ export function AppShellClient({
                         <span className="truncate">{monitor.name}</span>
                       </span>
                       <span className={cn("shrink-0 text-xs", monitor.statusTone)}>
-                        {monitor.statusLabel}
+                        {isDemoMode ? `${monitor.statusLabel} · Demo` : monitor.statusLabel}
                       </span>
                     </div>
                     <p className="mt-0.5 pl-5 text-xs text-muted-foreground/55">
@@ -147,6 +149,11 @@ export function AppShellClient({
             </div>
 
             <div className="flex items-center gap-2 text-xs text-muted-foreground sm:gap-2.5">
+              {isDemoMode && (
+                <span className="hidden items-center gap-1.5 rounded-md border border-amber-400/35 bg-amber-400/[0.08] px-2.5 py-1.5 text-amber-300 sm:flex">
+                  Demo mode
+                </span>
+              )}
               {activeIssueCount > 0 && (
                 <span className="hidden items-center gap-1.5 rounded-md border border-border/55 px-2.5 py-1.5 sm:flex">
                   <AlertTriangle className="h-3 w-3 text-amber-300" />
@@ -209,6 +216,19 @@ export function AppShellClient({
         </header>
 
         <main className="app-shell-main min-h-[calc(100vh-3.5rem)] px-4 py-5 sm:min-h-[calc(100vh-4rem)] sm:px-6 sm:py-6 lg:px-8 lg:py-7">
+          {isDemoMode && (
+            <section className="mx-auto mb-4 flex max-w-7xl flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-400/35 bg-amber-400/[0.08] px-4 py-3 text-sm text-amber-100">
+              <p>
+                Demo workspace active. Data shown here is simulated and not from your live sources.
+              </p>
+              <Link
+                href="/api/mock/onboarding?state=empty&next=/app"
+                className="rounded-md border border-amber-300/40 px-3 py-1.5 text-xs font-medium text-amber-200 transition-colors hover:text-amber-100"
+              >
+                Return to live workspace
+              </Link>
+            </section>
+          )}
           <motion.div
             key={pathname}
             className="mx-auto max-w-7xl"

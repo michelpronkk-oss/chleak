@@ -164,6 +164,11 @@ export default async function BillingPage({
         <p className="vault-page-intro-copy">
           Manage plan state, seats, and upgrade path as monitored source coverage expands.
         </p>
+        {data.onboardingState === "demo" ? (
+          <p className="text-sm text-amber-300">
+            Demo mode is active. Workspace metrics may reflect simulated data.
+          </p>
+        ) : null}
         {data.onboardingState === "empty" ? (
           <Link
             href="/app/connect"

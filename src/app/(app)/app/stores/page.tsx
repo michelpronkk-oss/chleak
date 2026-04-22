@@ -34,6 +34,11 @@ export default async function StoresPage() {
         <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
           Every source is tracked as a monitored asset with scan status, active issues, and leakage exposure.
         </p>
+        {data.onboardingState === "demo" ? (
+          <p className="text-sm text-amber-300">
+            Demo mode is active. Source cards below use simulated data.
+          </p>
+        ) : null}
       </section>
 
       <section className="surface-card p-4 sm:p-5 lg:p-6">
@@ -68,6 +73,11 @@ export default async function StoresPage() {
                     <span className="rounded-md border border-border/70 px-2 py-0.5 text-[11px] uppercase text-muted-foreground">
                       {store.platform}
                     </span>
+                    {data.onboardingState === "demo" ? (
+                      <span className="rounded-md border border-amber-400/35 bg-amber-400/[0.08] px-2 py-0.5 text-[11px] uppercase text-amber-300">
+                        demo
+                      </span>
+                    ) : null}
                     <span className={`text-xs ${store.statusTone}`}>{store.statusLabel}</span>
                   </div>
                   <p className="mt-2 text-sm text-muted-foreground">
@@ -127,7 +137,22 @@ export default async function StoresPage() {
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-border/70 p-8 text-center text-sm text-muted-foreground">
-            No stores connected yet. Connect your first Shopify or Stripe source to start monitoring.
+            <p>No stores connected yet. Connect your first Shopify or Stripe source to start monitoring.</p>
+            <div className="mt-4 flex flex-wrap justify-center gap-2.5">
+              <Link
+                href="/app/connect"
+                className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
+              >
+                Connect source
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+              <Link
+                href="/api/mock/onboarding?state=demo&next=/app/stores"
+                className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Continue with demo data
+              </Link>
+            </div>
           </div>
         )}
       </section>

@@ -43,7 +43,37 @@ export default async function DashboardOverviewPage() {
   }
 
   if (journey.mode === "empty") {
-    redirect("/app/connect")
+    return (
+      <div className="space-y-5 pb-24 lg:pb-4">
+        <section className="space-y-2">
+          <p className="data-mono text-muted-foreground">Revenue Workspace</p>
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
+            Start your workspace with a real source or demo data
+          </h1>
+          <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
+            Connect Shopify or Stripe to populate your live workspace. Use demo mode only when you want to evaluate the product flow with simulated data.
+          </p>
+        </section>
+
+        <section className="surface-card p-5 sm:p-6 lg:p-7">
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/app/connect"
+              className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
+            >
+              Connect your first source
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            <Link
+              href="/api/mock/onboarding?state=demo&next=/app"
+              className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Open demo workspace
+            </Link>
+          </div>
+        </section>
+      </div>
+    )
   }
 
   if (journey.mode === "connecting") {

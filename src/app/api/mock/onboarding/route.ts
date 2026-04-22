@@ -16,6 +16,8 @@ export async function GET(request: Request) {
   const url = new URL(request.url)
   const state = url.searchParams.get("state")
   const next = sanitizeNextPath(url.searchParams.get("next"), "/app")
+  const isDemoState = state === "demo"
+  const cookieMaxAge = isDemoState ? undefined : 60 * 60 * 24 * 30
 
   if (!state || !isOnboardingState(state)) {
     return NextResponse.json(
@@ -30,7 +32,7 @@ export async function GET(request: Request) {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: cookieMaxAge,
   })
 
   if (state === "empty") {
@@ -46,7 +48,7 @@ export async function GET(request: Request) {
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
         path: "/",
-        maxAge: 60 * 60 * 24 * 30,
+        maxAge: cookieMaxAge,
       }
     )
     response.cookies.set(
@@ -61,7 +63,7 @@ export async function GET(request: Request) {
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
         path: "/",
-        maxAge: 60 * 60 * 24 * 30,
+        maxAge: cookieMaxAge,
       }
     )
   }
@@ -79,7 +81,7 @@ export async function GET(request: Request) {
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
         path: "/",
-        maxAge: 60 * 60 * 24 * 30,
+        maxAge: cookieMaxAge,
       }
     )
   }
@@ -97,7 +99,7 @@ export async function GET(request: Request) {
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
         path: "/",
-        maxAge: 60 * 60 * 24 * 30,
+        maxAge: cookieMaxAge,
       }
     )
   }
@@ -115,7 +117,7 @@ export async function GET(request: Request) {
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
         path: "/",
-        maxAge: 60 * 60 * 24 * 30,
+        maxAge: cookieMaxAge,
       }
     )
   }
@@ -133,7 +135,7 @@ export async function GET(request: Request) {
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
         path: "/",
-        maxAge: 60 * 60 * 24 * 30,
+        maxAge: cookieMaxAge,
       }
     )
   }
@@ -151,7 +153,7 @@ export async function GET(request: Request) {
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
         path: "/",
-        maxAge: 60 * 60 * 24 * 30,
+        maxAge: cookieMaxAge,
       }
     )
   }
@@ -169,7 +171,7 @@ export async function GET(request: Request) {
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
         path: "/",
-        maxAge: 60 * 60 * 24 * 30,
+        maxAge: cookieMaxAge,
       }
     )
   }

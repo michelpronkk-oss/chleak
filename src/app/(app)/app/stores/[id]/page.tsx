@@ -52,6 +52,11 @@ export default async function StoreDetailPage({
         <p className="vault-page-intro-copy">
           {data.context?.operationalArea ?? "Revenue monitoring source"} | {data.status.label}
         </p>
+        {data.onboardingState === "demo" ? (
+          <p className="text-sm text-amber-300">
+            Demo mode active. Source details and findings are simulated.
+          </p>
+        ) : null}
       </section>
 
       <section className="vault-metric-grid">

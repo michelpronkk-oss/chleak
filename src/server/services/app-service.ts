@@ -1095,6 +1095,7 @@ export async function getAppShellData() {
 
   return {
     onboardingState: journey.state,
+    isDemoMode: journey.state === "demo",
     commercialAccessState: journey.commercialAccessState,
     hasPlan: journey.hasPlan,
     planState: journey.planState,

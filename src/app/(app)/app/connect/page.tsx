@@ -171,6 +171,11 @@ export default async function ConnectPage({
         <p className="vault-page-intro-copy">
           CheckoutLeak needs one data source to begin detecting leakage. Connect Shopify for checkout signals or Stripe for billing recovery analysis.
         </p>
+        {state === "demo" ? (
+          <p className="text-sm text-amber-300">
+            Demo mode is active. This setup state is simulated.
+          </p>
+        ) : null}
         <WorkspaceProgressSteps currentStep={currentProgressStep} />
       </section>
 
@@ -340,6 +345,14 @@ export default async function ConnectPage({
           >
             Continue with demo data
           </Link>
+          {state === "demo" ? (
+            <Link
+              href="/api/mock/onboarding?state=empty&next=/app/connect"
+              className="rounded-lg border border-amber-400/35 bg-amber-400/[0.08] px-4 py-2.5 text-sm text-amber-200 transition-colors hover:text-amber-100"
+            >
+              Return to live setup
+            </Link>
+          ) : null}
           <Link
             href="/contact#demo"
             className="rounded-lg border border-border/60 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"

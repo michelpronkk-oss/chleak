@@ -8,6 +8,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <AppShellClient
       user={shell.user}
+      isDemoMode={shell.isDemoMode}
       activeIssueCount={shell.activeIssueCount}
       liveMonitors={shell.liveMonitors}
     >
