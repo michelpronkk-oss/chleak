@@ -25,6 +25,7 @@ import {
   getFallbackFixPlanHref,
   getFixPlanHrefForIssue,
 } from "@/server/services/fix-plan-service"
+import { EmptyWorkspaceActions } from "./empty-workspace-actions"
 
 export default async function DashboardOverviewPage() {
   const journey = await getDashboardJourneyData()
@@ -56,21 +57,7 @@ export default async function DashboardOverviewPage() {
         </section>
 
         <section className="surface-card p-5 sm:p-6 lg:p-7">
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/app/connect"
-              className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
-            >
-              Connect your first source
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-            <Link
-              href="/api/mock/onboarding?state=demo&next=/app"
-              className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Open demo workspace
-            </Link>
-          </div>
+          <EmptyWorkspaceActions />
         </section>
       </div>
     )
