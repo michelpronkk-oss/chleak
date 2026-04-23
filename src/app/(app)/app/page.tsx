@@ -297,7 +297,7 @@ export default async function DashboardOverviewPage() {
                 href="/app/stores"
                 className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
               >
-                Open source details
+                Open sources
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
               <Link
@@ -319,7 +319,7 @@ export default async function DashboardOverviewPage() {
               href="/app/stores"
               className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
             >
-              Open connection status
+              Open sources
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -374,7 +374,7 @@ export default async function DashboardOverviewPage() {
                 href="/app/stores"
                 className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
               >
-                {isDemoMode ? "Open demo source detail" : "Open source details"}
+                {isDemoMode ? "Review demo sources" : "Open sources"}
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
               {isDemoMode ? (
@@ -400,6 +400,7 @@ export default async function DashboardOverviewPage() {
   }
 
   const snapshot = journey.snapshot
+  const liveSystemStores = snapshot.stores.filter((s) => s.platform !== "website")
   const primaryIssue = snapshot.summary.highestImpactIssue
   const fallbackFixPlanHref = getFallbackFixPlanHref()
   const primaryFixPlanHref =
@@ -466,12 +467,12 @@ export default async function DashboardOverviewPage() {
         <article className="vault-metric-cell">
           <p className="vault-metric-key">Sources</p>
           <p className="vault-metric-value">
-            {snapshot.summary.monitoredStores}
+            {liveSystemStores.length}
             <span className="ml-1 text-xl text-muted-foreground">
               {isDemoMode ? "demo" : "live"}
             </span>
           </p>
-          <p className="vault-metric-delta">Coverage tracked in workspace</p>
+          <p className="vault-metric-delta">System sources in workspace</p>
         </article>
       </section>
 
@@ -534,7 +535,7 @@ export default async function DashboardOverviewPage() {
               href={topMoveHref}
               className="marketing-primary-cta mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
             >
-              {isDemoMode ? "Open simulated fix path" : "Open fix path"}
+              Review action brief
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </section>
@@ -544,8 +545,11 @@ export default async function DashboardOverviewPage() {
             meta={latestScanAt ? `Scan ${formatRelativeTimestamp(latestScanAt)}` : "No scan data"}
           >
             <div className="divide-y divide-border/60">
-              {snapshot.stores.map((store) => {
+              {liveSystemStores.map((store) => {
                 const storeIssues = rankedIssues.filter((issue) => issue.storeId === store.id).length
+                const storeLeakage = rankedIssues
+                  .filter((issue) => issue.storeId === store.id)
+                  .reduce((sum, issue) => sum + issue.estimatedMonthlyRevenueImpact, 0)
                 return (
                   <div key={store.id} className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3 sm:px-5">
                     <span
@@ -557,8 +561,8 @@ export default async function DashboardOverviewPage() {
                         {store.platform} | {storeIssues} open
                       </p>
                     </div>
-                    <p className="font-mono text-[0.66rem] tracking-[0.04em] text-muted-foreground">
-                      {store.timezone}
+                    <p className="font-mono text-[0.66rem] tracking-[0.04em] text-muted-foreground tabular-nums">
+                      {formatCompactCurrency(storeLeakage)}
                     </p>
                   </div>
                 )

@@ -418,10 +418,10 @@ export default async function StoreDetailPage({
               <MetaPill>{formatCompactCurrency(rankedIssues[0]?.estimatedMonthlyRevenueImpact ?? 0)}</MetaPill>
             </div>
             <Link
-              href={data.fixPlanLinks[0]?.href ?? (isDemoMode ? "/app/stores" : "/app")}
+              href={data.fixPlanLinks[0]?.href ?? "/app/stores"}
               className="marketing-primary-cta mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
             >
-              {isDemoMode ? "Open simulated fix plan" : "Open fix plan"}
+              Review action brief
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
             {data.setupAttentionMessage ? (
@@ -471,7 +471,7 @@ export default async function StoreDetailPage({
                       href={plan.href}
                       className="vault-link mt-2 inline-flex items-center gap-1 text-xs"
                     >
-                      Open fix plan <ArrowRight className="h-3 w-3" />
+                      Review action brief <ArrowRight className="h-3 w-3" />
                     </Link>
                   </li>
                 ))
@@ -486,6 +486,7 @@ export default async function StoreDetailPage({
           </VaultPanel>
 
           {showUrlSourceControls ? (
+            <div id="surface-analysis">
             <VaultPanel title="Surface analysis" meta="Latest revenue path and surface evidence">
               {urlSourceAnalysis ? (
                 <div className="space-y-3 px-4 py-4 text-sm sm:px-5">
@@ -548,6 +549,7 @@ export default async function StoreDetailPage({
                 </p>
               )}
             </VaultPanel>
+            </div>
           ) : (
             <VaultPanel title="Last activation run" meta="Latest deterministic flow summary">
               {showLiveShopifyActivationControls ? (

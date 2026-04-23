@@ -273,7 +273,7 @@ export async function triggerUrlSourceAnalysisForStore(storeId: string) {
 
   if (processed.processed) {
     redirect(
-      `/app/stores/${storeId}?scan_status=completed&scan_id=${encodeURIComponent(insertScan.data.id)}`
+      `/app/stores/${storeId}?scan_status=completed&scan_id=${encodeURIComponent(insertScan.data.id)}#surface-analysis`
     )
   }
 

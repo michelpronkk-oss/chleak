@@ -250,7 +250,7 @@ export async function triggerPrimaryUrlSourceAnalysis() {
     redirect(
       `/app/stores?provider=source_url_analysis&status=completed&scan_id=${encodeURIComponent(
         scanInsert.data.id
-      )}`
+      )}#primary-source`
     )
   }
 

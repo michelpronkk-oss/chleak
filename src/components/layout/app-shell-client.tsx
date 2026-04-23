@@ -122,7 +122,7 @@ export function AppShellClient({
 
         <div className="mt-6 space-y-1 rounded-lg border border-border/55 bg-background/25 p-3">
           <p className="px-1 font-mono text-[0.62rem] tracking-[0.1em] uppercase text-muted-foreground/70">
-            Live Monitors
+            {isDemoMode ? "Demo Monitors" : "Live Monitors"}
           </p>
           {liveMonitors.length ? (
             <ul className="mt-2 space-y-0.5 text-sm">
