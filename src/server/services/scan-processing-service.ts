@@ -12,6 +12,11 @@ import {
   getPrimaryScanFamilyForPlatform,
   getRecommendedScanFamiliesForPlatform,
 } from "@/server/services/flow-scan-family-service"
+import {
+  URL_SOURCE_ANALYSIS_RUNNER_DETECTOR_VERSION,
+  runUrlSourceAnalysisV1,
+  type UrlSourceAnalysisResultV1,
+} from "@/server/services/url-source-analysis-runner"
 
 type IssueInsert = Database["public"]["Tables"]["issues"]["Insert"]
 
@@ -129,7 +134,13 @@ interface FindingDraft {
 }
 
 function parseMerchantPlatform(input: string): MerchantPlatform {
-  return input === "stripe" ? "stripe" : "shopify"
+  if (input === "stripe") {
+    return "stripe"
+  }
+  if (input === "website") {
+    return "website"
+  }
+  return "shopify"
 }
 
 function readShopifySignalSnapshot(metadata: Record<string, unknown>): ShopifySignalSnapshot {
@@ -1018,6 +1029,48 @@ function buildSimulatedFindings(): FindingDraft[] {
   ]
 }
 
+function buildUrlSourceSurfaceFindings(input: {
+  run: UrlSourceAnalysisResultV1 | null
+}) {
+  if (!input.run || input.run.status !== "completed") {
+    return []
+  }
+
+  if (!input.run.summary.noClearRevenuePath) {
+    return []
+  }
+
+  return [
+    {
+      key: "url_source_no_clear_revenue_path_v1",
+      type: "setup_gap",
+      severity: "medium",
+      title: "Primary URL source has no clear revenue path",
+      summary:
+        "URL-source analysis did not detect a clear pricing, signup, or checkout handoff path on the saved primary surface.",
+      whyItMatters:
+        "Without a clear revenue path, activation and handoff leakage analysis remains low-confidence for URL-first scanning.",
+      recommendedAction:
+        "Set a source URL that reflects the commercial entry surface and confirm visible pricing, signup, or checkout progression paths.",
+      estimatedMonthlyRevenueImpact: 0,
+      evidence: {
+        detector_version: input.run.detectorVersion,
+        analysis_status: input.run.status,
+        surface_classification: input.run.summary.surfaceClassification,
+        revenue_path_clarity: input.run.summary.revenuePathClarity,
+        has_pricing_path: input.run.summary.hasPricingPath,
+        has_signup_path: input.run.summary.hasSignupPath,
+        has_login_path: input.run.summary.hasLoginPath,
+        has_primary_cta: input.run.summary.hasPrimaryCta,
+        primary_cta_label: input.run.summary.primaryCtaLabel,
+        has_checkout_signal: input.run.summary.hasCheckoutSignal,
+        final_url: input.run.summary.finalUrl,
+        http_status: input.run.summary.httpStatus,
+      },
+    },
+  ] satisfies FindingDraft[]
+}
+
 export async function processQueuedScanV1(input?: {
   scanId?: string | null
   simulationOutcome?: ScanSimulationOutcome | null
@@ -1176,6 +1229,7 @@ export async function processQueuedScanV1(input?: {
         }
   const simulationOutcome = input?.simulationOutcome ?? null
   let stripeBillingSnapshot: StripeBillingSignalSnapshot | null = null
+  let urlSourceAnalysisRun: UrlSourceAnalysisResultV1 | null = null
   if (
     !simulationOutcome &&
     integrationProvider === "stripe" &&
@@ -1194,12 +1248,44 @@ export async function processQueuedScanV1(input?: {
       )
     }
   }
+  if (
+    !simulationOutcome &&
+    integrationProvider === "checkoutleak_connector"
+  ) {
+    const primaryUrl =
+      asString(integrationMetadata.primary_live_source_url) ??
+      asString(integrationMetadata.live_source_url) ??
+      storeResult.data.domain
+
+    if (primaryUrl) {
+      try {
+        urlSourceAnalysisRun = await runUrlSourceAnalysisV1({
+          runId: queuedScan.id,
+          entryUrl: primaryUrl,
+        })
+        console.info(
+          `[scan-runner] url source analysis completed: scan_id=${queuedScan.id}; status=${urlSourceAnalysisRun.status}; classification=${urlSourceAnalysisRun.summary.surfaceClassification}; clarity=${urlSourceAnalysisRun.summary.revenuePathClarity}`
+        )
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        console.error(
+          `[scan-runner] url source analysis failed: scan_id=${queuedScan.id}; reason=${message}`
+        )
+      }
+    }
+  }
   const meaningfulCommercialSignal = simulationOutcome
     ? simulationOutcome !== "no_signal"
     : integrationProvider === "shopify"
       ? hasMeaningfulCommercialSignal(signalSnapshot)
       : integrationProvider === "stripe"
         ? hasMeaningfulStripeBillingSignal(stripeBillingSnapshot)
+        : integrationProvider === "checkoutleak_connector"
+          ? Boolean(
+              urlSourceAnalysisRun &&
+                urlSourceAnalysisRun.status === "completed" &&
+                urlSourceAnalysisRun.summary.revenuePathClarity !== "none"
+            )
         : false
   const setupCoverageMissingScopes = getMissingScopes(
     integrationResult.data.scopes,
@@ -1282,6 +1368,10 @@ export async function processQueuedScanV1(input?: {
             integrationStatus: integrationResult.data.status,
             syncStatus: integrationResult.data.sync_status,
           })
+      : integrationProvider === "checkoutleak_connector"
+        ? buildUrlSourceSurfaceFindings({
+            run: urlSourceAnalysisRun,
+          })
       : []
 
   const managedIssueSource = simulationOutcome
@@ -1290,13 +1380,21 @@ export async function processQueuedScanV1(input?: {
       : "shopify_simulation_v1"
     : integrationProvider === "stripe"
       ? "stripe_monitoring_v1"
+      : integrationProvider === "checkoutleak_connector"
+        ? "url_source_analysis_v1"
       : "shopify_monitoring_v1"
-  if (integrationProvider === "shopify" || integrationProvider === "stripe") {
+  if (
+    integrationProvider === "shopify" ||
+    integrationProvider === "stripe" ||
+    integrationProvider === "checkoutleak_connector"
+  ) {
     const sourcesToResolve = simulationOutcome
       ? integrationProvider === "stripe"
         ? ["stripe_simulation_v1", "stripe_monitoring_v1"]
         : ["shopify_simulation_v1", "shopify_monitoring_v1"]
-      : [managedIssueSource]
+      : integrationProvider === "checkoutleak_connector"
+        ? ["url_source_analysis_v1"]
+        : [managedIssueSource]
     const resolveOldIssues = await admin
       .from("issues")
       .update({ status: "resolved" })
@@ -1430,6 +1528,29 @@ export async function processQueuedScanV1(input?: {
             activationFlowRun?.summary.deadEndDetected ?? false,
           activation_flow_dead_end_reason:
             activationFlowRun?.summary.deadEndReason ?? null,
+        }
+      : {}),
+    ...(integrationProvider === "checkoutleak_connector"
+      ? {
+          url_source_analysis_runner_version:
+            URL_SOURCE_ANALYSIS_RUNNER_DETECTOR_VERSION,
+          url_source_analysis_last_run: urlSourceAnalysisRun
+            ? {
+                detector_version: urlSourceAnalysisRun.detectorVersion,
+                status: urlSourceAnalysisRun.status,
+                summary: urlSourceAnalysisRun.summary,
+                evidence_rows: urlSourceAnalysisRun.evidenceRows,
+                error_message: urlSourceAnalysisRun.errorMessage,
+              }
+            : null,
+          url_source_analysis_last_run_at:
+            urlSourceAnalysisRun?.summary.completedAt ?? null,
+          url_source_surface_classification:
+            urlSourceAnalysisRun?.summary.surfaceClassification ?? null,
+          url_source_revenue_path_clarity:
+            urlSourceAnalysisRun?.summary.revenuePathClarity ?? null,
+          url_source_no_clear_revenue_path:
+            urlSourceAnalysisRun?.summary.noClearRevenuePath ?? null,
         }
       : {}),
     stripe_billing_signal_snapshot: stripeBillingSnapshot

@@ -18,19 +18,19 @@ export const scanFamilyCatalog: Record<ScanFamily, ScanFamilyDefinition> = {
   signup: {
     key: "signup",
     label: "Signup",
-    primaryPlatforms: ["shopify"],
+    primaryPlatforms: ["shopify", "website"],
     notes: "Evaluates pre-checkout signup and identity friction.",
   },
   onboarding_activation: {
     key: "onboarding_activation",
     label: "Onboarding and activation",
-    primaryPlatforms: ["shopify", "stripe"],
+    primaryPlatforms: ["shopify", "stripe", "website"],
     notes: "Evaluates first-value activation gaps after signup or trial start.",
   },
   pricing_handoff: {
     key: "pricing_handoff",
     label: "Pricing and upgrade handoff",
-    primaryPlatforms: ["shopify", "stripe"],
+    primaryPlatforms: ["shopify", "stripe", "website"],
     notes: "Evaluates leakage between pricing intent and checkout start.",
   },
   checkout: {
@@ -50,6 +50,10 @@ export const scanFamilyCatalog: Record<ScanFamily, ScanFamilyDefinition> = {
 export function getPrimaryScanFamilyForPlatform(platform: MerchantPlatform): ScanFamily {
   if (platform === "stripe") {
     return "billing_recovery"
+  }
+
+  if (platform === "website") {
+    return "pricing_handoff"
   }
 
   return "checkout"

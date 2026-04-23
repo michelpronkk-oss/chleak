@@ -20,6 +20,75 @@ function asRecord(input: unknown): Record<string, unknown> {
   return input as Record<string, unknown>
 }
 
+async function upsertPrimaryUrlSourceLane(input: {
+  admin: ReturnType<typeof createSupabaseAdminClient>
+  organizationId: string
+  normalizedUrl: string
+  normalizedDomain: string
+  connectedSystemProviders: string[]
+}) {
+  const sourceStoreInsert = {
+    organization_id: input.organizationId,
+    name: `${input.normalizedDomain} Source`,
+    platform: "website",
+    domain: input.normalizedDomain,
+    timezone: "UTC",
+    currency: "USD",
+    active: true,
+  }
+
+  const storeResult = await input.admin
+    .from("stores")
+    .upsert([sourceStoreInsert], { onConflict: "organization_id,platform,domain" })
+    .select("id")
+    .single()
+
+  if (storeResult.error || !storeResult.data) {
+    return { ok: false as const }
+  }
+
+  const integrationInsert = {
+    organization_id: input.organizationId,
+    store_id: storeResult.data.id,
+    provider: "checkoutleak_connector",
+    status: "connected",
+    installed_at: new Date().toISOString(),
+    sync_status: "synced",
+    connection_health: "healthy",
+    metadata: {
+      source_entity_type: "website_domain",
+      live_source_url: input.normalizedUrl,
+      live_source_domain: input.normalizedDomain,
+      primary_live_source_url: input.normalizedUrl,
+      primary_live_source_domain: input.normalizedDomain,
+      primary_live_source_updated_at: new Date().toISOString(),
+      connected_systems: [
+        "checkoutleak_connector",
+        ...input.connectedSystemProviders.filter(
+          (provider) => provider === "shopify" || provider === "stripe"
+        ),
+      ],
+    } as Json,
+    last_synced_at: new Date().toISOString(),
+  }
+
+  const integrationResult = await input.admin
+    .from("store_integrations")
+    .upsert([integrationInsert], { onConflict: "organization_id,store_id,provider" })
+    .select("id")
+    .single()
+
+  if (integrationResult.error || !integrationResult.data) {
+    return { ok: false as const }
+  }
+
+  return {
+    ok: true as const,
+    storeId: storeResult.data.id,
+    integrationId: integrationResult.data.id,
+  }
+}
+
 export async function setLiveSourceContext(formData: FormData) {
   const raw = (formData.get("source_url") as string | null)?.trim() ?? ""
   const normalized = normalizeLiveSourceUrl(raw)
@@ -63,7 +132,7 @@ export async function setLiveSourceContext(formData: FormData) {
 
   const integrationsResult = await admin
     .from("store_integrations")
-    .select("id, metadata")
+    .select("id, metadata, provider")
     .eq("organization_id", membershipResult.data.organization_id)
     .in("provider", ["shopify", "stripe"])
     .neq("status", "disconnected")
@@ -91,7 +160,103 @@ export async function setLiveSourceContext(formData: FormData) {
     }
   }
 
+  const upsertPrimarySourceLane = await upsertPrimaryUrlSourceLane({
+    admin,
+    organizationId: membershipResult.data.organization_id,
+    normalizedUrl: normalized.normalizedUrl,
+    normalizedDomain: normalized.hostname,
+    connectedSystemProviders: (integrationsResult.data ?? []).map(
+      (integration) => integration.provider
+    ),
+  })
+
+  if (!upsertPrimarySourceLane.ok) {
+    redirect("/app/stores?provider=source_url&status=context_save_failed")
+  }
+
   revalidatePath("/app/connect")
   revalidatePath("/app/stores")
   redirect("/app/stores?provider=source_url&status=context_saved")
+}
+
+export async function triggerPrimaryUrlSourceAnalysis() {
+  const session = await getServerSession()
+  if (!session) {
+    redirect("/auth/sign-in?next=/app/stores")
+  }
+
+  const admin = createSupabaseAdminClient()
+  const membershipResult = await admin
+    .from("org_members")
+    .select("organization_id")
+    .eq("user_id", session.user.id)
+    .single()
+
+  if (membershipResult.error || !membershipResult.data) {
+    redirect("/app/stores?provider=source_url_analysis&status=unauthorized")
+  }
+
+  const integrationResult = await admin
+    .from("store_integrations")
+    .select("id, store_id, metadata")
+    .eq("organization_id", membershipResult.data.organization_id)
+    .eq("provider", "checkoutleak_connector")
+    .neq("status", "disconnected")
+    .order("installed_at", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (integrationResult.error || !integrationResult.data) {
+    redirect("/app/stores?provider=source_url_analysis&status=source_not_set")
+  }
+
+  const metadata = asRecord(integrationResult.data.metadata)
+  const entryUrl =
+    (typeof metadata.primary_live_source_url === "string"
+      ? metadata.primary_live_source_url
+      : null) ??
+    (typeof metadata.live_source_url === "string" ? metadata.live_source_url : null)
+
+  if (!entryUrl) {
+    redirect("/app/stores?provider=source_url_analysis&status=source_not_set")
+  }
+
+  const scanInsert = await admin
+    .from("scans")
+    .insert({
+      organization_id: membershipResult.data.organization_id,
+      store_id: integrationResult.data.store_id,
+      status: "queued",
+      scanned_at: new Date().toISOString(),
+      detected_issues_count: 0,
+      estimated_monthly_leakage: 0,
+    })
+    .select("id")
+    .single()
+
+  if (scanInsert.error || !scanInsert.data) {
+    redirect("/app/stores?provider=source_url_analysis&status=queue_failed")
+  }
+
+  const { processQueuedScanV1 } = await import(
+    "@/server/services/scan-processing-service"
+  )
+  const processed = await processQueuedScanV1({ scanId: scanInsert.data.id })
+
+  revalidatePath("/app/stores")
+
+  if (processed.processed) {
+    redirect(
+      `/app/stores?provider=source_url_analysis&status=completed&scan_id=${encodeURIComponent(
+        scanInsert.data.id
+      )}`
+    )
+  }
+
+  redirect(
+    `/app/stores?provider=source_url_analysis&status=${encodeURIComponent(
+      processed.reason
+    )}&scan_id=${encodeURIComponent(scanInsert.data.id)}`
+  )
 }

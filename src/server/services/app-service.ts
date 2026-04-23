@@ -130,6 +130,28 @@ interface ActivationFlowLastRunView {
   progressionScreenshotBytes: number | null
 }
 
+interface UrlSourceAnalysisLastRunView {
+  detectorVersion: string | null
+  status: string | null
+  runId: string | null
+  entryUrl: string | null
+  finalUrl: string | null
+  completedAt: string | null
+  surfaceClassification: string | null
+  revenuePathClarity: string | null
+  noClearRevenuePath: boolean | null
+  hasPricingPath: boolean | null
+  hasSignupPath: boolean | null
+  hasLoginPath: boolean | null
+  hasPrimaryCta: boolean | null
+  primaryCtaLabel: string | null
+  hasCheckoutSignal: boolean | null
+  httpStatus: number | null
+  evidenceRows: Array<{ label: string; value: string }>
+  errorMessage: string | null
+  storeId: string | null
+}
+
 interface LiveSourceSurfaceView {
   primaryUrl: string | null
   domain: string | null
@@ -734,6 +756,84 @@ function readActivationFlowLastRunView(source: unknown): ActivationFlowLastRunVi
   return hasAnyRunField ? view : null
 }
 
+function readUrlSourceAnalysisLastRunView(input: {
+  metadata: unknown
+  storeId: string
+}): UrlSourceAnalysisLastRunView | null {
+  const metadata =
+    input.metadata && typeof input.metadata === "object" && !Array.isArray(input.metadata)
+      ? (input.metadata as Record<string, unknown>)
+      : null
+  if (!metadata) {
+    return null
+  }
+
+  const runRecord =
+    metadata.url_source_analysis_last_run &&
+    typeof metadata.url_source_analysis_last_run === "object" &&
+    !Array.isArray(metadata.url_source_analysis_last_run)
+      ? (metadata.url_source_analysis_last_run as Record<string, unknown>)
+      : null
+  const summary =
+    runRecord?.summary && typeof runRecord.summary === "object" && !Array.isArray(runRecord.summary)
+      ? (runRecord.summary as Record<string, unknown>)
+      : null
+  const evidenceRowsRaw =
+    runRecord?.evidence_rows && Array.isArray(runRecord.evidence_rows)
+      ? runRecord.evidence_rows
+      : []
+  const evidenceRows = evidenceRowsRaw
+    .map((row) => {
+      if (!row || typeof row !== "object" || Array.isArray(row)) {
+        return null
+      }
+      const record = row as Record<string, unknown>
+      const label = typeof record.label === "string" ? record.label.trim() : ""
+      const value = typeof record.value === "string" ? record.value.trim() : ""
+      if (!label || !value) {
+        return null
+      }
+      return { label, value }
+    })
+    .filter((row): row is { label: string; value: string } => Boolean(row))
+
+  if (!runRecord && !summary) {
+    return null
+  }
+
+  return {
+    detectorVersion:
+      readStringFromRecord(runRecord, "detector_version") ??
+      readStringFromRecord(metadata, "url_source_analysis_runner_version"),
+    status: readStringFromRecord(runRecord, "status"),
+    runId: readStringFromRecord(summary, "runId"),
+    entryUrl: readStringFromRecord(summary, "entryUrl"),
+    finalUrl: readStringFromRecord(summary, "finalUrl"),
+    completedAt:
+      readStringFromRecord(summary, "completedAt") ??
+      readStringFromRecord(metadata, "url_source_analysis_last_run_at"),
+    surfaceClassification:
+      readStringFromRecord(summary, "surfaceClassification") ??
+      readStringFromRecord(metadata, "url_source_surface_classification"),
+    revenuePathClarity:
+      readStringFromRecord(summary, "revenuePathClarity") ??
+      readStringFromRecord(metadata, "url_source_revenue_path_clarity"),
+    noClearRevenuePath:
+      readBooleanFromRecord(summary, "noClearRevenuePath") ??
+      readBooleanFromRecord(metadata, "url_source_no_clear_revenue_path"),
+    hasPricingPath: readBooleanFromRecord(summary, "hasPricingPath"),
+    hasSignupPath: readBooleanFromRecord(summary, "hasSignupPath"),
+    hasLoginPath: readBooleanFromRecord(summary, "hasLoginPath"),
+    hasPrimaryCta: readBooleanFromRecord(summary, "hasPrimaryCta"),
+    primaryCtaLabel: readStringFromRecord(summary, "primaryCtaLabel"),
+    hasCheckoutSignal: readBooleanFromRecord(summary, "hasCheckoutSignal"),
+    httpStatus: readNumberFromRecord(summary, "httpStatus"),
+    evidenceRows,
+    errorMessage: readStringFromRecord(runRecord, "error_message"),
+    storeId: input.storeId,
+  }
+}
+
 async function loadShopifyDomainViews(organizationId: string) {
   const admin = createSupabaseAdminClient()
   const result = await admin
@@ -781,7 +881,7 @@ async function loadLiveSourceContextFromIntegrations(organizationId: string) {
     .from("store_integrations")
     .select("metadata, installed_at, created_at")
     .eq("organization_id", organizationId)
-    .in("provider", ["shopify", "stripe"])
+    .in("provider", ["shopify", "stripe", "checkoutleak_connector"])
     .neq("status", "disconnected")
     .order("installed_at", { ascending: false })
     .order("created_at", { ascending: false })
@@ -1659,6 +1759,16 @@ export async function getConnectJourneyData() {
   const integrationLiveSourceContext = await loadLiveSourceContextFromIntegrations(
     journey.organizationId
   )
+  const urlSourceIntegrationResult = await createSupabaseAdminClient()
+    .from("store_integrations")
+    .select("metadata, store_id")
+    .eq("organization_id", journey.organizationId)
+    .eq("provider", "checkoutleak_connector")
+    .neq("status", "disconnected")
+    .order("installed_at", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
   const cookieStore = await cookies()
   const cookieLiveSourceContext = parseLiveSourceContext(
     cookieStore.get(LIVE_SOURCE_CONTEXT_COOKIE)?.value
@@ -1700,6 +1810,17 @@ export async function getConnectJourneyData() {
         connectedSystemDomains,
       })
     : null
+  const urlSourceAnalysis =
+    !urlSourceIntegrationResult.error && urlSourceIntegrationResult.data
+      ? readUrlSourceAnalysisLastRunView({
+          metadata: urlSourceIntegrationResult.data.metadata,
+          storeId: urlSourceIntegrationResult.data.store_id,
+        })
+      : null
+  const urlSourceStoreId =
+    !urlSourceIntegrationResult.error && urlSourceIntegrationResult.data
+      ? urlSourceIntegrationResult.data.store_id
+      : null
 
   return {
     onboardingState: journey.state,
@@ -1720,6 +1841,8 @@ export async function getConnectJourneyData() {
         : null),
     liveSourceContext,
     liveSourceVerification,
+    urlSourceAnalysis,
+    urlSourceStoreId,
     organization: journey.baseSnapshot.organization,
   }
 }
@@ -1916,7 +2039,7 @@ export async function getStoresIndexData() {
     }
   }
 
-  const stores = journey.snapshot.stores.map((store) => {
+  const stores = journey.snapshot.stores.filter((store) => store.platform !== "website").map((store) => {
     const storeIssues = journey.snapshot.issues.filter(
       (issue) => issue.storeId === store.id && issue.status !== "resolved"
     )
@@ -2016,10 +2139,6 @@ export async function getStoreDetailData(storeId: string) {
   const shopifyDomainViews = await loadShopifyDomainViews(journey.organizationId)
   const admin = createSupabaseAdminClient()
 
-  if (!isReadyState(journey.state) && !isPendingScanState(journey.state)) {
-    return null
-  }
-
   const snapshot =
     isPendingScanState(journey.state) && journey.sourceStore
       ? {
@@ -2030,15 +2149,91 @@ export async function getStoreDetailData(storeId: string) {
         }
       : journey.snapshot
 
-  const store = snapshot.stores.find((item) => item.id === storeId)
+  let store: Store | undefined = snapshot.stores.find((item) => item.id === storeId)
+
+  // For non-ready states, still allow access to website platform stores (URL source)
+  if (!store && !isReadyState(journey.state) && !isPendingScanState(journey.state)) {
+    const directResult = await admin
+      .from("stores")
+      .select("id, organization_id, name, platform, domain, timezone, currency, active, created_at")
+      .eq("id", storeId)
+      .eq("organization_id", journey.organizationId)
+      .eq("platform", "website")
+      .maybeSingle()
+    if (!directResult.error && directResult.data) {
+      const d = directResult.data
+      store = {
+        id: d.id,
+        organizationId: d.organization_id,
+        name: d.name,
+        platform: d.platform as "website",
+        domain: d.domain,
+        timezone: d.timezone,
+        currency: d.currency,
+        active: d.active,
+        createdAt: d.created_at,
+      }
+    }
+  }
+
   if (!store) {
     return null
   }
 
-  const scans = snapshot.scans.filter((scan) => scan.storeId === storeId)
-  const issues = snapshot.issues.filter(
-    (issue) => issue.storeId === storeId && issue.status !== "resolved"
-  )
+  const isWebsiteStore = store.platform === "website"
+  const useDirectQuery = isWebsiteStore && !isReadyState(journey.state) && !isPendingScanState(journey.state)
+
+  let scans: typeof snapshot.scans
+  let issues: typeof snapshot.issues
+
+  if (useDirectQuery) {
+    const [scansResult, issuesResult] = await Promise.all([
+      admin
+        .from("scans")
+        .select("id, organization_id, store_id, status, scanned_at, completed_at, detected_issues_count, estimated_monthly_leakage")
+        .eq("organization_id", journey.organizationId)
+        .eq("store_id", storeId)
+        .order("scanned_at", { ascending: false })
+        .limit(5),
+      admin
+        .from("issues")
+        .select("id, organization_id, store_id, scan_id, title, summary, type, severity, status, estimated_monthly_revenue_impact, recommended_action, source, detected_at, why_it_matters")
+        .eq("organization_id", journey.organizationId)
+        .eq("store_id", storeId)
+        .neq("status", "resolved"),
+    ])
+    scans = (scansResult.data ?? []).map((s) => ({
+      id: s.id,
+      organizationId: s.organization_id,
+      storeId: s.store_id,
+      status: s.status as import("@/types/domain").ScanStatus,
+      scannedAt: s.scanned_at,
+      completedAt: s.completed_at,
+      detectedIssuesCount: s.detected_issues_count,
+      estimatedMonthlyLeakage: s.estimated_monthly_leakage,
+    }))
+    issues = (issuesResult.data ?? []).map((i) => ({
+      id: i.id,
+      organizationId: i.organization_id,
+      storeId: i.store_id,
+      scanId: i.scan_id,
+      title: i.title,
+      summary: i.summary,
+      type: i.type as import("@/types/domain").IssueType,
+      severity: i.severity as import("@/types/domain").IssueSeverity,
+      status: i.status as import("@/types/domain").IssueStatus,
+      estimatedMonthlyRevenueImpact: i.estimated_monthly_revenue_impact,
+      recommendedAction: i.recommended_action,
+      source: i.source,
+      detectedAt: i.detected_at,
+      whyItMatters: i.why_it_matters,
+    }))
+  } else {
+    scans = snapshot.scans.filter((scan) => scan.storeId === storeId)
+    issues = snapshot.issues.filter(
+      (issue) => issue.storeId === storeId && issue.status !== "resolved"
+    )
+  }
   const latestScan = scans[0] ?? null
   const highestSeverity = getHighestSeverity(issues.map((i) => i.severity))
   const status = getStoreStatus({ issueCount: issues.length, highestSeverity })
@@ -2093,6 +2288,13 @@ export async function getStoreDetailData(storeId: string) {
           activationFlowHints: readActivationFlowHintsView(integrationResult.data.metadata),
           activationLastRun: readActivationFlowLastRunView(integrationResult.data.metadata),
         }
+  const urlSourceAnalysis =
+    isWebsiteStore && !integrationResult.error && integrationResult.data
+      ? readUrlSourceAnalysisLastRunView({
+          metadata: integrationResult.data.metadata,
+          storeId: store.id,
+        })
+      : null
 
   const fixPlanLinks = issues
     .map((issue) => ({
@@ -2135,6 +2337,7 @@ export async function getStoreDetailData(storeId: string) {
     setupAttention,
     setupAttentionMessage,
     integration,
+    urlSourceAnalysis,
   }
 }
 

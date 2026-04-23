@@ -11,6 +11,7 @@ import { MetaPill, RankedQueueRow, SeverityPill, VaultPanel } from "@/components
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
 import { SubmitButton } from "@/components/ui/submit-button"
 import { getStoreDetailData, getStoresIndexData } from "@/server/services/app-service"
+import { triggerPrimaryUrlSourceAnalysis } from "../../connect/actions"
 import { saveActivationFlowHints, triggerActivationTestRun } from "./actions"
 
 const hintStatusMessage: Record<string, string> = {
@@ -68,11 +69,11 @@ export default async function StoreDetailPage({
     redirect("/app/billing?intent=plan_required")
   }
 
-  if (storesData.onboardingState === "empty") {
+  const data = await getStoreDetailData(id)
+
+  if (!data && storesData.onboardingState === "empty") {
     redirect("/app/stores")
   }
-
-  const data = await getStoreDetailData(id)
 
   if (!data) {
     notFound()
@@ -110,13 +111,18 @@ export default async function StoreDetailPage({
     null
   const isDemoMode = data.onboardingState === "demo"
   const isShopifySource = data.store.platform === "shopify"
+  const isWebsiteSource = data.store.platform === "website"
   const showLiveShopifyActivationControls = isShopifySource && !isDemoMode
+  const showUrlSourceControls = isWebsiteSource && !isDemoMode
+  const urlSourceAnalysis = data.urlSourceAnalysis ?? null
   const liveSourceSurface = data.integration?.liveSourceSurface ?? null
-  const connectedSystems = liveSourceSurface?.connectedSystems?.length
-    ? liveSourceSurface.connectedSystems
-    : data.integration?.provider
-      ? [data.integration.provider]
-      : []
+  const connectedSystems = (
+    liveSourceSurface?.connectedSystems?.length
+      ? liveSourceSurface.connectedSystems
+      : data.integration?.provider
+        ? [data.integration.provider]
+        : []
+  ).filter((s) => s !== "checkoutleak_connector")
 
   const rankedIssues = [...data.issues].sort(
     (a, b) => b.estimatedMonthlyRevenueImpact - a.estimatedMonthlyRevenueImpact
@@ -256,6 +262,7 @@ export default async function StoreDetailPage({
             ) : null}
           </VaultPanel>
 
+          {isWebsiteSource ? null : (
           <VaultPanel title="Activation flow hints" meta="Runner targeting controls">
             {showLiveShopifyActivationControls ? (
               <form action={saveHintsAction}>
@@ -391,6 +398,7 @@ export default async function StoreDetailPage({
               </p>
             )}
           </VaultPanel>
+          )}
         </div>
 
         <div className="space-y-5">
@@ -477,146 +485,227 @@ export default async function StoreDetailPage({
             </ul>
           </VaultPanel>
 
-          <VaultPanel title="Last activation run" meta="Latest deterministic flow summary">
-            {showLiveShopifyActivationControls ? (
-              lastActivationRun ? (
+          {showUrlSourceControls ? (
+            <VaultPanel title="Surface analysis" meta="Latest revenue path and surface evidence">
+              {urlSourceAnalysis ? (
                 <div className="space-y-3 px-4 py-4 text-sm sm:px-5">
                   <dl className="grid gap-2 text-muted-foreground">
                     <div>
-                      <dt className="data-mono text-[0.68rem]">Run time</dt>
+                      <dt className="data-mono text-[0.68rem]">Analyzed</dt>
                       <dd className="mt-1 text-foreground">
-                        {lastActivationRun.lastRunAt
-                          ? formatRelativeTimestamp(lastActivationRun.lastRunAt)
+                        {urlSourceAnalysis.completedAt
+                          ? formatRelativeTimestamp(urlSourceAnalysis.completedAt)
                           : "Unknown"}
                       </dd>
                     </div>
                     <div>
-                      <dt className="data-mono text-[0.68rem]">Runner</dt>
-                      <dd className="mt-1">
-                        {lastActivationRun.detectorVersion ?? "Unknown"} | {formatOperatorValue(lastActivationRun.runStatus)}
+                      <dt className="data-mono text-[0.68rem]">Surface</dt>
+                      <dd className="mt-1 text-foreground">
+                        {urlSourceAnalysis.surfaceClassification ?? "unknown"}
                       </dd>
                     </div>
                     <div>
-                      <dt className="data-mono text-[0.68rem]">Progression</dt>
-                      <dd className="mt-1">
-                        {formatOperatorValue(lastActivationRun.progressionOutcome)}
-                        {" | "}
-                        dead end: {formatOperatorValue(lastActivationRun.deadEndReason)}
+                      <dt className="data-mono text-[0.68rem]">Revenue path</dt>
+                      <dd className="mt-1 text-foreground">
+                        {urlSourceAnalysis.revenuePathClarity ?? "unknown"}
                       </dd>
                     </div>
                     <div>
-                      <dt className="data-mono text-[0.68rem]">URLs</dt>
-                      <dd className="mt-1 break-all">
-                        Entry: {lastActivationRun.entryUrl ?? "Unknown"}
-                      </dd>
-                      <dd className="mt-1 break-all">
-                        Final: {lastActivationRun.finalUrl ?? "Unknown"}
+                      <dt className="data-mono text-[0.68rem]">Signals</dt>
+                      <dd className="mt-1">
+                        Pricing: {urlSourceAnalysis.hasPricingPath ? "yes" : "no"} | Signup:{" "}
+                        {urlSourceAnalysis.hasSignupPath ? "yes" : "no"} | Checkout:{" "}
+                        {urlSourceAnalysis.hasCheckoutSignal ? "yes" : "no"}
                       </dd>
                     </div>
+                    {urlSourceAnalysis.primaryCtaLabel ? (
+                      <div>
+                        <dt className="data-mono text-[0.68rem]">Primary action</dt>
+                        <dd className="mt-1">{urlSourceAnalysis.primaryCtaLabel}</dd>
+                      </div>
+                    ) : null}
                     <div>
-                      <dt className="data-mono text-[0.68rem]">Page state</dt>
-                      <dd className="mt-1">
-                        Entry: {formatOperatorValue(lastActivationRun.entryPageClassification)}
-                      </dd>
-                      <dd className="mt-1">
-                        Final: {formatOperatorValue(lastActivationRun.finalPageClassification)}
-                      </dd>
+                      <dt className="data-mono text-[0.68rem]">Entry URL</dt>
+                      <dd className="mt-1 break-all">{urlSourceAnalysis.entryUrl ?? "Unknown"}</dd>
                     </div>
-                    <div>
-                      <dt className="data-mono text-[0.68rem]">Primary CTA</dt>
-                      <dd className="mt-1">
-                        {lastActivationRun.primaryActionLabel ?? "None"}{" "}
-                        ({formatOperatorValue(lastActivationRun.primaryActionKind)})
-                      </dd>
-                      <dd className="mt-1 break-all">
-                        Target: {lastActivationRun.primaryActionTarget ?? "None"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="data-mono text-[0.68rem]">Hint usage</dt>
-                      <dd className="mt-1">
-                        Source: {lastActivationRun.hintSource ?? "none"}
-                      </dd>
-                      <dd className="mt-1 break-all">
-                        Primary selector: {lastActivationRun.hintPrimarySelector ?? "None"} ({formatSelectorMatch(lastActivationRun.hintPrimarySelectorMatched)})
-                      </dd>
-                      <dd className="mt-1 break-all">
-                        Next-action selector: {lastActivationRun.hintNextActionSelector ?? "None"} ({formatSelectorMatch(lastActivationRun.hintNextActionSelectorMatched)})
-                      </dd>
-                      <dd className="mt-1 break-all">
-                        First-value selector: {lastActivationRun.hintFirstValueSelector ?? "None"} ({formatSelectorMatch(lastActivationRun.hintFirstValueSelectorMatched)})
-                      </dd>
-                      <dd className="mt-1">
-                        Auth expected:{" "}
-                        {lastActivationRun.hintAuthExpected === null
-                          ? "auto"
-                          : lastActivationRun.hintAuthExpected
-                            ? "true"
-                            : "false"}{" "}
-                        | intent: {lastActivationRun.hintPageIntent ?? "auto"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="data-mono text-[0.68rem]">Screenshot evidence</dt>
-                      <dd className="mt-1 break-all">
-                        Ref: {screenshotReference ?? "None"}
-                      </dd>
-                      <dd className="mt-1 break-all">
-                        SHA-256: {screenshotSha ?? "None"}
-                      </dd>
-                      <dd className="mt-1">
-                        Bytes: {screenshotBytes ?? "None"}
-                      </dd>
-                    </div>
+                    {urlSourceAnalysis.finalUrl && urlSourceAnalysis.finalUrl !== urlSourceAnalysis.entryUrl ? (
+                      <div>
+                        <dt className="data-mono text-[0.68rem]">Final URL</dt>
+                        <dd className="mt-1 break-all">{urlSourceAnalysis.finalUrl}</dd>
+                      </div>
+                    ) : null}
+                    {urlSourceAnalysis.errorMessage ? (
+                      <div>
+                        <dt className="data-mono text-[0.68rem]">Note</dt>
+                        <dd className="mt-1 text-amber-300">{urlSourceAnalysis.errorMessage}</dd>
+                      </div>
+                    ) : null}
                   </dl>
                 </div>
               ) : (
                 <p className="px-5 py-6 text-sm text-muted-foreground">
-                  No activation flow run has been recorded for this source yet. Run a test scan to generate the first summary.
-                </p>
-              )
-            ) : (
-              <p className="px-5 py-6 text-sm text-muted-foreground">
-                {isDemoMode
-                  ? "Activation run summary appears for live Shopify sources after an activation test run."
-                  : "Activation run summary is available for Shopify sources."}
-              </p>
-            )}
-          </VaultPanel>
-
-          <VaultPanel
-            title="Activation test-run"
-            meta={
-              showLiveShopifyActivationControls
-                ? "Run and validate activation behavior on this source"
-                : "Source-specific scan controls"
-            }
-          >
-            <div className="px-4 py-4 sm:px-5">
-              {showLiveShopifyActivationControls ? (
-                <>
-                  <p className="text-sm text-muted-foreground">
-                    Trigger a fresh activation scan and review evidence in this source detail.
-                  </p>
-                  <form action={runTestScanAction} className="mt-4">
-                    <SubmitButton
-                      label="Run activation test scan"
-                      pendingLabel="Running scan..."
-                    />
-                  </form>
-                  {activeScanStatus ? (
-                    <p className="mt-2 text-xs text-muted-foreground">{activeScanStatus}</p>
-                  ) : null}
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  {isDemoMode
-                    ? "Test scans run in live Shopify sources. Use Return to live workspace to validate real behavior."
-                    : "Activation test scans are available for Shopify sources."}
+                  No surface analysis has been run for this source yet.
                 </p>
               )}
-            </div>
-          </VaultPanel>
+            </VaultPanel>
+          ) : (
+            <VaultPanel title="Last activation run" meta="Latest deterministic flow summary">
+              {showLiveShopifyActivationControls ? (
+                lastActivationRun ? (
+                  <div className="space-y-3 px-4 py-4 text-sm sm:px-5">
+                    <dl className="grid gap-2 text-muted-foreground">
+                      <div>
+                        <dt className="data-mono text-[0.68rem]">Run time</dt>
+                        <dd className="mt-1 text-foreground">
+                          {lastActivationRun.lastRunAt
+                            ? formatRelativeTimestamp(lastActivationRun.lastRunAt)
+                            : "Unknown"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="data-mono text-[0.68rem]">Runner</dt>
+                        <dd className="mt-1">
+                          {lastActivationRun.detectorVersion ?? "Unknown"} | {formatOperatorValue(lastActivationRun.runStatus)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="data-mono text-[0.68rem]">Progression</dt>
+                        <dd className="mt-1">
+                          {formatOperatorValue(lastActivationRun.progressionOutcome)}
+                          {" | "}
+                          dead end: {formatOperatorValue(lastActivationRun.deadEndReason)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="data-mono text-[0.68rem]">URLs</dt>
+                        <dd className="mt-1 break-all">
+                          Entry: {lastActivationRun.entryUrl ?? "Unknown"}
+                        </dd>
+                        <dd className="mt-1 break-all">
+                          Final: {lastActivationRun.finalUrl ?? "Unknown"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="data-mono text-[0.68rem]">Page state</dt>
+                        <dd className="mt-1">
+                          Entry: {formatOperatorValue(lastActivationRun.entryPageClassification)}
+                        </dd>
+                        <dd className="mt-1">
+                          Final: {formatOperatorValue(lastActivationRun.finalPageClassification)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="data-mono text-[0.68rem]">Primary action</dt>
+                        <dd className="mt-1">
+                          {lastActivationRun.primaryActionLabel ?? "None"}{" "}
+                          ({formatOperatorValue(lastActivationRun.primaryActionKind)})
+                        </dd>
+                        <dd className="mt-1 break-all">
+                          Target: {lastActivationRun.primaryActionTarget ?? "None"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="data-mono text-[0.68rem]">Hint usage</dt>
+                        <dd className="mt-1">
+                          Source: {lastActivationRun.hintSource ?? "none"}
+                        </dd>
+                        <dd className="mt-1 break-all">
+                          Primary selector: {lastActivationRun.hintPrimarySelector ?? "None"} ({formatSelectorMatch(lastActivationRun.hintPrimarySelectorMatched)})
+                        </dd>
+                        <dd className="mt-1 break-all">
+                          Next-action selector: {lastActivationRun.hintNextActionSelector ?? "None"} ({formatSelectorMatch(lastActivationRun.hintNextActionSelectorMatched)})
+                        </dd>
+                        <dd className="mt-1 break-all">
+                          First-value selector: {lastActivationRun.hintFirstValueSelector ?? "None"} ({formatSelectorMatch(lastActivationRun.hintFirstValueSelectorMatched)})
+                        </dd>
+                        <dd className="mt-1">
+                          Auth expected:{" "}
+                          {lastActivationRun.hintAuthExpected === null
+                            ? "auto"
+                            : lastActivationRun.hintAuthExpected
+                              ? "true"
+                              : "false"}{" "}
+                          | intent: {lastActivationRun.hintPageIntent ?? "auto"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="data-mono text-[0.68rem]">Screenshot evidence</dt>
+                        <dd className="mt-1 break-all">
+                          Ref: {screenshotReference ?? "None"}
+                        </dd>
+                        <dd className="mt-1 break-all">
+                          SHA-256: {screenshotSha ?? "None"}
+                        </dd>
+                        <dd className="mt-1">
+                          Bytes: {screenshotBytes ?? "None"}
+                        </dd>
+                      </div>
+                    </dl>
+                  </div>
+                ) : (
+                  <p className="px-5 py-6 text-sm text-muted-foreground">
+                    No activation flow run has been recorded for this source yet. Run a test scan to generate the first summary.
+                  </p>
+                )
+              ) : (
+                <p className="px-5 py-6 text-sm text-muted-foreground">
+                  {isDemoMode
+                    ? "Activation run summary appears for live Shopify sources after an activation test run."
+                    : "Activation run summary is available for Shopify sources."}
+                </p>
+              )}
+            </VaultPanel>
+          )}
+
+          {showUrlSourceControls ? (
+            <VaultPanel title="Surface analysis scan" meta="Run surface analysis on this source">
+              <div className="px-4 py-4 sm:px-5">
+                <p className="text-sm text-muted-foreground">
+                  Analyze the live revenue surface to detect pricing path, signup flow, and checkout signal presence.
+                </p>
+                <form action={triggerPrimaryUrlSourceAnalysis} className="mt-4">
+                  <SubmitButton
+                    label={urlSourceAnalysis ? "Re-run surface analysis" : "Run surface analysis"}
+                    pendingLabel="Analyzing..."
+                  />
+                </form>
+              </div>
+            </VaultPanel>
+          ) : (
+            <VaultPanel
+              title="Activation test-run"
+              meta={
+                showLiveShopifyActivationControls
+                  ? "Run and validate activation behavior on this source"
+                  : "Source-specific scan controls"
+              }
+            >
+              <div className="px-4 py-4 sm:px-5">
+                {showLiveShopifyActivationControls ? (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      Trigger a fresh activation scan and review evidence in this source detail.
+                    </p>
+                    <form action={runTestScanAction} className="mt-4">
+                      <SubmitButton
+                        label="Run activation test scan"
+                        pendingLabel="Running scan..."
+                      />
+                    </form>
+                    {activeScanStatus ? (
+                      <p className="mt-2 text-xs text-muted-foreground">{activeScanStatus}</p>
+                    ) : null}
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {isDemoMode
+                      ? "Test scans run in live Shopify sources. Use Return to live workspace to validate real behavior."
+                      : "Activation test scans are available for Shopify sources."}
+                  </p>
+                )}
+              </div>
+            </VaultPanel>
+          )}
         </div>
       </section>
 

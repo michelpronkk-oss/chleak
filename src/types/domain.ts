@@ -1,4 +1,4 @@
-export type MerchantPlatform = "shopify" | "stripe"
+export type MerchantPlatform = "shopify" | "stripe" | "website"
 export type ConnectedSystemProvider =
   | MerchantPlatform
   | "checkoutleak_connector"

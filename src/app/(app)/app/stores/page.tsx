@@ -12,7 +12,10 @@ import { normalizeLiveSourceUrl } from "@/lib/live-source"
 import { cn } from "@/lib/utils"
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
 import { getConnectJourneyData, getStoresIndexData } from "@/server/services/app-service"
-import { setLiveSourceContext } from "../connect/actions"
+import {
+  setLiveSourceContext,
+  triggerPrimaryUrlSourceAnalysis,
+} from "../connect/actions"
 import { DisconnectButton } from "../connect/disconnect-button"
 import { ShopifyConnectSubmitButton } from "../connect/shopify-connect-submit-button"
 import { StripeConnectSubmitButton } from "../connect/stripe-connect-submit-button"
@@ -33,6 +36,17 @@ const statusMessage: Record<string, string> = {
   invalid_source_url: "Use a valid URL or domain for the live revenue surface.",
   context_saved: "Live source context saved.",
   context_save_failed: "Could not save live source context. Retry in a moment.",
+  source_not_set: "Set a primary live source URL before running URL-source analysis.",
+  queue_failed: "Could not queue URL-source analysis. Retry in a moment.",
+  completed: "URL-source analysis completed. Summary has been updated.",
+  unauthorized: "You are not authorized to run URL-source analysis for this workspace.",
+  lookup_failed: "URL-source analysis lookup failed. Retry in a moment.",
+  store_missing: "URL-source analysis store context is missing.",
+  integration_missing: "URL-source analysis integration context is missing.",
+  running_update_failed: "URL-source analysis could not enter running state.",
+  scan_not_queued_or_missing: "Queued URL-source analysis is no longer available.",
+  scan_not_queued_anymore: "Queued URL-source analysis was already picked by another runner.",
+  completion_failed: "URL-source analysis failed during completion.",
 }
 
 const errorStatuses = new Set([
@@ -47,6 +61,16 @@ const errorStatuses = new Set([
   "disconnect_failed",
   "invalid_source_url",
   "context_save_failed",
+  "source_not_set",
+  "queue_failed",
+  "unauthorized",
+  "lookup_failed",
+  "store_missing",
+  "integration_missing",
+  "running_update_failed",
+  "scan_not_queued_or_missing",
+  "scan_not_queued_anymore",
+  "completion_failed",
 ])
 
 const progressSteps = ["Plan active", "Set source URL", "Connect systems", "Findings"]
@@ -151,7 +175,10 @@ export default async function SourcesPage({
       : null
 
   const showStatusMessage =
-    (provider === "shopify" || provider === "stripe" || provider === "source_url") &&
+    (provider === "shopify" ||
+      provider === "stripe" ||
+      provider === "source_url" ||
+      provider === "source_url_analysis") &&
     status &&
     statusMessage[status]
   const statusIsError = status ? errorStatuses.has(status) : false
@@ -199,12 +226,17 @@ export default async function SourcesPage({
     (system) => system.status !== "not_connected"
   ).length
   const hasCompletedSystemScan = storesData.stores.some((store) => Boolean(store.latestScanAt))
-  const latestScanAt = [...storesData.stores]
+  const latestStoreScanAt = [...storesData.stores]
     .map((store) => store.latestScanAt)
     .filter((value): value is string => Boolean(value))
     .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0] ?? null
+  const urlSourceAnalysis = connectData.urlSourceAnalysis
+  const urlSourceStoreId = connectData.urlSourceStoreId ?? urlSourceAnalysis?.storeId ?? null
+  const latestAnalysisAt = urlSourceAnalysis?.completedAt ?? latestStoreScanAt
   const sourceScanStateLabel = !primarySourceSaved
     ? "Not set"
+    : urlSourceAnalysis?.status === "completed"
+      ? "Analyzed"
     : connectedSystemsCount === 0
       ? "Saved | ready for scan"
       : hasCompletedSystemScan
@@ -214,6 +246,8 @@ export default async function SourcesPage({
           : "Saved | waiting for first scan"
   const sourceScanStateTone = !primarySourceSaved
     ? "text-muted-foreground"
+    : urlSourceAnalysis?.status === "completed"
+      ? "text-emerald-300"
     : hasCompletedSystemScan
       ? "text-emerald-300"
       : isPendingShopify || isPendingStripe
@@ -221,13 +255,15 @@ export default async function SourcesPage({
         : "text-amber-300"
   const sourceScanStateDetail = !primarySourceSaved
     ? "Set a primary URL or domain to create the canonical source context."
+    : urlSourceAnalysis?.status === "completed"
+      ? "Surface analysis completed. Revenue path and checkout signals are now in evidence."
     : connectedSystemsCount === 0
-      ? "Primary URL source is saved. Connect Shopify or Stripe to start the first analysis cycle."
+      ? "Primary source saved. Connect Shopify or Stripe for deeper activation and checkout evidence."
       : hasCompletedSystemScan
-        ? "Primary URL source is active and currently used as canonical scan context."
+        ? "Primary source is active and used as canonical context for connected system scans."
         : isPendingShopify || isPendingStripe
-          ? "Connected systems are running first analysis. The URL source is attached as canonical context."
-          : "Connected systems exist, but first analysis has not completed yet."
+          ? "Connected systems are running first analysis. Primary source is attached as context."
+          : "Connected systems exist. First analysis has not completed yet."
   const liveSourceUpdatedAt =
     connectData.liveSourceContext && "updatedAt" in connectData.liveSourceContext
       ? connectData.liveSourceContext.updatedAt
@@ -295,14 +331,14 @@ export default async function SourcesPage({
             />
           </div>
           <SubmitButton
-            label="Set live source context"
-            pendingLabel="Saving source..."
+            label="Save as primary source"
+            pendingLabel="Saving..."
             className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
           />
         </form>
         {connectData.liveSourceContext?.url ? (
           <p className="mt-3 text-xs text-emerald-300">
-            Saved context: {connectData.liveSourceContext.url}
+            Primary source: {connectData.liveSourceContext.url}
           </p>
         ) : null}
         {normalizedLiveSource ? (
@@ -313,12 +349,12 @@ export default async function SourcesPage({
       </section>
 
       <section className="surface-card p-4 sm:p-5 lg:p-6">
-        <p className="data-mono text-muted-foreground">Primary source object</p>
+        <p className="data-mono text-muted-foreground">Primary source</p>
         <article className="mt-4 rounded-xl border border-border/70 bg-background/35 p-4 sm:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="font-mono text-[0.68rem] tracking-[0.1em] uppercase text-muted-foreground/60">
-                Canonical live source
+                Primary live source
               </p>
               <h2 className="mt-1.5 flex items-center gap-2 text-base font-semibold tracking-tight sm:text-lg">
                 <Globe2 className="h-4 w-4 text-muted-foreground/70" />
@@ -375,26 +411,60 @@ export default async function SourcesPage({
             <div className="rounded-lg border border-border/60 bg-background/30 p-3">
               <dt className="data-mono text-muted-foreground">Latest analysis</dt>
               <dd className="mt-1 text-foreground">
-                {latestScanAt ? formatRelativeTimestamp(latestScanAt) : "Not run yet"}
+                {latestAnalysisAt ? formatRelativeTimestamp(latestAnalysisAt) : "Not run yet"}
               </dd>
             </div>
           </dl>
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            {connectedSystems.map((system) => (
-              <span
-                key={system.label}
-                className={cn(
-                  "inline-flex items-center rounded-md border px-2 py-1 text-[11px] uppercase",
-                  system.status === "not_connected"
-                    ? "border-border/70 text-muted-foreground/70"
-                    : "border-primary/30 text-foreground"
-                )}
-              >
-                {system.label} | {formatSourceStatus(system.status)}
-              </span>
-            ))}
-          </div>
+          {urlSourceAnalysis ? (
+            <div className="mt-4 rounded-lg border border-border/60 bg-background/30 p-3">
+              <p className="data-mono text-muted-foreground">Surface analysis</p>
+              <p className="mt-2 text-sm text-foreground">
+                {urlSourceAnalysis.surfaceClassification ?? "unknown"} | Revenue path:{" "}
+                {urlSourceAnalysis.revenuePathClarity ?? "unknown"}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Pricing path: {urlSourceAnalysis.hasPricingPath ? "yes" : "no"} | Signup path:{" "}
+                {urlSourceAnalysis.hasSignupPath ? "yes" : "no"} | Checkout signal:{" "}
+                {urlSourceAnalysis.hasCheckoutSignal ? "yes" : "no"}
+              </p>
+              {urlSourceAnalysis.primaryCtaLabel ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Primary action: {urlSourceAnalysis.primaryCtaLabel}
+                </p>
+              ) : null}
+              {urlSourceAnalysis.errorMessage ? (
+                <p className="mt-1 text-xs text-amber-300">
+                  {urlSourceAnalysis.errorMessage}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {connectedSystemsCount > 0 ? (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {connectedSystems
+                .filter((system) => system.status !== "not_connected")
+                .map((system) => (
+                  <span
+                    key={system.label}
+                    className="inline-flex items-center rounded-md border border-primary/30 px-2 py-1 text-[11px] uppercase text-foreground"
+                  >
+                    {system.label} | {formatSourceStatus(system.status)}
+                  </span>
+                ))}
+            </div>
+          ) : null}
+
+          {primarySourceSaved ? (
+            <form action={triggerPrimaryUrlSourceAnalysis} className="mt-4">
+              <SubmitButton
+                label={urlSourceAnalysis ? "Re-run surface analysis" : "Run surface analysis"}
+                pendingLabel="Analyzing..."
+                className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              />
+            </form>
+          ) : null}
         </article>
       </section>
 
@@ -566,10 +636,13 @@ export default async function SourcesPage({
 
                 <div className="grid gap-1 text-sm">
                   <p className="text-muted-foreground">
-                    Latest analysis: {latestScanAt ? formatRelativeTimestamp(latestScanAt) : "Not run yet"}
+                    Latest analysis:{" "}
+                    {latestAnalysisAt ? formatRelativeTimestamp(latestAnalysisAt) : "Not run yet"}
                   </p>
                   <p className="font-semibold text-primary">
-                    {connectedSystemsCount} connected system{connectedSystemsCount !== 1 ? "s" : ""}
+                    {connectedSystemsCount > 0
+                      ? `${connectedSystemsCount} connected system${connectedSystemsCount !== 1 ? "s" : ""}`
+                      : "No systems connected"}
                   </p>
                 </div>
 
@@ -577,6 +650,14 @@ export default async function SourcesPage({
                   <Link href="#source-setup" className="vault-link inline-flex items-center gap-1 text-sm">
                     Edit source <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
+                  {urlSourceStoreId && storesData.onboardingState !== "empty" ? (
+                    <Link
+                      href={`/app/stores/${urlSourceStoreId}`}
+                      className="vault-link inline-flex items-center gap-1 text-sm"
+                    >
+                      Open surface detail <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  ) : null}
                 </div>
               </article>
             ) : null}
@@ -654,7 +735,7 @@ export default async function SourcesPage({
         <p className="data-mono text-muted-foreground">Coverage Snapshot</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-3 sm:gap-4">
           <div className="rounded-xl border border-border/70 bg-background/35 p-3.5 sm:p-4">
-            <p className="text-sm text-muted-foreground">Connected sources</p>
+            <p className="text-sm text-muted-foreground">Active sources</p>
             <p className="mt-1 text-2xl font-semibold tracking-tight">
               {storesData.stores.length + (primarySourceSaved ? 1 : 0)}
             </p>
