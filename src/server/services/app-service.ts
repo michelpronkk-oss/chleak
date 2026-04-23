@@ -81,6 +81,22 @@ interface ShopifyDomainView {
   lastError: string | null
 }
 
+type ActivationPageIntentHint =
+  | "onboarding"
+  | "activation"
+  | "first_value"
+  | "checkout_handoff"
+
+interface ActivationFlowHintsView {
+  preferredEntryUrl: string | null
+  onboardingPathUrl: string | null
+  preferredPrimaryCtaSelector: string | null
+  preferredNextActionSelector: string | null
+  firstValueAreaSelector: string | null
+  authExpected: boolean | null
+  pageIntentHint: ActivationPageIntentHint | null
+}
+
 function isShopifySetupAttention(view: ShopifyDomainView | undefined) {
   if (!view) {
     return false
@@ -361,6 +377,50 @@ function readStringFromRecord(source: unknown, key: string): string | null {
   }
   const value = (source as Record<string, unknown>)[key]
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null
+}
+
+function readBooleanFromRecord(source: unknown, key: string): boolean | null {
+  if (!source || typeof source !== "object" || Array.isArray(source)) {
+    return null
+  }
+  const value = (source as Record<string, unknown>)[key]
+  return typeof value === "boolean" ? value : null
+}
+
+function readActivationFlowHintsView(source: unknown): ActivationFlowHintsView {
+  const hintsSource =
+    source && typeof source === "object" && !Array.isArray(source)
+      ? (source as Record<string, unknown>).activation_flow_hints_v1
+      : null
+  const record =
+    hintsSource && typeof hintsSource === "object" && !Array.isArray(hintsSource)
+      ? (hintsSource as Record<string, unknown>)
+      : null
+
+  const rawIntent = readStringFromRecord(record, "page_intent_hint")
+  const pageIntentHint =
+    rawIntent === "onboarding" ||
+    rawIntent === "activation" ||
+    rawIntent === "first_value" ||
+    rawIntent === "checkout_handoff"
+      ? rawIntent
+      : null
+
+  return {
+    preferredEntryUrl: readStringFromRecord(record, "preferred_entry_url"),
+    onboardingPathUrl: readStringFromRecord(record, "onboarding_path_url"),
+    preferredPrimaryCtaSelector: readStringFromRecord(
+      record,
+      "preferred_primary_cta_selector"
+    ),
+    preferredNextActionSelector: readStringFromRecord(
+      record,
+      "preferred_next_action_selector"
+    ),
+    firstValueAreaSelector: readStringFromRecord(record, "first_value_area_selector"),
+    authExpected: readBooleanFromRecord(record, "auth_expected"),
+    pageIntentHint,
+  }
 }
 
 async function loadShopifyDomainViews(organizationId: string) {
@@ -1562,6 +1622,7 @@ export async function getStoresIndexData() {
 export async function getStoreDetailData(storeId: string) {
   const journey = await getJourneyContext()
   const shopifyDomainViews = await loadShopifyDomainViews(journey.organizationId)
+  const admin = createSupabaseAdminClient()
 
   if (!isReadyState(journey.state) && !isPendingScanState(journey.state)) {
     return null
@@ -1611,6 +1672,25 @@ export async function getStoreDetailData(storeId: string) {
   )
   const context =
     mockStoreContexts.find((item) => item.storeId === storeId) ?? null
+  const integrationResult = await admin
+    .from("store_integrations")
+    .select("id, provider, status, metadata")
+    .eq("organization_id", journey.organizationId)
+    .eq("store_id", storeId)
+    .neq("status", "disconnected")
+    .order("installed_at", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const integration =
+    integrationResult.error || !integrationResult.data
+      ? null
+      : {
+          id: integrationResult.data.id,
+          provider: integrationResult.data.provider,
+          status: integrationResult.data.status,
+          activationFlowHints: readActivationFlowHintsView(integrationResult.data.metadata),
+        }
 
   const fixPlanLinks = issues
     .map((issue) => ({
@@ -1652,6 +1732,7 @@ export async function getStoreDetailData(storeId: string) {
     fixPlanLinks,
     setupAttention,
     setupAttentionMessage,
+    integration,
   }
 }
 

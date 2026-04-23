@@ -9,14 +9,42 @@ export const metadata: Metadata = {
 
 import { MetaPill, RankedQueueRow, SeverityPill, VaultPanel } from "@/components/dashboard/vault-primitives"
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
+import { SubmitButton } from "@/components/ui/submit-button"
 import { getStoreDetailData, getStoresIndexData } from "@/server/services/app-service"
+import { saveActivationFlowHints, triggerActivationTestRun } from "./actions"
+
+const hintStatusMessage: Record<string, string> = {
+  saved: "Activation flow hints saved.",
+  invalid: "Hints were not saved. Check URL or selector formatting.",
+  no_integration: "No active integration found for this source.",
+  save_failed: "Hint save failed. Retry in a moment.",
+  unauthorized: "You are not authorized to edit this store.",
+  not_found: "Store context was not found for this workspace.",
+}
+
+const scanStatusMessage: Record<string, string> = {
+  completed: "Test scan completed and evidence is now available in source findings.",
+  queue_failed: "Could not queue a test scan. Retry in a moment.",
+  unauthorized: "You are not authorized to trigger scans for this store.",
+  not_found: "Store context was not found for this workspace.",
+  scan_not_queued_or_missing: "Queued test scan could not be processed.",
+  scan_not_queued_anymore: "Queued test scan was already picked by another runner.",
+  lookup_failed: "Scan processor lookup failed.",
+  store_missing: "Scan failed because store record was missing.",
+  integration_missing: "Scan failed because integration was missing.",
+  running_update_failed: "Scan failed before entering running state.",
+  completion_failed: "Scan failed during completion update.",
+}
 
 export default async function StoreDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const { id } = await params
+  const query = await searchParams
   const storesData = await getStoresIndexData()
 
   if (!storesData.hasPlan) {
@@ -31,6 +59,24 @@ export default async function StoreDetailPage({
 
   if (!data) {
     notFound()
+  }
+
+  const hintStatusRaw = query.hint_status
+  const hintStatus = Array.isArray(hintStatusRaw) ? hintStatusRaw[0] : hintStatusRaw
+  const scanStatusRaw = query.scan_status
+  const scanStatus = Array.isArray(scanStatusRaw) ? scanStatusRaw[0] : scanStatusRaw
+  const activeHintStatus = hintStatus ? hintStatusMessage[hintStatus] ?? null : null
+  const activeScanStatus = scanStatus ? scanStatusMessage[scanStatus] ?? null : null
+  const saveHintsAction = saveActivationFlowHints.bind(null, data.store.id)
+  const runTestScanAction = triggerActivationTestRun.bind(null, data.store.id)
+  const hintDefaults = data.integration?.activationFlowHints ?? {
+    preferredEntryUrl: null,
+    onboardingPathUrl: null,
+    preferredPrimaryCtaSelector: null,
+    preferredNextActionSelector: null,
+    firstValueAreaSelector: null,
+    authExpected: null,
+    pageIntentHint: null,
   }
 
   const rankedIssues = [...data.issues].sort(
@@ -139,6 +185,140 @@ export default async function StoreDetailPage({
               </div>
             ) : null}
           </VaultPanel>
+
+          <VaultPanel title="Activation flow hints" meta="Runner targeting controls">
+            {data.store.platform === "shopify" ? (
+              <form action={saveHintsAction}>
+                <div className="vault-settings-table">
+                <div className="vault-settings-row">
+                  <div>
+                    <label htmlFor="preferred_entry_url" className="vault-settings-key">Preferred entry URL</label>
+                    <p className="vault-settings-desc">Absolute URL for activation entry. Leave blank for default integration domain.</p>
+                  </div>
+                  <input
+                    id="preferred_entry_url"
+                    name="preferred_entry_url"
+                    defaultValue={hintDefaults.preferredEntryUrl ?? ""}
+                    placeholder="https://your-store.myshopify.com"
+                    className="vault-input rounded-md px-3 py-2 text-sm outline-none w-full max-w-xs"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                  />
+                </div>
+
+                <div className="vault-settings-row">
+                  <div>
+                    <label htmlFor="onboarding_path_url" className="vault-settings-key">Onboarding path URL</label>
+                    <p className="vault-settings-desc">Optional path or URL to start the first activation surface.</p>
+                  </div>
+                  <input
+                    id="onboarding_path_url"
+                    name="onboarding_path_url"
+                    defaultValue={hintDefaults.onboardingPathUrl ?? ""}
+                    placeholder="/onboarding"
+                    className="vault-input rounded-md px-3 py-2 text-sm outline-none w-full max-w-xs"
+                  />
+                </div>
+
+                <div className="vault-settings-row">
+                  <div>
+                    <label htmlFor="preferred_primary_cta_selector" className="vault-settings-key">Primary CTA selector</label>
+                    <p className="vault-settings-desc">CSS selector for the expected primary forward action.</p>
+                  </div>
+                  <input
+                    id="preferred_primary_cta_selector"
+                    name="preferred_primary_cta_selector"
+                    defaultValue={hintDefaults.preferredPrimaryCtaSelector ?? ""}
+                    placeholder='button[data-test="start"]'
+                    className="vault-input rounded-md px-3 py-2 text-sm outline-none w-full max-w-xs"
+                  />
+                </div>
+
+                <div className="vault-settings-row">
+                  <div>
+                    <label htmlFor="preferred_next_action_selector" className="vault-settings-key">Next action selector</label>
+                    <p className="vault-settings-desc">CSS selector for the first visible progression after entry.</p>
+                  </div>
+                  <input
+                    id="preferred_next_action_selector"
+                    name="preferred_next_action_selector"
+                    defaultValue={hintDefaults.preferredNextActionSelector ?? ""}
+                    placeholder='a[href*="next-step"]'
+                    className="vault-input rounded-md px-3 py-2 text-sm outline-none w-full max-w-xs"
+                  />
+                </div>
+
+                <div className="vault-settings-row">
+                  <div>
+                    <label htmlFor="first_value_area_selector" className="vault-settings-key">First value area selector</label>
+                    <p className="vault-settings-desc">CSS selector marking first-value content presence.</p>
+                  </div>
+                  <input
+                    id="first_value_area_selector"
+                    name="first_value_area_selector"
+                    defaultValue={hintDefaults.firstValueAreaSelector ?? ""}
+                    placeholder='section[data-test="dashboard-main"]'
+                    className="vault-input rounded-md px-3 py-2 text-sm outline-none w-full max-w-xs"
+                  />
+                </div>
+
+                <div className="vault-settings-row">
+                  <div>
+                    <label htmlFor="auth_expected" className="vault-settings-key">Auth expected</label>
+                    <p className="vault-settings-desc">Set when this surface is expected to show an auth gate before progression.</p>
+                  </div>
+                  <select
+                    id="auth_expected"
+                    name="auth_expected"
+                    defaultValue={
+                      hintDefaults.authExpected === true
+                        ? "true"
+                        : hintDefaults.authExpected === false
+                          ? "false"
+                          : ""
+                    }
+                    className="vault-input rounded-md px-3 py-2 text-sm outline-none w-full max-w-xs"
+                  >
+                    <option value="">Auto</option>
+                    <option value="true">Expected</option>
+                    <option value="false">Not expected</option>
+                  </select>
+                </div>
+
+                <div className="vault-settings-row">
+                  <div>
+                    <label htmlFor="page_intent_hint" className="vault-settings-key">Page intent hint</label>
+                    <p className="vault-settings-desc">Optional intent guidance for deterministic page classification.</p>
+                  </div>
+                  <select
+                    id="page_intent_hint"
+                    name="page_intent_hint"
+                    defaultValue={hintDefaults.pageIntentHint ?? ""}
+                    className="vault-input rounded-md px-3 py-2 text-sm outline-none w-full max-w-xs"
+                  >
+                    <option value="">Auto</option>
+                    <option value="onboarding">Onboarding</option>
+                    <option value="activation">Activation</option>
+                    <option value="first_value">First value</option>
+                    <option value="checkout_handoff">Checkout handoff</option>
+                  </select>
+                </div>
+              </div>
+
+                <div className="border-t border-border/60 px-4 py-3 sm:px-5">
+                  <SubmitButton label="Save activation hints" />
+                  {activeHintStatus ? (
+                    <p className="mt-2 text-xs text-muted-foreground">{activeHintStatus}</p>
+                  ) : null}
+                </div>
+              </form>
+            ) : (
+              <p className="px-5 py-6 text-sm text-muted-foreground">
+                Activation flow hints are currently used for Shopify activation scans.
+              </p>
+            )}
+          </VaultPanel>
         </div>
 
         <div className="space-y-5">
@@ -210,6 +390,30 @@ export default async function StoreDetailPage({
                 </li>
               )}
             </ul>
+          </VaultPanel>
+
+          <VaultPanel
+            title="Activation test-run"
+            meta={data.store.platform === "shopify" ? "Queue and process a store activation scan" : "Queue and process a source scan"}
+          >
+            <div className="px-4 py-4 sm:px-5">
+              <p className="text-sm text-muted-foreground">
+                Runs through the native queued scan path and refreshes issue evidence for this source.
+              </p>
+              <form action={runTestScanAction} className="mt-4">
+                <SubmitButton
+                  label={
+                    data.store.platform === "shopify"
+                      ? "Run activation test scan"
+                      : "Run test scan"
+                  }
+                  pendingLabel="Running scan..."
+                />
+              </form>
+              {activeScanStatus ? (
+                <p className="mt-2 text-xs text-muted-foreground">{activeScanStatus}</p>
+              ) : null}
+            </div>
           </VaultPanel>
         </div>
       </section>

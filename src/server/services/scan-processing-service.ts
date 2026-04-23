@@ -2,6 +2,13 @@ import { createSupabaseAdminClient } from "@/lib/supabase/shared"
 import type { IssueType, MerchantPlatform } from "@/types/domain"
 import type { Database, Json } from "@/types/database"
 import {
+  ACTIVATION_FLOW_RUNNER_DETECTOR_VERSION,
+  runActivationFlowV1,
+  type ActivationFlowHintsV1,
+  type ActivationPageIntentHintV1,
+  type ActivationFlowRunResultV1,
+} from "@/server/services/activation-flow-runner"
+import {
   getPrimaryScanFamilyForPlatform,
   getRecommendedScanFamiliesForPlatform,
 } from "@/server/services/flow-scan-family-service"
@@ -46,6 +53,23 @@ function asBoolean(input: unknown) {
   return typeof input === "boolean" ? input : null
 }
 
+function asNullableTrimmedString(input: unknown) {
+  if (typeof input !== "string") {
+    return null
+  }
+  const trimmed = input.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+function isActivationPageIntentHint(input: unknown): input is ActivationPageIntentHintV1 {
+  return (
+    input === "onboarding" ||
+    input === "activation" ||
+    input === "first_value" ||
+    input === "checkout_handoff"
+  )
+}
+
 interface ShopifySignalSnapshot {
   orders30d: number | null
   totalOrders: number | null
@@ -80,6 +104,7 @@ const ACTIVATION_MIN_TOTAL_ORDERS = 20
 const ACTIVATION_MAX_ORDERS_30D = 3
 const ACTIVATION_MAX_ORDER_TO_CUSTOMER_RATE = 0.03
 const ACTIVATION_HIGH_SEVERITY_CUSTOMERS = 220
+const ACTIVATION_FLOW_FINDING_MIN_INSTALL_AGE_DAYS = 7
 const STRIPE_BILLING_LOOKBACK_DAYS = 30
 const STRIPE_MIN_FAILED_SIGNAL_EVENTS = 6
 const STRIPE_MIN_FAILED_AMOUNT_CENTS = 150_000
@@ -495,6 +520,422 @@ function buildShopifyActivationFindings(input: {
   ]
 }
 
+function normalizeHttpUrl(input: string) {
+  const trimmed = input.trim()
+  if (!trimmed) {
+    return null
+  }
+
+  const withProtocol =
+    trimmed.startsWith("http://") || trimmed.startsWith("https://")
+      ? trimmed
+      : `https://${trimmed}`
+
+  try {
+    const parsed = new URL(withProtocol)
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null
+    }
+    return parsed.toString()
+  } catch {
+    return null
+  }
+}
+
+interface ActivationFlowHintsConfig {
+  hints: ActivationFlowHintsV1 | null
+  source: "metadata.activation_flow_hints_v1" | "legacy_keys" | "none"
+}
+
+function readActivationFlowHintsConfig(metadata: Record<string, unknown>): ActivationFlowHintsConfig {
+  const hintsRecord = asRecord(metadata.activation_flow_hints_v1)
+  if (hintsRecord) {
+    const pageIntentRaw = asNullableTrimmedString(hintsRecord.page_intent_hint)
+    const hints: ActivationFlowHintsV1 = {
+      preferredEntryUrl: asNullableTrimmedString(hintsRecord.preferred_entry_url),
+      onboardingPathUrl: asNullableTrimmedString(hintsRecord.onboarding_path_url),
+      preferredPrimaryCtaSelector: asNullableTrimmedString(
+        hintsRecord.preferred_primary_cta_selector
+      ),
+      preferredNextActionSelector: asNullableTrimmedString(
+        hintsRecord.preferred_next_action_selector
+      ),
+      firstValueAreaSelector: asNullableTrimmedString(
+        hintsRecord.first_value_area_selector
+      ),
+      authExpected: asBoolean(hintsRecord.auth_expected),
+      pageIntentHint:
+        pageIntentRaw && isActivationPageIntentHint(pageIntentRaw)
+          ? pageIntentRaw
+          : null,
+    }
+
+    const hasAnyHint = Object.values(hints).some(
+      (value) => value !== null && value !== undefined
+    )
+    if (hasAnyHint) {
+      return {
+        hints,
+        source: "metadata.activation_flow_hints_v1",
+      }
+    }
+  }
+
+  const legacyHints: ActivationFlowHintsV1 = {
+    preferredEntryUrl:
+      asNullableTrimmedString(metadata.activation_flow_entry_url) ??
+      asNullableTrimmedString(metadata.activation_entry_url) ??
+      asNullableTrimmedString(metadata.activation_surface_url),
+    onboardingPathUrl:
+      asNullableTrimmedString(metadata.activation_flow_start_path) ??
+      asNullableTrimmedString(metadata.activation_start_path),
+    preferredPrimaryCtaSelector: asNullableTrimmedString(
+      metadata.activation_primary_cta_selector
+    ),
+    preferredNextActionSelector: asNullableTrimmedString(
+      metadata.activation_next_action_selector
+    ),
+    firstValueAreaSelector: asNullableTrimmedString(
+      metadata.activation_first_value_selector
+    ),
+    authExpected: asBoolean(metadata.activation_auth_expected),
+    pageIntentHint:
+      (() => {
+        const raw = asNullableTrimmedString(metadata.activation_page_intent_hint)
+        return raw && isActivationPageIntentHint(raw) ? raw : null
+      })(),
+  }
+  const hasLegacyHint = Object.values(legacyHints).some(
+    (value) => value !== null && value !== undefined
+  )
+  if (hasLegacyHint) {
+    return {
+      hints: legacyHints,
+      source: "legacy_keys",
+    }
+  }
+
+  return {
+    hints: null,
+    source: "none",
+  }
+}
+
+function toStoredActivationFlowHints(
+  hints: ActivationFlowHintsV1 | null
+) {
+  if (!hints) {
+    return null
+  }
+
+  return {
+    preferred_entry_url: hints.preferredEntryUrl ?? null,
+    onboarding_path_url: hints.onboardingPathUrl ?? null,
+    preferred_primary_cta_selector: hints.preferredPrimaryCtaSelector ?? null,
+    preferred_next_action_selector: hints.preferredNextActionSelector ?? null,
+    first_value_area_selector: hints.firstValueAreaSelector ?? null,
+    auth_expected: hints.authExpected ?? null,
+    page_intent_hint: hints.pageIntentHint ?? null,
+  }
+}
+
+function resolveShopifyActivationFlowConfig(input: {
+  metadata: Record<string, unknown>
+  shopDomain: string | null
+  storeDomain: string | null
+  hints: ActivationFlowHintsV1 | null
+}) {
+  const candidateEntries: Array<{ value: string | null; source: string }> = [
+    {
+      value: asNullableTrimmedString(input.hints?.preferredEntryUrl),
+      source: "activation_flow_hints_v1.preferred_entry_url",
+    },
+    {
+      value: asString(input.metadata.activation_flow_entry_url),
+      source: "activation_flow_entry_url",
+    },
+    {
+      value: asString(input.metadata.activation_entry_url),
+      source: "activation_entry_url",
+    },
+    {
+      value: asString(input.metadata.activation_surface_url),
+      source: "activation_surface_url",
+    },
+    {
+      value: asString(input.metadata.canonical_shop_domain),
+      source: "canonical_shop_domain",
+    },
+    {
+      value: input.shopDomain,
+      source: "shop_domain",
+    },
+    {
+      value: input.storeDomain,
+      source: "store_domain",
+    },
+  ]
+
+  for (const candidate of candidateEntries) {
+    if (!candidate.value) {
+      continue
+    }
+    const normalized = normalizeHttpUrl(candidate.value)
+    if (normalized) {
+      return {
+        entryUrl: normalized,
+        startPath: asNullableTrimmedString(input.hints?.onboardingPathUrl) ??
+          asString(input.metadata.activation_flow_start_path) ??
+          asString(input.metadata.activation_start_path) ??
+          null,
+        entrySource: candidate.source,
+      }
+    }
+  }
+
+  return {
+    entryUrl: null,
+    startPath: asNullableTrimmedString(input.hints?.onboardingPathUrl) ??
+      asString(input.metadata.activation_flow_start_path) ??
+      asString(input.metadata.activation_start_path) ??
+      null,
+    entrySource: "unresolved",
+  }
+}
+
+function formatActivationFlowDeadEndReason(reason: string | null) {
+  if (!reason) {
+    return "Unknown dead-end reason"
+  }
+
+  if (reason === "entry_unreachable") {
+    return "Entry surface was unreachable"
+  }
+  if (reason === "entry_blocked_gate") {
+    return "Entry surface was blocked by a gate or auth wall"
+  }
+  if (reason === "empty_state_without_next_action") {
+    return "Entry surface was an empty state without a next action"
+  }
+  if (reason === "missing_next_action") {
+    return "Entry surface lacked a meaningful next action"
+  }
+  if (reason === "primary_action_not_executable") {
+    return "Primary action could not be executed"
+  }
+  if (reason === "stalled_after_entry_action") {
+    return "Flow stalled after the primary entry action"
+  }
+
+  return reason
+}
+
+function joinEvidenceSignals(values: string[]) {
+  return values.length > 0 ? values.join(" | ") : null
+}
+
+function estimateActivationFlowRunnerImpact(snapshot: ShopifySignalSnapshot) {
+  const customers = Math.max(snapshot.customers ?? 60, 60)
+  const orders30d = Math.max(snapshot.orders30d ?? 0, 0)
+  return Math.max(estimateActivationImpact({ customers, orders30d }), 2200)
+}
+
+function buildShopifyActivationFlowFindings(input: {
+  run: ActivationFlowRunResultV1 | null
+  installedAt: string | null
+  signalSnapshot: ShopifySignalSnapshot
+  setupCoverageComplete: boolean
+  integrationHealthy: boolean
+  meaningfulCommercialSignal: boolean
+  entrySource: string
+  hintsSource: "metadata.activation_flow_hints_v1" | "legacy_keys" | "none"
+}) {
+  if (!input.run || !input.setupCoverageComplete || !input.integrationHealthy) {
+    return []
+  }
+
+  if (input.run.status !== "completed" || !input.run.summary.deadEndDetected) {
+    return []
+  }
+
+  if (
+    input.run.summary.hintAuthExpected &&
+    input.run.summary.deadEndReason === "entry_blocked_gate"
+  ) {
+    return []
+  }
+
+  const daysSinceInstall = getDaysSinceTimestamp(input.installedAt)
+  if (
+    daysSinceInstall !== null &&
+    daysSinceInstall < ACTIVATION_FLOW_FINDING_MIN_INSTALL_AGE_DAYS
+  ) {
+    return []
+  }
+
+  if (
+    !input.meaningfulCommercialSignal &&
+    (daysSinceInstall === null || daysSinceInstall < ACTIVATION_MIN_INSTALL_AGE_DAYS)
+  ) {
+    return []
+  }
+
+  const reasonLabel = formatActivationFlowDeadEndReason(
+    input.run.summary.deadEndReason
+  )
+  const severity: FindingDraft["severity"] =
+    input.run.summary.deadEndReason === "entry_blocked_gate" ||
+    input.run.summary.deadEndReason === "stalled_after_entry_action"
+      ? "high"
+      : "medium"
+  const estimatedMonthlyRevenueImpact = estimateActivationFlowRunnerImpact(
+    input.signalSnapshot
+  )
+  const summary =
+    `Activation flow dead-end detected on ${input.run.summary.entryUrl}. ` +
+    `Entry state: ${input.run.summary.entryPageClassification ?? "unknown"}, ` +
+    `progression outcome: ${input.run.summary.progressionOutcome}.`
+
+  return [
+    {
+      key: "shopify_activation_flow_dead_end_v1",
+      type: "activation_funnel_dropout",
+      severity,
+      title: "Activation flow dead-end after entry",
+      summary,
+      whyItMatters:
+        `${reasonLabel}. Operators can enter the journey but fail to reach a clear forward path to first value, which drives preventable activation leakage.`,
+      recommendedAction:
+        "Repair the first-step handoff by adding an explicit next action on entry surfaces and validating that the primary CTA advances users to a real next step.",
+      estimatedMonthlyRevenueImpact,
+      evidence: {
+        detector_version: input.run.detectorVersion,
+        flow_path_id: input.run.summary.pathId,
+        flow_entry_url: input.run.summary.entryUrl,
+        flow_entry_source: input.entrySource,
+        flow_hints_source: input.hintsSource,
+        flow_start_path: input.run.path.startPath,
+        flow_final_url: input.run.summary.finalUrl,
+        flow_progression_outcome: input.run.summary.progressionOutcome,
+        flow_dead_end_detected: input.run.summary.deadEndDetected,
+        flow_dead_end_reason: input.run.summary.deadEndReason,
+        flow_steps_inspected: input.run.summary.stepsInspected,
+        flow_entry_page_classification: input.run.summary.entryPageClassification,
+        flow_final_page_classification: input.run.summary.finalPageClassification,
+        flow_entry_meaningful_cta_count: input.run.summary.entryMeaningfulCtaCount,
+        flow_final_meaningful_cta_count: input.run.summary.finalMeaningfulCtaCount,
+        flow_entry_next_action_count: input.run.summary.entryNextActionCount,
+        flow_final_next_action_count: input.run.summary.finalNextActionCount,
+        flow_primary_action_label: input.run.summary.primaryActionLabel,
+        flow_primary_action_kind: input.run.summary.primaryActionKind,
+        flow_primary_action_target: input.run.summary.primaryActionTarget,
+        flow_entry_empty_state_signals: joinEvidenceSignals(
+          input.run.summary.entryEmptyStateSignals
+        ),
+        flow_entry_blocked_signals: joinEvidenceSignals(
+          input.run.summary.entryBlockedSignals
+        ),
+        flow_run_started_at: input.run.summary.startedAt,
+        flow_run_completed_at: input.run.summary.completedAt,
+        flow_entry_screenshot_ref: input.run.summary.entryScreenshotRef,
+        flow_progression_screenshot_ref: input.run.summary.progressionScreenshotRef,
+        flow_entry_screenshot_sha256: input.run.summary.entryScreenshotSha256,
+        flow_progression_screenshot_sha256:
+          input.run.summary.progressionScreenshotSha256,
+        flow_entry_screenshot_bytes: input.run.summary.entryScreenshotBytes,
+        flow_progression_screenshot_bytes:
+          input.run.summary.progressionScreenshotBytes,
+        flow_hint_primary_selector: input.run.summary.hintPrimarySelector,
+        flow_hint_primary_selector_matched:
+          input.run.summary.hintPrimarySelectorMatched,
+        flow_hint_next_action_selector: input.run.summary.hintNextActionSelector,
+        flow_hint_next_action_selector_matched:
+          input.run.summary.hintNextActionSelectorMatched,
+        flow_hint_first_value_selector: input.run.summary.hintFirstValueAreaSelector,
+        flow_hint_first_value_selector_matched:
+          input.run.summary.hintFirstValueAreaMatched,
+        flow_hint_auth_expected: input.run.summary.hintAuthExpected,
+        flow_hint_page_intent: input.run.summary.hintPageIntent,
+        days_since_install: daysSinceInstall,
+        orders_30d: input.signalSnapshot.orders30d,
+        total_orders: input.signalSnapshot.totalOrders,
+        products: input.signalSnapshot.products,
+        customers: input.signalSnapshot.customers,
+        flow_runner_version: ACTIVATION_FLOW_RUNNER_DETECTOR_VERSION,
+      },
+    },
+  ]
+}
+
+function toActivationFlowRunMetadata(run: ActivationFlowRunResultV1 | null) {
+  if (!run) {
+    return null
+  }
+
+  return {
+    detector_version: run.detectorVersion,
+    status: run.status,
+    path: {
+      id: run.path.id,
+      label: run.path.label,
+      entry_url: run.path.entryUrl,
+      start_path: run.path.startPath,
+      max_guided_steps: run.path.maxGuidedSteps,
+      guided_checks: run.path.guidedChecks,
+    },
+    summary: {
+      run_id: run.summary.runId,
+      started_at: run.summary.startedAt,
+      completed_at: run.summary.completedAt,
+      final_url: run.summary.finalUrl,
+      progression_outcome: run.summary.progressionOutcome,
+      dead_end_detected: run.summary.deadEndDetected,
+      dead_end_reason: run.summary.deadEndReason,
+      entry_page_classification: run.summary.entryPageClassification,
+      final_page_classification: run.summary.finalPageClassification,
+      entry_meaningful_cta_count: run.summary.entryMeaningfulCtaCount,
+      final_meaningful_cta_count: run.summary.finalMeaningfulCtaCount,
+      entry_next_action_count: run.summary.entryNextActionCount,
+      final_next_action_count: run.summary.finalNextActionCount,
+      primary_action_label: run.summary.primaryActionLabel,
+      primary_action_kind: run.summary.primaryActionKind,
+      primary_action_target: run.summary.primaryActionTarget,
+      entry_empty_state_signals: run.summary.entryEmptyStateSignals,
+      entry_blocked_signals: run.summary.entryBlockedSignals,
+      steps_inspected: run.summary.stepsInspected,
+      entry_screenshot_ref: run.summary.entryScreenshotRef,
+      progression_screenshot_ref: run.summary.progressionScreenshotRef,
+      entry_screenshot_sha256: run.summary.entryScreenshotSha256,
+      progression_screenshot_sha256: run.summary.progressionScreenshotSha256,
+      entry_screenshot_bytes: run.summary.entryScreenshotBytes,
+      progression_screenshot_bytes: run.summary.progressionScreenshotBytes,
+      hint_primary_selector: run.summary.hintPrimarySelector,
+      hint_primary_selector_matched: run.summary.hintPrimarySelectorMatched,
+      hint_next_action_selector: run.summary.hintNextActionSelector,
+      hint_next_action_selector_matched: run.summary.hintNextActionSelectorMatched,
+      hint_first_value_selector: run.summary.hintFirstValueAreaSelector,
+      hint_first_value_selector_matched: run.summary.hintFirstValueAreaMatched,
+      hint_auth_expected: run.summary.hintAuthExpected,
+      hint_page_intent: run.summary.hintPageIntent,
+    },
+    steps: run.steps.map((step) => ({
+      step_id: step.stepId,
+      status: step.status,
+      inspected_at: step.inspectedAt,
+      inspected_url: step.inspectedUrl,
+      page_classification: step.pageClassification,
+      meaningful_cta_count: step.meaningfulCtaCount,
+      next_action_count: step.nextActionCount,
+      empty_state_signals: step.emptyStateSignals,
+      blocked_signals: step.blockedSignals,
+      top_actions: step.topActions,
+      screenshot_ref: step.screenshotRef,
+      detail: step.detail,
+    })),
+    error_message: run.errorMessage,
+  }
+}
+
 function buildShopifyFindings(input: {
   metadata: Record<string, unknown>
   integrationStatus: string
@@ -715,7 +1156,24 @@ export async function processQueuedScanV1(input?: {
   const scanFamily = getPrimaryScanFamilyForPlatform(storePlatform)
   const integrationProvider = integrationResult.data.provider
   const integrationMetadata = asRecord(integrationResult.data.metadata) ?? {}
+  const activationFlowHintsConfig =
+    integrationProvider === "shopify"
+      ? readActivationFlowHintsConfig(integrationMetadata)
+      : { hints: null, source: "none" as const }
   const signalSnapshot = readShopifySignalSnapshot(integrationMetadata)
+  const activationFlowConfig =
+    integrationProvider === "shopify"
+      ? resolveShopifyActivationFlowConfig({
+          metadata: integrationMetadata,
+          shopDomain: integrationResult.data.shop_domain,
+          storeDomain: storeResult.data.domain,
+          hints: activationFlowHintsConfig.hints,
+        })
+      : {
+          entryUrl: null,
+          startPath: null,
+          entrySource: "not_shopify",
+        }
   const simulationOutcome = input?.simulationOutcome ?? null
   let stripeBillingSnapshot: StripeBillingSignalSnapshot | null = null
   if (
@@ -754,26 +1212,70 @@ export async function processQueuedScanV1(input?: {
   )
   const setupCoverageComplete =
     !integrationHasWebhookFailure && setupCoverageMissingScopes.length === 0
+  let activationFlowRun: ActivationFlowRunResultV1 | null = null
+  if (
+    !simulationOutcome &&
+    integrationProvider === "shopify" &&
+    setupCoverageComplete &&
+    integrationResult.data.status !== "degraded" &&
+    activationFlowConfig.entryUrl
+  ) {
+    try {
+      activationFlowRun = await runActivationFlowV1({
+        runId: queuedScan.id,
+        entryUrl: activationFlowConfig.entryUrl,
+        startPath: activationFlowConfig.startPath,
+        hints: activationFlowHintsConfig.hints,
+        captureScreenshots:
+          process.env.CHECKOUTLEAK_ACTIVATION_SCREENSHOTS !== "0",
+        screenshotDirectory:
+          process.env.CHECKOUTLEAK_ACTIVATION_SCREENSHOT_DIR ?? null,
+      })
+      console.info(
+        `[scan-runner] activation flow run completed: scan_id=${queuedScan.id}; status=${activationFlowRun.status}; progression=${activationFlowRun.summary.progressionOutcome}; dead_end=${activationFlowRun.summary.deadEndDetected}`
+      )
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.error(
+        `[scan-runner] activation flow run failed: scan_id=${queuedScan.id}; reason=${message}`
+      )
+    }
+  }
   const findings = simulationOutcome
     ? simulationOutcome === "findings_present"
       ? buildSimulatedFindings()
       : []
     : integrationProvider === "shopify"
-      ? [
-          ...buildShopifyFindings({
+      ? (() => {
+          const setupFindings = buildShopifyFindings({
             metadata: integrationMetadata,
             integrationStatus: integrationResult.data.status,
             syncStatus: integrationResult.data.sync_status,
             scopes: integrationResult.data.scopes,
             meaningfulCommercialSignal,
-          }),
-          ...buildShopifyActivationFindings({
+          })
+          const aggregateActivationFindings = buildShopifyActivationFindings({
             signalSnapshot,
             installedAt: integrationResult.data.installed_at,
             setupCoverageComplete,
             integrationHealthy: integrationResult.data.status !== "degraded",
-          }),
-        ]
+          })
+          const flowActivationFindings = buildShopifyActivationFlowFindings({
+            run: activationFlowRun,
+            installedAt: integrationResult.data.installed_at,
+            signalSnapshot,
+            setupCoverageComplete,
+            integrationHealthy: integrationResult.data.status !== "degraded",
+            meaningfulCommercialSignal,
+            entrySource: activationFlowConfig.entrySource,
+            hintsSource: activationFlowHintsConfig.source,
+          })
+          const activationFindings =
+            flowActivationFindings.length > 0
+              ? flowActivationFindings
+              : aggregateActivationFindings
+          return [...setupFindings, ...activationFindings]
+        })()
       : integrationProvider === "stripe"
         ? buildStripeBillingRecoveryFindings({
             snapshot: stripeBillingSnapshot,
@@ -910,6 +1412,26 @@ export async function processQueuedScanV1(input?: {
     billing_recovery_gap_detected: findings.some(
       (finding) => finding.type === "failed_payment_recovery"
     ),
+    ...(integrationProvider === "shopify"
+      ? {
+          activation_flow_runner_version: ACTIVATION_FLOW_RUNNER_DETECTOR_VERSION,
+          activation_flow_entry_url: activationFlowConfig.entryUrl,
+          activation_flow_entry_source: activationFlowConfig.entrySource,
+          activation_flow_start_path: activationFlowConfig.startPath,
+          activation_flow_hints_source: activationFlowHintsConfig.source,
+          activation_flow_hints_v1: toStoredActivationFlowHints(
+            activationFlowHintsConfig.hints
+          ),
+          activation_flow_last_run: toActivationFlowRunMetadata(activationFlowRun),
+          activation_flow_last_run_at: activationFlowRun?.summary.completedAt ?? null,
+          activation_flow_progression_outcome:
+            activationFlowRun?.summary.progressionOutcome ?? null,
+          activation_flow_dead_end_detected:
+            activationFlowRun?.summary.deadEndDetected ?? false,
+          activation_flow_dead_end_reason:
+            activationFlowRun?.summary.deadEndReason ?? null,
+        }
+      : {}),
     stripe_billing_signal_snapshot: stripeBillingSnapshot
       ? {
           lookback_days: stripeBillingSnapshot.lookbackDays,

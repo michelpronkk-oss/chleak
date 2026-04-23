@@ -172,7 +172,10 @@ function readFindingEvidenceForIssueType(input: {
   }
 
   const keysByIssueType: Record<IssueType, string[]> = {
-    activation_funnel_dropout: ["shopify_activation_funnel_dropout_v1"],
+    activation_funnel_dropout: [
+      "shopify_activation_flow_dead_end_v1",
+      "shopify_activation_funnel_dropout_v1",
+    ],
     failed_payment_recovery: ["stripe_failed_payment_recovery_gap_v1"],
     setup_gap: [
       "shopify_webhook_registration_incomplete",
@@ -201,6 +204,29 @@ function readFindingEvidenceForIssueType(input: {
   return firstStructured ? asRecord(firstStructured) : null
 }
 
+function formatActivationDeadEndReason(reason: string) {
+  if (reason === "entry_unreachable") {
+    return "Entry surface was unreachable"
+  }
+  if (reason === "entry_blocked_gate") {
+    return "Entry surface was blocked by an auth gate"
+  }
+  if (reason === "empty_state_without_next_action") {
+    return "Entry surface was empty and had no next action"
+  }
+  if (reason === "missing_next_action") {
+    return "Entry surface lacked a meaningful next action"
+  }
+  if (reason === "primary_action_not_executable") {
+    return "Primary action could not be executed"
+  }
+  if (reason === "stalled_after_entry_action") {
+    return "Flow stalled after executing the primary action"
+  }
+
+  return reason
+}
+
 function buildActivationEvidenceRows(input: {
   evidence: Record<string, unknown>
   issueDetectedAt: string
@@ -211,8 +237,282 @@ function buildActivationEvidenceRows(input: {
   const orders30d = asNumber(input.evidence.orders_30d)
   const totalOrders = asNumber(input.evidence.total_orders)
   const daysSinceInstall = asNumber(input.evidence.days_since_install)
-  const activationRatePct = asNumber(input.evidence.activation_rate_pct_30d)
   const detectorVersion = asString(input.evidence.detector_version)
+  const flowEntryUrl = asString(input.evidence.flow_entry_url)
+  const flowFinalUrl = asString(input.evidence.flow_final_url)
+  const flowProgressionOutcome = asString(input.evidence.flow_progression_outcome)
+  const flowDeadEndReason = asString(input.evidence.flow_dead_end_reason)
+  const flowEntryClassification = asString(input.evidence.flow_entry_page_classification)
+  const flowFinalClassification = asString(input.evidence.flow_final_page_classification)
+  const flowEntryMeaningfulCtaCount = asNumber(
+    input.evidence.flow_entry_meaningful_cta_count
+  )
+  const flowFinalMeaningfulCtaCount = asNumber(
+    input.evidence.flow_final_meaningful_cta_count
+  )
+  const flowEntryNextActionCount = asNumber(
+    input.evidence.flow_entry_next_action_count
+  )
+  const flowFinalNextActionCount = asNumber(
+    input.evidence.flow_final_next_action_count
+  )
+  const flowPrimaryActionLabel = asString(input.evidence.flow_primary_action_label)
+  const flowPrimaryActionKind = asString(input.evidence.flow_primary_action_kind)
+  const flowPrimaryActionTarget = asString(input.evidence.flow_primary_action_target)
+  const flowEntryEmptySignals = asString(input.evidence.flow_entry_empty_state_signals)
+  const flowEntryBlockedSignals = asString(input.evidence.flow_entry_blocked_signals)
+  const flowRunStartedAt = asString(input.evidence.flow_run_started_at)
+  const flowRunCompletedAt = asString(input.evidence.flow_run_completed_at)
+  const flowEntryScreenshotRef = asString(input.evidence.flow_entry_screenshot_ref)
+  const flowProgressionScreenshotRef = asString(
+    input.evidence.flow_progression_screenshot_ref
+  )
+  const flowEntryScreenshotSha = asString(input.evidence.flow_entry_screenshot_sha256)
+  const flowProgressionScreenshotSha = asString(
+    input.evidence.flow_progression_screenshot_sha256
+  )
+  const flowEntryScreenshotBytes = asNumber(input.evidence.flow_entry_screenshot_bytes)
+  const flowProgressionScreenshotBytes = asNumber(
+    input.evidence.flow_progression_screenshot_bytes
+  )
+  const flowHintsSource = asString(input.evidence.flow_hints_source)
+  const flowHintPrimarySelector = asString(input.evidence.flow_hint_primary_selector)
+  const flowHintPrimarySelectorMatched = asBoolean(
+    input.evidence.flow_hint_primary_selector_matched
+  )
+  const flowHintNextActionSelector = asString(
+    input.evidence.flow_hint_next_action_selector
+  )
+  const flowHintNextActionSelectorMatched = asBoolean(
+    input.evidence.flow_hint_next_action_selector_matched
+  )
+  const flowHintFirstValueSelector = asString(
+    input.evidence.flow_hint_first_value_selector
+  )
+  const flowHintFirstValueSelectorMatched = asBoolean(
+    input.evidence.flow_hint_first_value_selector_matched
+  )
+  const flowHintAuthExpected = asBoolean(input.evidence.flow_hint_auth_expected)
+  const flowHintPageIntent = asString(input.evidence.flow_hint_page_intent)
+  const hasFlowEvidence =
+    flowEntryUrl !== null ||
+    flowProgressionOutcome !== null ||
+    flowEntryClassification !== null ||
+    flowDeadEndReason !== null
+
+  if (hasFlowEvidence) {
+    if (flowEntryUrl) {
+      rows.push({ label: "Entry URL", value: flowEntryUrl })
+    }
+    if (flowFinalUrl) {
+      rows.push({ label: "Final URL", value: flowFinalUrl })
+    }
+    if (flowEntryClassification) {
+      rows.push({ label: "Entry page state", value: flowEntryClassification })
+    }
+    if (flowFinalClassification) {
+      rows.push({ label: "Final page state", value: flowFinalClassification })
+    }
+    if (flowProgressionOutcome) {
+      rows.push({ label: "Progression outcome", value: flowProgressionOutcome })
+    }
+    if (flowDeadEndReason) {
+      rows.push({
+        label: "Dead-end reason",
+        value: formatActivationDeadEndReason(flowDeadEndReason),
+      })
+    }
+    if (flowEntryMeaningfulCtaCount !== null) {
+      rows.push({
+        label: "Entry meaningful CTAs",
+        value: formatInteger(flowEntryMeaningfulCtaCount),
+      })
+    }
+    if (flowFinalMeaningfulCtaCount !== null) {
+      rows.push({
+        label: "Final meaningful CTAs",
+        value: formatInteger(flowFinalMeaningfulCtaCount),
+      })
+    }
+    if (flowEntryNextActionCount !== null) {
+      rows.push({
+        label: "Entry next-action count",
+        value: formatInteger(flowEntryNextActionCount),
+      })
+    }
+    if (flowFinalNextActionCount !== null) {
+      rows.push({
+        label: "Final next-action count",
+        value: formatInteger(flowFinalNextActionCount),
+      })
+    }
+    if (flowPrimaryActionLabel) {
+      rows.push({ label: "Primary action", value: flowPrimaryActionLabel })
+    }
+    if (flowPrimaryActionKind) {
+      rows.push({ label: "Primary action type", value: flowPrimaryActionKind })
+    }
+    if (flowPrimaryActionTarget) {
+      rows.push({ label: "Primary action target", value: flowPrimaryActionTarget })
+    }
+    if (flowEntryEmptySignals) {
+      rows.push({ label: "Entry empty-state signals", value: flowEntryEmptySignals })
+    }
+    if (flowEntryBlockedSignals) {
+      rows.push({ label: "Entry blocked signals", value: flowEntryBlockedSignals })
+    }
+    if (flowRunStartedAt) {
+      rows.push({
+        label: "Flow run started",
+        value: formatTimestamp(flowRunStartedAt),
+      })
+    }
+    if (flowRunCompletedAt) {
+      rows.push({
+        label: "Flow run completed",
+        value: formatTimestamp(flowRunCompletedAt),
+      })
+    }
+    if (flowEntryScreenshotRef) {
+      rows.push({
+        label: "Entry screenshot ref",
+        value: flowEntryScreenshotRef,
+      })
+    }
+    if (flowEntryScreenshotSha) {
+      rows.push({
+        label: "Entry screenshot SHA-256",
+        value: flowEntryScreenshotSha,
+      })
+    }
+    if (flowEntryScreenshotBytes !== null) {
+      rows.push({
+        label: "Entry screenshot bytes",
+        value: formatInteger(flowEntryScreenshotBytes),
+      })
+    }
+    if (flowProgressionScreenshotRef) {
+      rows.push({
+        label: "Progression screenshot ref",
+        value: flowProgressionScreenshotRef,
+      })
+    }
+    if (flowProgressionScreenshotSha) {
+      rows.push({
+        label: "Progression screenshot SHA-256",
+        value: flowProgressionScreenshotSha,
+      })
+    }
+    if (flowProgressionScreenshotBytes !== null) {
+      rows.push({
+        label: "Progression screenshot bytes",
+        value: formatInteger(flowProgressionScreenshotBytes),
+      })
+    }
+    if (flowHintsSource) {
+      rows.push({
+        label: "Hint source",
+        value: flowHintsSource,
+      })
+    }
+    if (flowHintPrimarySelector) {
+      rows.push({
+        label: "Hint primary selector",
+        value: flowHintPrimarySelector,
+      })
+      rows.push({
+        label: "Hint primary selector matched",
+        value:
+          flowHintPrimarySelectorMatched === null
+            ? "Unknown"
+            : flowHintPrimarySelectorMatched
+              ? "Yes"
+              : "No",
+      })
+    }
+    if (flowHintNextActionSelector) {
+      rows.push({
+        label: "Hint next-action selector",
+        value: flowHintNextActionSelector,
+      })
+      rows.push({
+        label: "Hint next-action selector matched",
+        value:
+          flowHintNextActionSelectorMatched === null
+            ? "Unknown"
+            : flowHintNextActionSelectorMatched
+              ? "Yes"
+              : "No",
+      })
+    }
+    if (flowHintFirstValueSelector) {
+      rows.push({
+        label: "Hint first-value selector",
+        value: flowHintFirstValueSelector,
+      })
+      rows.push({
+        label: "Hint first-value selector matched",
+        value:
+          flowHintFirstValueSelectorMatched === null
+            ? "Unknown"
+            : flowHintFirstValueSelectorMatched
+              ? "Yes"
+              : "No",
+      })
+    }
+    if (flowHintAuthExpected !== null) {
+      rows.push({
+        label: "Hint auth expected",
+        value: flowHintAuthExpected ? "Yes" : "No",
+      })
+    }
+    if (flowHintPageIntent) {
+      rows.push({
+        label: "Hint page intent",
+        value: flowHintPageIntent,
+      })
+    }
+    if (daysSinceInstall !== null) {
+      rows.push({ label: "Days since install", value: formatInteger(daysSinceInstall) })
+    }
+    if (customers !== null) {
+      rows.push({ label: "Customers", value: formatInteger(customers) })
+    }
+    if (products !== null) {
+      rows.push({ label: "Products", value: formatInteger(products) })
+    }
+    if (orders30d !== null) {
+      rows.push({ label: "Orders (last 30 days)", value: formatInteger(orders30d) })
+    }
+    if (totalOrders !== null) {
+      rows.push({ label: "Lifetime orders", value: formatInteger(totalOrders) })
+    }
+    if (detectorVersion) {
+      rows.push({ label: "Detector version", value: detectorVersion })
+    }
+
+    rows.push({
+      label: "Scan timestamp",
+      value: formatTimestamp(input.issueDetectedAt),
+    })
+
+    const triggerLine =
+      flowDeadEndReason !== null
+        ? `Triggered because the activation flow runner observed a dead-end after entry: ${formatActivationDeadEndReason(flowDeadEndReason)}.`
+        : "Triggered because the activation flow runner detected stalled forward progression after entry."
+    const summaryLine =
+      flowProgressionOutcome !== null
+        ? `Activation flow signal detected from real journey inspection with progression outcome "${flowProgressionOutcome}".`
+        : "Activation flow signal detected from real journey inspection."
+
+    return {
+      rows,
+      triggerLine,
+      summaryLine,
+    }
+  }
+
+  const activationRatePct = asNumber(input.evidence.activation_rate_pct_30d)
   const thresholdOrders30dMax = asNumber(input.evidence.threshold_orders_30d_max)
   const thresholdRateMax = asNumber(
     input.evidence.threshold_order_to_customer_rate_max
