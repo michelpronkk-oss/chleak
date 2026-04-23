@@ -214,6 +214,74 @@ export async function saveActivationFlowHints(storeId: string, formData: FormDat
   redirect(`/app/stores/${storeId}?hint_status=saved`)
 }
 
+export async function triggerUrlSourceAnalysisForStore(storeId: string) {
+  const session = await getServerSession()
+  if (!session) {
+    redirect(`/app/stores/${storeId}?scan_status=unauthorized`)
+  }
+
+  const storeCtx = await resolveAuthorizedStore({
+    storeId,
+    userId: session.user.id,
+  })
+
+  if (!storeCtx) {
+    redirect(`/app/stores/${storeId}?scan_status=not_found`)
+  }
+
+  if (storeCtx.store.platform !== "website") {
+    redirect(`/app/stores/${storeId}?scan_status=not_found`)
+  }
+
+  const integrationResult = await storeCtx.admin
+    .from("store_integrations")
+    .select("id")
+    .eq("organization_id", storeCtx.organizationId)
+    .eq("store_id", storeId)
+    .eq("provider", "checkoutleak_connector")
+    .neq("status", "disconnected")
+    .order("installed_at", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (integrationResult.error || !integrationResult.data) {
+    redirect(`/app/stores/${storeId}?scan_status=integration_missing`)
+  }
+
+  const insertScan = await storeCtx.admin
+    .from("scans")
+    .insert({
+      organization_id: storeCtx.organizationId,
+      store_id: storeId,
+      status: "queued",
+      scanned_at: new Date().toISOString(),
+      detected_issues_count: 0,
+      estimated_monthly_leakage: 0,
+    })
+    .select("id")
+    .single()
+
+  if (insertScan.error || !insertScan.data) {
+    redirect(`/app/stores/${storeId}?scan_status=queue_failed`)
+  }
+
+  const processed = await processQueuedScanV1({ scanId: insertScan.data.id })
+
+  revalidatePath(`/app/stores/${storeId}`)
+  revalidatePath("/app/stores")
+
+  if (processed.processed) {
+    redirect(
+      `/app/stores/${storeId}?scan_status=completed&scan_id=${encodeURIComponent(insertScan.data.id)}`
+    )
+  }
+
+  redirect(
+    `/app/stores/${storeId}?scan_status=${encodeURIComponent(processed.reason)}&scan_id=${encodeURIComponent(insertScan.data.id)}`
+  )
+}
+
 export async function triggerActivationTestRun(storeId: string) {
   const session = await getServerSession()
   if (!session) {

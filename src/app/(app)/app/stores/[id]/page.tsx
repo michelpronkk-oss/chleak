@@ -11,8 +11,7 @@ import { MetaPill, RankedQueueRow, SeverityPill, VaultPanel } from "@/components
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
 import { SubmitButton } from "@/components/ui/submit-button"
 import { getStoreDetailData, getStoresIndexData } from "@/server/services/app-service"
-import { triggerPrimaryUrlSourceAnalysis } from "../../connect/actions"
-import { saveActivationFlowHints, triggerActivationTestRun } from "./actions"
+import { saveActivationFlowHints, triggerActivationTestRun, triggerUrlSourceAnalysisForStore } from "./actions"
 
 const hintStatusMessage: Record<string, string> = {
   saved: "Activation flow hints saved.",
@@ -24,7 +23,7 @@ const hintStatusMessage: Record<string, string> = {
 }
 
 const scanStatusMessage: Record<string, string> = {
-  completed: "Test scan completed and evidence is now available in source findings.",
+  completed: "Scan completed. Results have been updated.",
   queue_failed: "Could not queue a test scan. Retry in a moment.",
   unauthorized: "You are not authorized to trigger scans for this store.",
   not_found: "Store context was not found for this workspace.",
@@ -87,6 +86,7 @@ export default async function StoreDetailPage({
   const activeScanStatus = scanStatus ? scanStatusMessage[scanStatus] ?? null : null
   const saveHintsAction = saveActivationFlowHints.bind(null, data.store.id)
   const runTestScanAction = triggerActivationTestRun.bind(null, data.store.id)
+  const runSurfaceAnalysisAction = triggerUrlSourceAnalysisForStore.bind(null, data.store.id)
   const hintDefaults = data.integration?.activationFlowHints ?? {
     preferredEntryUrl: null,
     onboardingPathUrl: null,
@@ -663,12 +663,15 @@ export default async function StoreDetailPage({
                 <p className="text-sm text-muted-foreground">
                   Analyze the live revenue surface to detect pricing path, signup flow, and checkout signal presence.
                 </p>
-                <form action={triggerPrimaryUrlSourceAnalysis} className="mt-4">
+                <form action={runSurfaceAnalysisAction} className="mt-4">
                   <SubmitButton
                     label={urlSourceAnalysis ? "Re-run surface analysis" : "Run surface analysis"}
                     pendingLabel="Analyzing..."
                   />
                 </form>
+                {activeScanStatus ? (
+                  <p className="mt-2 text-xs text-muted-foreground">{activeScanStatus}</p>
+                ) : null}
               </div>
             </VaultPanel>
           ) : (
