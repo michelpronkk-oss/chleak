@@ -70,7 +70,7 @@ export function mapStoreIntegrationRow(row: StoreIntegrationRow): StoreIntegrati
     lastSyncedAt: row.last_synced_at,
     metadata:
       row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
-        ? (row.metadata as Record<string, string | number | boolean | null>)
+        ? (row.metadata as Record<string, unknown>)
         : {},
     createdAt: row.created_at,
   }

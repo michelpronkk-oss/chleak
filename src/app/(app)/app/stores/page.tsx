@@ -12,6 +12,7 @@ import { getStoresIndexData } from "@/server/services/app-service"
 
 export default async function StoresPage() {
   const data = await getStoresIndexData()
+  const isDemoMode = data.onboardingState === "demo"
   console.info(
     `[auth] stores page auth decision: has_plan=${data.hasPlan}; org=${data.organization.id}`
   )
@@ -32,9 +33,11 @@ export default async function StoresPage() {
           Connected Revenue Sources
         </h1>
         <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-          Every source is tracked as a monitored asset with scan status, active issues, and leakage exposure.
+          {isDemoMode
+            ? "Demo sources mirror real operator flows with simulated status, issue load, and leakage exposure."
+            : "Every source is tracked as a monitored asset with scan status, active issues, and leakage exposure."}
         </p>
-        {data.onboardingState === "demo" ? (
+        {isDemoMode ? (
           <p className="text-sm text-amber-300">
             Demo mode is active. Source cards below use simulated data.
           </p>
@@ -73,7 +76,7 @@ export default async function StoresPage() {
                     <span className="rounded-md border border-border/70 px-2 py-0.5 text-[11px] uppercase text-muted-foreground">
                       {store.platform}
                     </span>
-                    {data.onboardingState === "demo" ? (
+                    {isDemoMode ? (
                       <span className="rounded-md border border-amber-400/35 bg-amber-400/[0.08] px-2 py-0.5 text-[11px] uppercase text-amber-300">
                         demo
                       </span>
@@ -116,7 +119,7 @@ export default async function StoresPage() {
                   >
                     Open store <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
-                  {store.platform === "shopify" ? (
+                  {store.platform === "shopify" && !isDemoMode ? (
                     <form method="POST" action="/api/integrations/shopify/disconnect">
                       <input
                         type="hidden"
@@ -137,13 +140,13 @@ export default async function StoresPage() {
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-border/70 p-8 text-center text-sm text-muted-foreground">
-            <p>No stores connected yet. Connect your first Shopify or Stripe source to start monitoring.</p>
+            <p>No sources connected yet. Start by setting a live source URL, then connect Shopify or Stripe systems for deeper coverage.</p>
             <div className="mt-4 flex flex-wrap justify-center gap-2.5">
               <Link
                 href="/app/connect"
                 className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
               >
-                Connect source
+                Open source setup
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
               <Link
@@ -181,7 +184,9 @@ export default async function StoresPage() {
         </div>
         <p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
           <CircleDot className="h-3.5 w-3.5 text-muted-foreground/60" />
-          Store health updates as scans complete and issue status changes.
+          {isDemoMode
+            ? "Demo source health reflects simulated scan and issue changes."
+            : "Store health updates as scans complete and issue status changes."}
         </p>
       </section>
     </div>

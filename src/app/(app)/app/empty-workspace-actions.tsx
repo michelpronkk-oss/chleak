@@ -22,7 +22,7 @@ export function EmptyWorkspaceActions() {
         href="/app/connect"
         className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
       >
-        Connect your first source
+        Set live source
         <ArrowRight className="h-3.5 w-3.5" />
       </Link>
       <button

@@ -1,4 +1,8 @@
 export type MerchantPlatform = "shopify" | "stripe"
+export type ConnectedSystemProvider =
+  | MerchantPlatform
+  | "checkoutleak_connector"
+  | "unknown"
 
 export type IssueType =
   | "checkout_friction"
@@ -54,11 +58,28 @@ export interface Store {
   createdAt: string
 }
 
+// URL-first foundation: source entity identity is the live revenue surface.
+export interface LiveSourceSurface {
+  primaryUrl: string | null
+  domain: string | null
+  sourceEntityType:
+    | "website_domain"
+    | "billing_account"
+    | "marketplace_storefront"
+    | "unknown"
+  identifier: string | null
+}
+
+export interface ConnectedSystem {
+  provider: ConnectedSystemProvider
+  status: "connected" | "degraded" | "disconnected" | "unknown"
+}
+
 export interface StoreIntegration {
   id: string
   organizationId: string
   storeId: string
-  provider: MerchantPlatform | "checkoutleak_connector"
+  provider: ConnectedSystemProvider
   status: "connected" | "degraded" | "disconnected"
   accountIdentifier: string | null
   shopDomain: string | null
@@ -66,7 +87,7 @@ export interface StoreIntegration {
   syncStatus: "pending" | "syncing" | "synced" | "errored" | null
   connectionHealth: "healthy" | "degraded" | "unknown" | null
   lastSyncedAt: string | null
-  metadata: Record<string, string | number | boolean | null>
+  metadata: Record<string, unknown>
   createdAt: string
 }
 

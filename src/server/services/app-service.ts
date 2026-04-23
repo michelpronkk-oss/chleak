@@ -97,6 +97,44 @@ interface ActivationFlowHintsView {
   pageIntentHint: ActivationPageIntentHint | null
 }
 
+interface ActivationFlowLastRunView {
+  lastRunAt: string | null
+  detectorVersion: string | null
+  runStatus: string | null
+  progressionOutcome: string | null
+  deadEndReason: string | null
+  entryUrl: string | null
+  finalUrl: string | null
+  entryPageClassification: string | null
+  finalPageClassification: string | null
+  primaryActionLabel: string | null
+  primaryActionKind: string | null
+  primaryActionTarget: string | null
+  hintSource: string | null
+  hintPrimarySelector: string | null
+  hintPrimarySelectorMatched: boolean | null
+  hintNextActionSelector: string | null
+  hintNextActionSelectorMatched: boolean | null
+  hintFirstValueSelector: string | null
+  hintFirstValueSelectorMatched: boolean | null
+  hintAuthExpected: boolean | null
+  hintPageIntent: string | null
+  entryScreenshotRef: string | null
+  progressionScreenshotRef: string | null
+  entryScreenshotSha256: string | null
+  progressionScreenshotSha256: string | null
+  entryScreenshotBytes: number | null
+  progressionScreenshotBytes: number | null
+}
+
+interface LiveSourceSurfaceView {
+  primaryUrl: string | null
+  domain: string | null
+  identifier: string | null
+  sourceEntityType: string | null
+  connectedSystems: string[]
+}
+
 function isShopifySetupAttention(view: ShopifyDomainView | undefined) {
   if (!view) {
     return false
@@ -387,6 +425,25 @@ function readBooleanFromRecord(source: unknown, key: string): boolean | null {
   return typeof value === "boolean" ? value : null
 }
 
+function readNumberFromRecord(source: unknown, key: string): number | null {
+  if (!source || typeof source !== "object" || Array.isArray(source)) {
+    return null
+  }
+  const value = (source as Record<string, unknown>)[key]
+  return typeof value === "number" && Number.isFinite(value) ? value : null
+}
+
+function readStringArrayFromRecord(source: unknown, key: string): string[] {
+  if (!source || typeof source !== "object" || Array.isArray(source)) {
+    return []
+  }
+  const value = (source as Record<string, unknown>)[key]
+  if (!Array.isArray(value)) {
+    return []
+  }
+  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+}
+
 function readActivationFlowHintsView(source: unknown): ActivationFlowHintsView {
   const hintsSource =
     source && typeof source === "object" && !Array.isArray(source)
@@ -421,6 +478,124 @@ function readActivationFlowHintsView(source: unknown): ActivationFlowHintsView {
     authExpected: readBooleanFromRecord(record, "auth_expected"),
     pageIntentHint,
   }
+}
+
+function readLiveSourceSurfaceView(input: {
+  metadata: unknown
+  storeDomain: string | null
+  platform: string
+  shopDomain: string | null
+  accountIdentifier: string | null
+}): LiveSourceSurfaceView {
+  const metadata =
+    input.metadata && typeof input.metadata === "object" && !Array.isArray(input.metadata)
+      ? (input.metadata as Record<string, unknown>)
+      : null
+  const liveSourceUrl = readStringFromRecord(metadata, "live_source_url")
+  const liveSourceDomain = readStringFromRecord(metadata, "live_source_domain")
+  const sourceEntityType = readStringFromRecord(metadata, "source_entity_type")
+  const connectedSystems = readStringArrayFromRecord(metadata, "connected_systems")
+  const fallbackShopifyUrl =
+    input.platform === "shopify" && (input.shopDomain ?? input.storeDomain)
+      ? `https://${input.shopDomain ?? input.storeDomain}`
+      : null
+
+  return {
+    primaryUrl: liveSourceUrl ?? fallbackShopifyUrl,
+    domain: liveSourceDomain ?? input.shopDomain ?? input.storeDomain,
+    identifier: input.accountIdentifier,
+    sourceEntityType,
+    connectedSystems,
+  }
+}
+
+function readActivationFlowLastRunView(source: unknown): ActivationFlowLastRunView | null {
+  const metadata =
+    source && typeof source === "object" && !Array.isArray(source)
+      ? (source as Record<string, unknown>)
+      : null
+  if (!metadata) {
+    return null
+  }
+
+  const runRecord =
+    metadata.activation_flow_last_run &&
+    typeof metadata.activation_flow_last_run === "object" &&
+    !Array.isArray(metadata.activation_flow_last_run)
+      ? (metadata.activation_flow_last_run as Record<string, unknown>)
+      : null
+  const runSummary =
+    runRecord?.summary && typeof runRecord.summary === "object" && !Array.isArray(runRecord.summary)
+      ? (runRecord.summary as Record<string, unknown>)
+      : null
+  const runPath =
+    runRecord?.path && typeof runRecord.path === "object" && !Array.isArray(runRecord.path)
+      ? (runRecord.path as Record<string, unknown>)
+      : null
+
+  const view: ActivationFlowLastRunView = {
+    lastRunAt:
+      readStringFromRecord(metadata, "activation_flow_last_run_at") ??
+      readStringFromRecord(runSummary, "completed_at"),
+    detectorVersion:
+      readStringFromRecord(runRecord, "detector_version") ??
+      readStringFromRecord(metadata, "activation_flow_runner_version"),
+    runStatus: readStringFromRecord(runRecord, "status"),
+    progressionOutcome:
+      readStringFromRecord(metadata, "activation_flow_progression_outcome") ??
+      readStringFromRecord(runSummary, "progression_outcome"),
+    deadEndReason:
+      readStringFromRecord(metadata, "activation_flow_dead_end_reason") ??
+      readStringFromRecord(runSummary, "dead_end_reason"),
+    entryUrl:
+      readStringFromRecord(runPath, "entry_url") ??
+      readStringFromRecord(metadata, "activation_flow_entry_url"),
+    finalUrl: readStringFromRecord(runSummary, "final_url"),
+    entryPageClassification: readStringFromRecord(runSummary, "entry_page_classification"),
+    finalPageClassification: readStringFromRecord(runSummary, "final_page_classification"),
+    primaryActionLabel: readStringFromRecord(runSummary, "primary_action_label"),
+    primaryActionKind: readStringFromRecord(runSummary, "primary_action_kind"),
+    primaryActionTarget: readStringFromRecord(runSummary, "primary_action_target"),
+    hintSource: readStringFromRecord(metadata, "activation_flow_hints_source"),
+    hintPrimarySelector: readStringFromRecord(runSummary, "hint_primary_selector"),
+    hintPrimarySelectorMatched: readBooleanFromRecord(
+      runSummary,
+      "hint_primary_selector_matched"
+    ),
+    hintNextActionSelector: readStringFromRecord(runSummary, "hint_next_action_selector"),
+    hintNextActionSelectorMatched: readBooleanFromRecord(
+      runSummary,
+      "hint_next_action_selector_matched"
+    ),
+    hintFirstValueSelector: readStringFromRecord(runSummary, "hint_first_value_selector"),
+    hintFirstValueSelectorMatched: readBooleanFromRecord(
+      runSummary,
+      "hint_first_value_selector_matched"
+    ),
+    hintAuthExpected: readBooleanFromRecord(runSummary, "hint_auth_expected"),
+    hintPageIntent: readStringFromRecord(runSummary, "hint_page_intent"),
+    entryScreenshotRef: readStringFromRecord(runSummary, "entry_screenshot_ref"),
+    progressionScreenshotRef: readStringFromRecord(
+      runSummary,
+      "progression_screenshot_ref"
+    ),
+    entryScreenshotSha256: readStringFromRecord(runSummary, "entry_screenshot_sha256"),
+    progressionScreenshotSha256: readStringFromRecord(
+      runSummary,
+      "progression_screenshot_sha256"
+    ),
+    entryScreenshotBytes: readNumberFromRecord(runSummary, "entry_screenshot_bytes"),
+    progressionScreenshotBytes: readNumberFromRecord(
+      runSummary,
+      "progression_screenshot_bytes"
+    ),
+  }
+
+  const hasAnyRunField = Object.values(view).some(
+    (value) => value !== null && value !== undefined
+  )
+
+  return hasAnyRunField ? view : null
 }
 
 async function loadShopifyDomainViews(organizationId: string) {
@@ -1243,6 +1418,16 @@ export async function getDashboardJourneyData() {
     }
   }
 
+  if (journey.state === "demo") {
+    return {
+      mode: "ready" as const,
+      scanOutcome:
+        journey.snapshot.summary.activeIssues > 0 ? "issues_found" : "clean",
+      onboardingState: journey.state,
+      snapshot: journey.snapshot,
+    }
+  }
+
   if (primaryOutcome === "no_signal") {
     return {
       mode: "no_signal" as const,
@@ -1674,7 +1859,7 @@ export async function getStoreDetailData(storeId: string) {
     mockStoreContexts.find((item) => item.storeId === storeId) ?? null
   const integrationResult = await admin
     .from("store_integrations")
-    .select("id, provider, status, metadata")
+    .select("id, provider, status, metadata, account_identifier, shop_domain")
     .eq("organization_id", journey.organizationId)
     .eq("store_id", storeId)
     .neq("status", "disconnected")
@@ -1689,7 +1874,17 @@ export async function getStoreDetailData(storeId: string) {
           id: integrationResult.data.id,
           provider: integrationResult.data.provider,
           status: integrationResult.data.status,
+          accountIdentifier: integrationResult.data.account_identifier,
+          shopDomain: integrationResult.data.shop_domain,
+          liveSourceSurface: readLiveSourceSurfaceView({
+            metadata: integrationResult.data.metadata,
+            storeDomain: store.domain,
+            platform: store.platform,
+            shopDomain: integrationResult.data.shop_domain,
+            accountIdentifier: integrationResult.data.account_identifier,
+          }),
           activationFlowHints: readActivationFlowHintsView(integrationResult.data.metadata),
+          activationLastRun: readActivationFlowLastRunView(integrationResult.data.metadata),
         }
 
   const fixPlanLinks = issues

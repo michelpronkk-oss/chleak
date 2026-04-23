@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/shared"
+import { normalizeLiveSourceUrl } from "@/lib/live-source"
 import type { Database, Json } from "@/types/database"
 
 type StoreInsert = Database["public"]["Tables"]["stores"]["Insert"]
@@ -74,6 +75,10 @@ export async function persistShopifyIntegration(input: {
     `[shopify] store upsert success: organization=${input.organizationId}; store_id=${storeResult.data.id}`
   )
 
+  const normalizedLiveSource = normalizeLiveSourceUrl(
+    input.preferredShopDomain ?? input.shopDomain
+  )
+
   const integrationInsert: StoreIntegrationInsert = {
     organization_id: input.organizationId,
     store_id: storeResult.data.id,
@@ -88,6 +93,10 @@ export async function persistShopifyIntegration(input: {
     metadata: {
       install_source: "oauth_callback",
       canonical_shop_domain: input.canonicalShopDomain ?? input.shopDomain,
+      source_entity_type: "website_domain",
+      live_source_url: normalizedLiveSource?.normalizedUrl ?? null,
+      live_source_domain: normalizedLiveSource?.hostname ?? null,
+      connected_systems: ["shopify"],
       signal_snapshot: input.signalSnapshot
         ? {
             captured_at: input.signalSnapshot.capturedAt,

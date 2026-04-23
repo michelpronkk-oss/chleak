@@ -8,6 +8,10 @@ export const metadata: Metadata = {
 }
 
 import { cn } from "@/lib/utils"
+import {
+  inferShopifyDomainFromLiveSource,
+  normalizeLiveSourceUrl,
+} from "@/lib/live-source"
 import { getConnectJourneyData } from "@/server/services/app-service"
 import { DisconnectButton } from "./disconnect-button"
 import { PostOauthHandoff } from "./post-oauth-handoff"
@@ -27,6 +31,7 @@ const statusMessage: Record<string, string> = {
   connected: "Source connected. First scan queued.",
   disconnected: "Shopify has been disconnected. Reconnect when ready.",
   disconnect_failed: "Shopify disconnect failed. Retry in a moment.",
+  invalid_source_url: "Use a valid URL or domain for the live revenue surface.",
 }
 
 const errorStatuses = new Set([
@@ -45,7 +50,7 @@ function formatSourceStatus(status: string) {
   return status.replaceAll("_", " ")
 }
 
-const progressSteps = ["Plan active", "Connect source", "First scan", "Findings"]
+const progressSteps = ["Plan active", "Set source URL", "First scan", "Findings"]
 
 function WorkspaceProgressSteps({ currentStep }: { currentStep: number }) {
   return (
@@ -119,6 +124,15 @@ export default async function ConnectPage({
   const status = Array.isArray(params.status) ? params.status[0] : params.status
   const missing = Array.isArray(params.missing) ? params.missing[0] : params.missing
   const shopFromParams = Array.isArray(params.shop) ? params.shop[0] : params.shop
+  const sourceUrlParam =
+    Array.isArray(params.source_url) ? params.source_url[0] : params.source_url
+  const normalizedLiveSource = sourceUrlParam
+    ? normalizeLiveSourceUrl(sourceUrlParam)
+    : null
+  const sourceUrlInvalid = Boolean(sourceUrlParam && !normalizedLiveSource)
+  const inferredShopDomain = inferShopifyDomainFromLiveSource(
+    normalizedLiveSource?.normalizedUrl ?? sourceUrlParam ?? null
+  )
 
   const isPendingShopify = state === "pending_shopify"
   const isPendingStripe = state === "pending_stripe"
@@ -130,7 +144,9 @@ export default async function ConnectPage({
     state === "demo"
 
   const showStatusMessage =
-    (provider === "shopify" || provider === "stripe") && status && statusMessage[status]
+    (provider === "shopify" || provider === "stripe" || provider === "source_url") &&
+    status &&
+    statusMessage[status]
   const statusIsError = status ? errorStatuses.has(status) : false
   const stripeMissingList = (
     missing?.split(",").map((item) => item.trim()).filter(Boolean) ??
@@ -169,7 +185,7 @@ export default async function ConnectPage({
           Connect your first revenue source
         </h1>
         <p className="vault-page-intro-copy">
-          CheckoutLeak needs one data source to begin detecting leakage. Connect Shopify for checkout signals or Stripe for billing recovery analysis.
+          Start with your live revenue URL or domain. Connect Shopify and Stripe as optional system enrichments for deeper evidence.
         </p>
         {state === "demo" ? (
           <p className="text-sm text-amber-300">
@@ -200,7 +216,51 @@ export default async function ConnectPage({
         />
       ) : null}
 
-      {/* Source cards */}
+      <section className="vault-panel-shell p-4 sm:p-5">
+        <p className="data-mono text-muted-foreground">Primary live source</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Set the URL or domain that represents your live revenue surface. This becomes the primary source context for upcoming URL-first analysis.
+        </p>
+        <form method="GET" action="/app/connect" className="mt-4 space-y-3">
+          <input type="hidden" name="provider" value="source_url" />
+          <div className="space-y-2">
+            <label
+              htmlFor="source_url"
+              className="block font-mono text-[0.68rem] tracking-[0.08em] uppercase text-muted-foreground/60"
+            >
+              Live source URL
+            </label>
+            <input
+              id="source_url"
+              name="source_url"
+              defaultValue={normalizedLiveSource?.normalizedUrl ?? sourceUrlParam ?? ""}
+              placeholder="https://yourstore.com"
+              className="vault-input w-full rounded-lg px-3.5 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/40"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              inputMode="url"
+            />
+          </div>
+          <button
+            type="submit"
+            className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Set live source context
+          </button>
+        </form>
+        {normalizedLiveSource ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Source domain: {normalizedLiveSource.hostname}
+          </p>
+        ) : sourceUrlInvalid ? (
+          <p className="mt-3 text-xs text-amber-300">
+            Enter a valid URL or domain to set source context.
+          </p>
+        ) : null}
+      </section>
+
+      {/* Connected systems */}
       <section className="vault-source-grid">
         {/* Shopify */}
         <article className="vault-source-cell">
@@ -210,7 +270,7 @@ export default async function ConnectPage({
                 Shopify
               </p>
               <h2 className="mt-1.5 text-base font-semibold tracking-tight">
-                Checkout and payment signals
+                Connected system | checkout and activation depth
               </h2>
             </div>
             <SourceStatusBadge status={data.shopifySourceState.status} />
@@ -234,7 +294,12 @@ export default async function ConnectPage({
               <input
                 id="shop"
                 name="shop"
-                defaultValue={shopFromParams ?? data.shopifySourceState.shopDomain ?? ""}
+                defaultValue={
+                  shopFromParams ??
+                  inferredShopDomain ??
+                  data.shopifySourceState.shopDomain ??
+                  ""
+                }
                 placeholder="your-store.myshopify.com"
                 className="vault-input w-full rounded-lg px-3.5 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/40"
                 required
@@ -246,7 +311,7 @@ export default async function ConnectPage({
                 title="Use format: your-store.myshopify.com"
               />
               <p className="text-xs text-muted-foreground/55">
-                Exact myshopify domain. We initiate app authorization and return after approval.
+                Exact myshopify domain. If your primary source URL is a myshopify domain, it is inferred automatically.
               </p>
             </div>
             <ShopifyConnectSubmitButton
@@ -283,7 +348,7 @@ export default async function ConnectPage({
                 Stripe
               </p>
               <h2 className="mt-1.5 text-base font-semibold tracking-tight">
-                Billing recovery source
+                Connected system | billing recovery depth
               </h2>
             </div>
             <SourceStatusBadge status={data.stripeSourceState.status} />

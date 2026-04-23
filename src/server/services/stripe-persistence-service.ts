@@ -106,6 +106,11 @@ export async function persistStripeIntegration(input: {
     access_token_ref: "stripe_v1_ref_placeholder",
     metadata: {
       connect_source: "oauth_callback",
+      source_entity_type: "billing_account",
+      live_source_url: null,
+      live_source_domain: null,
+      live_source_identifier: input.stripeAccountId,
+      connected_systems: ["stripe"],
       scope: input.scope,
       livemode: input.livemode,
       has_refresh_token: Boolean(input.refreshToken),

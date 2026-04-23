@@ -29,6 +29,7 @@ import { EmptyWorkspaceActions } from "./empty-workspace-actions"
 
 export default async function DashboardOverviewPage() {
   const journey = await getDashboardJourneyData()
+  const isDemoMode = journey.onboardingState === "demo"
   const authOrgId =
     "organization" in journey
       ? journey.organization?.id ?? "none"
@@ -52,7 +53,7 @@ export default async function DashboardOverviewPage() {
             Start with a live source or explicit demo mode
           </h1>
           <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
-            Connect Shopify or Stripe to run a live scan in your real workspace. Demo mode is opt-in and stays clearly labeled as simulated data.
+            Set your live revenue URL or domain first, then connect Shopify or Stripe for deeper system evidence. Demo mode is opt-in and stays clearly labeled as simulated data.
           </p>
         </section>
 
@@ -331,12 +332,18 @@ export default async function DashboardOverviewPage() {
     return (
       <div className="space-y-5 pb-24 lg:pb-4">
         <section className="space-y-2">
-          <p className="data-mono text-muted-foreground">Baseline Analysis Complete</p>
+          <p className="data-mono text-muted-foreground">
+            {isDemoMode ? "Demo Workspace" : "Baseline Analysis Complete"}
+          </p>
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
-            {journey.snapshot.organization.name} has no detected leaks in the latest cycle.
+            {isDemoMode
+              ? "Simulated workspace currently shows no active leaks."
+              : `${journey.snapshot.organization.name} has no detected leaks in the latest cycle.`}
           </h1>
           <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-            Monitoring remains active across activation, checkout, and billing recovery.
+            {isDemoMode
+              ? "This is simulated data for product walkthrough and operator training."
+              : "Monitoring remains active across activation, checkout, and billing recovery."}
           </p>
         </section>
 
@@ -344,32 +351,47 @@ export default async function DashboardOverviewPage() {
           <article className="surface-card-strong p-5 sm:p-6 lg:p-7">
             <p className="data-mono text-muted-foreground">Monitoring Status</p>
             <h2 className="mt-2 text-lg font-semibold tracking-tight">
-              Leakage baseline is currently clean.
+              {isDemoMode
+                ? "Simulated baseline is currently clean."
+                : "Leakage baseline is currently clean."}
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              No ranked fixes are required right now. Scan cycles continue automatically.
+              {isDemoMode
+                ? "No simulated interventions are required in this snapshot."
+                : "No ranked fixes are required right now. Scan cycles continue automatically."}
             </p>
           </article>
 
           <article className="surface-card p-4 sm:p-5 lg:p-6">
             <p className="data-mono text-muted-foreground">Next Operator Move</p>
             <p className="mt-3 text-sm text-muted-foreground">
-              No corrective action required. Keep sources connected and review store status periodically.
+              {isDemoMode
+                ? "Review simulated source detail or return to your live workspace."
+                : "No corrective action required. Keep sources connected and review store status periodically."}
             </p>
             <div className="mt-5 flex flex-wrap gap-2.5">
               <Link
                 href="/app/stores"
                 className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
               >
-                Open store details
+                {isDemoMode ? "Open demo source detail" : "Open store details"}
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
-              <Link
-                href="/app/connect"
-                className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Connect another source
-              </Link>
+              {isDemoMode ? (
+                <Link
+                  href="/api/mock/onboarding?state=empty&next=/app"
+                  className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Return to live workspace
+                </Link>
+              ) : (
+                <Link
+                  href="/app/connect"
+                  className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Connect another source
+                </Link>
+              )}
             </div>
           </article>
         </section>
@@ -403,14 +425,18 @@ export default async function DashboardOverviewPage() {
   return (
     <div className="space-y-5 pb-24 lg:pb-2">
       <section className="vault-page-intro">
-        <p className="data-mono text-muted-foreground">Revenue Workspace</p>
+        <p className="data-mono text-muted-foreground">
+          {isDemoMode ? "Demo Revenue Workspace" : "Revenue Workspace"}
+        </p>
         <h1 className="vault-page-intro-title">Revenue at risk | last 30 days</h1>
         <p className="font-mono text-[0.68rem] tracking-[0.05em] text-muted-foreground">
           Rolling window | ranked by exposure | latest scan{" "}
           {latestScanAt ? formatRelativeTimestamp(latestScanAt) : "pending"}
         </p>
         <p className="vault-page-intro-copy">
-          {snapshot.organization.name} operator queue with explicit next move, source health, and supporting evidence.
+          {isDemoMode
+            ? "Simulated operator queue with realistic evidence framing and next moves."
+            : `${snapshot.organization.name} operator queue with explicit next move, source health, and supporting evidence.`}
         </p>
       </section>
 
@@ -441,7 +467,9 @@ export default async function DashboardOverviewPage() {
           <p className="vault-metric-key">Sources</p>
           <p className="vault-metric-value">
             {snapshot.summary.monitoredStores}
-            <span className="ml-1 text-xl text-muted-foreground">live</span>
+            <span className="ml-1 text-xl text-muted-foreground">
+              {isDemoMode ? "demo" : "live"}
+            </span>
           </p>
           <p className="vault-metric-delta">Coverage tracked in workspace</p>
         </article>
@@ -506,7 +534,7 @@ export default async function DashboardOverviewPage() {
               href={topMoveHref}
               className="marketing-primary-cta mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
             >
-              Open fix path
+              {isDemoMode ? "Open simulated fix path" : "Open fix path"}
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </section>
