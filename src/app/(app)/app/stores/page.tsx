@@ -55,6 +55,18 @@ function formatSourceStatus(status: string) {
   return status.replaceAll("_", " ")
 }
 
+function formatVerificationReason(
+  reason: "email_domain_match" | "connected_system_domain_match" | "manual_unverified"
+) {
+  if (reason === "email_domain_match") {
+    return "Verified by operator email domain"
+  }
+  if (reason === "connected_system_domain_match") {
+    return "Verified by connected system domain match"
+  }
+  return "Manual source context. Ownership is not verified yet."
+}
+
 function SourceStatusBadge({ status }: { status: string }) {
   const isConnected = status === "connected"
 
@@ -220,6 +232,11 @@ export default async function SourcesPage({
     connectData.liveSourceContext && "updatedAt" in connectData.liveSourceContext
       ? connectData.liveSourceContext.updatedAt
       : null
+  const liveSourceVerification = connectData.liveSourceVerification
+  const verificationBadgeTone =
+    liveSourceVerification?.state === "verified"
+      ? "border-emerald-400/30 bg-emerald-400/[0.08] text-emerald-300"
+      : "border-amber-300/40 bg-amber-300/[0.08] text-amber-200"
 
   return (
     <div className="space-y-5 pb-24 lg:pb-4">
@@ -308,10 +325,33 @@ export default async function SourcesPage({
                 {normalizedLiveSource?.hostname ?? "No primary source saved"}
               </h2>
             </div>
-            <span className={`text-xs ${sourceScanStateTone}`}>{sourceScanStateLabel}</span>
+            <div className="flex flex-col items-end gap-2">
+              <span className={`text-xs ${sourceScanStateTone}`}>{sourceScanStateLabel}</span>
+              {primarySourceSaved && liveSourceVerification ? (
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-md border px-2 py-1 font-mono text-[0.62rem] tracking-[0.08em] uppercase",
+                    verificationBadgeTone
+                  )}
+                >
+                  {liveSourceVerification.state === "verified" ? "verified" : "unverified"}
+                </span>
+              ) : null}
+            </div>
           </div>
 
           <p className="mt-2 text-sm text-muted-foreground">{sourceScanStateDetail}</p>
+          {primarySourceSaved && liveSourceVerification ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {formatVerificationReason(liveSourceVerification.reason)}
+              {liveSourceVerification.matchedDomain
+                ? ` (${liveSourceVerification.matchedDomain})`
+                : ""}
+              {liveSourceVerification.matchedSystem
+                ? ` | system: ${liveSourceVerification.matchedSystem}`
+                : ""}
+            </p>
+          ) : null}
 
           <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
             <div className="rounded-lg border border-border/60 bg-background/30 p-3">
@@ -495,6 +535,18 @@ export default async function SourcesPage({
                       website
                     </span>
                     <span className={`text-xs ${sourceScanStateTone}`}>{sourceScanStateLabel}</span>
+                    {liveSourceVerification ? (
+                      <span
+                        className={cn(
+                          "rounded-md border px-2 py-0.5 text-[11px] uppercase",
+                          liveSourceVerification.state === "verified"
+                            ? "border-emerald-400/30 bg-emerald-400/[0.08] text-emerald-300"
+                            : "border-amber-300/40 bg-amber-300/[0.08] text-amber-200"
+                        )}
+                      >
+                        {liveSourceVerification.state}
+                      </span>
+                    ) : null}
                   </div>
                   <p className="mt-2 text-sm text-muted-foreground">
                     {normalizedLiveSource?.normalizedUrl ?? "No URL saved"} | canonical source context
@@ -502,6 +554,14 @@ export default async function SourcesPage({
                   <p className="mt-1 text-xs text-muted-foreground">
                     {sourceScanStateDetail}
                   </p>
+                  {liveSourceVerification ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {formatVerificationReason(liveSourceVerification.reason)}
+                      {liveSourceVerification.matchedDomain
+                        ? ` (${liveSourceVerification.matchedDomain})`
+                        : ""}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="grid gap-1 text-sm">
