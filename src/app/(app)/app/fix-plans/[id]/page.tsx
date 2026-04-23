@@ -57,7 +57,7 @@ export default async function FixPlanPage({
   }
 
   if (billing.onboardingState === "empty") {
-    redirect("/app/connect")
+    redirect("/app/stores")
   }
 
   const fixPlan = await getFixPlanById(id)

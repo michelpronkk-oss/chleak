@@ -1,71 +1,385 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { ArrowRight, CircleDot } from "lucide-react"
+import { ArrowRight, Check, ChevronRight, CircleCheck, CircleDashed, CircleDot } from "lucide-react"
 
 export const metadata: Metadata = {
-  title: "Stores",
+  title: "Sources",
 }
 
+import { SubmitButton } from "@/components/ui/submit-button"
+import { normalizeLiveSourceUrl } from "@/lib/live-source"
+import { cn } from "@/lib/utils"
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
-import { getStoresIndexData } from "@/server/services/app-service"
+import { getConnectJourneyData, getStoresIndexData } from "@/server/services/app-service"
+import { setLiveSourceContext } from "../connect/actions"
+import { DisconnectButton } from "../connect/disconnect-button"
+import { ShopifyConnectSubmitButton } from "../connect/shopify-connect-submit-button"
+import { StripeConnectSubmitButton } from "../connect/stripe-connect-submit-button"
 
-export default async function StoresPage() {
-  const data = await getStoresIndexData()
-  const isDemoMode = data.onboardingState === "demo"
-  console.info(
-    `[auth] stores page auth decision: has_plan=${data.hasPlan}; org=${data.organization.id}`
+const statusMessage: Record<string, string> = {
+  setup_required: "Stripe connect setup is incomplete in this environment.",
+  invalid_shop: "Use a valid Shopify domain in the format your-store.myshopify.com.",
+  callback_missing: "Connection callback did not include required parameters.",
+  callback_invalid: "Connection callback verification failed.",
+  callback_failed: "Connection callback processing failed. Retry the connection.",
+  callback_declined: "Stripe connection was not approved.",
+  state_mismatch: "Connection state did not match this session. Retry the connection.",
+  webhook_registration_failed:
+    "Shopify connected, but webhook registration needs attention. Review setup and retry.",
+  connected: "Connected successfully. First scan has been queued.",
+  disconnected: "Shopify has been disconnected.",
+  disconnect_failed: "Shopify disconnect failed. Retry in a moment.",
+  invalid_source_url: "Use a valid URL or domain for the live revenue surface.",
+  context_saved: "Live source context saved.",
+  context_save_failed: "Could not save live source context. Retry in a moment.",
+}
+
+const errorStatuses = new Set([
+  "setup_required",
+  "invalid_shop",
+  "callback_missing",
+  "callback_invalid",
+  "callback_failed",
+  "callback_declined",
+  "state_mismatch",
+  "webhook_registration_failed",
+  "disconnect_failed",
+  "invalid_source_url",
+  "context_save_failed",
+])
+
+const progressSteps = ["Plan active", "Set source URL", "Connect systems", "Findings"]
+
+function formatSourceStatus(status: string) {
+  return status.replaceAll("_", " ")
+}
+
+function SourceStatusBadge({ status }: { status: string }) {
+  const isConnected = status === "connected"
+
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1.5 rounded-md border px-2.5 py-1 font-mono text-[0.65rem] tracking-[0.08em] uppercase",
+        isConnected
+          ? "border-emerald-400/30 bg-emerald-400/[0.08] text-emerald-400"
+          : "border-border/50 text-muted-foreground/50"
+      )}
+    >
+      {isConnected ? (
+        <CircleCheck className="h-3 w-3" />
+      ) : (
+        <CircleDashed className="h-3 w-3" />
+      )}
+      {formatSourceStatus(status)}
+    </span>
   )
+}
 
-  if (!data.hasPlan) {
+function WorkspaceProgressSteps({ currentStep }: { currentStep: number }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 pt-3">
+      {progressSteps.map((label, i) => {
+        const stepNumber = i + 1
+        const isDone = stepNumber < currentStep
+        const isCurrent = stepNumber === currentStep
+
+        return (
+          <span key={label} className="contents">
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 font-mono text-[0.65rem] tracking-[0.08em] uppercase",
+                isDone
+                  ? "border-border/40 bg-card/40 text-muted-foreground/55"
+                  : isCurrent
+                    ? "border-foreground/25 bg-foreground/[0.06] text-foreground"
+                    : "border-border/40 text-muted-foreground/40"
+              )}
+            >
+              {isDone && <Check className="h-2.5 w-2.5" />}
+              {label}
+            </span>
+            {i < progressSteps.length - 1 && (
+              <ChevronRight className="h-3 w-3 shrink-0 text-border/35" />
+            )}
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
+export default async function SourcesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const [storesData, connectData, params] = await Promise.all([
+    getStoresIndexData(),
+    getConnectJourneyData(),
+    searchParams,
+  ])
+  const isDemoMode = storesData.onboardingState === "demo"
+
+  if (!storesData.hasPlan) {
     redirect("/app/billing?intent=plan_required")
   }
 
-  if (data.onboardingState === "empty") {
-    redirect("/app/connect")
-  }
+  const provider = Array.isArray(params.provider) ? params.provider[0] : params.provider
+  const status = Array.isArray(params.status) ? params.status[0] : params.status
+  const missing = Array.isArray(params.missing) ? params.missing[0] : params.missing
+  const sourceUrlParam =
+    Array.isArray(params.source_url) ? params.source_url[0] : params.source_url
+  const shopFromParams = Array.isArray(params.shop) ? params.shop[0] : params.shop
+  const normalizedLiveSource = sourceUrlParam
+    ? normalizeLiveSourceUrl(sourceUrlParam)
+    : connectData.liveSourceContext?.url
+      ? normalizeLiveSourceUrl(connectData.liveSourceContext.url)
+      : null
+
+  const showStatusMessage =
+    (provider === "shopify" || provider === "stripe" || provider === "source_url") &&
+    status &&
+    statusMessage[status]
+  const statusIsError = status ? errorStatuses.has(status) : false
+  const isPendingShopify = connectData.onboardingState === "pending_shopify"
+  const isPendingStripe = connectData.onboardingState === "pending_stripe"
+  const isReady =
+    connectData.onboardingState === "first_results_shopify" ||
+    connectData.onboardingState === "first_results_stripe" ||
+    connectData.onboardingState === "completed_shopify" ||
+    connectData.onboardingState === "completed_stripe" ||
+    connectData.onboardingState === "demo"
+  const currentProgressStep = isReady ? 4 : isPendingShopify || isPendingStripe ? 3 : 2
+
+  const stripeMissingList = (
+    missing?.split(",").map((item) => item.trim()).filter(Boolean) ??
+    connectData.stripeSetupMissing ??
+    []
+  ) as string[]
+  const stripeMissingText = stripeMissingList.length
+    ? `Missing: ${stripeMissingList.join(", ")}.`
+    : "Missing: Stripe connection configuration."
+
+  const shopifyButtonLabel =
+    connectData.shopifySetupAttention
+      ? "Retry Shopify setup"
+      : connectData.shopifySourceState.status === "connected"
+        ? "Reconnect Shopify"
+        : connectData.shopifySourceState.status === "syncing"
+          ? "Reconnect Shopify"
+          : connectData.shopifySourceState.status === "errored"
+            ? "Retry Shopify setup"
+            : "Connect Shopify"
+
+  const shopifySetupMessage =
+    connectData.shopifySetupAttentionMessage ??
+    (connectData.shopifySetupAttention
+      ? "Shopify connected, but webhook registration needs attention. Retry setup."
+      : null)
 
   return (
     <div className="space-y-5 pb-24 lg:pb-4">
-      <section className="space-y-2">
-        <p className="data-mono text-muted-foreground">Stores</p>
+      <section className="space-y-2" id="source-setup">
+        <p className="data-mono text-muted-foreground">Sources</p>
         <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
-          Connected Revenue Sources
+          Live Source and System Connections
         </h1>
         <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-          {isDemoMode
-            ? "Demo sources mirror real operator flows with simulated status, issue load, and leakage exposure."
-            : "Every source is tracked as a monitored asset with scan status, active issues, and leakage exposure."}
+          Set the primary live source URL, then connect Shopify and Stripe systems for deeper activation, checkout, and billing evidence.
         </p>
         {isDemoMode ? (
           <p className="text-sm text-amber-300">
             Demo mode is active. Source cards below use simulated data.
           </p>
         ) : null}
+        <WorkspaceProgressSteps currentStep={currentProgressStep} />
+      </section>
+
+      {showStatusMessage ? (
+        <section
+          className={cn(
+            "vault-panel-shell border p-4",
+            statusIsError
+              ? "border-destructive/40 bg-destructive/[0.06]"
+              : "border-primary/30 bg-primary/[0.06]"
+          )}
+        >
+          <p className="text-sm leading-6 text-muted-foreground">{showStatusMessage}</p>
+        </section>
+      ) : null}
+
+      <section className="vault-panel-shell p-4 sm:p-5">
+        <p className="data-mono text-muted-foreground">Primary live source</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          This URL or domain is the canonical source context for scans and source detail evidence.
+        </p>
+        <form action={setLiveSourceContext} className="mt-4 space-y-3">
+          <div className="space-y-2">
+            <label
+              htmlFor="source_url"
+              className="block font-mono text-[0.68rem] tracking-[0.08em] uppercase text-muted-foreground/60"
+            >
+              Live source URL
+            </label>
+            <input
+              id="source_url"
+              name="source_url"
+              defaultValue={normalizedLiveSource?.normalizedUrl ?? ""}
+              placeholder="https://yourstore.com"
+              className="vault-input w-full rounded-lg px-3.5 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/40"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              inputMode="url"
+            />
+          </div>
+          <SubmitButton
+            label="Set live source context"
+            pendingLabel="Saving source..."
+            className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          />
+        </form>
+        {connectData.liveSourceContext?.url ? (
+          <p className="mt-3 text-xs text-emerald-300">
+            Saved context: {connectData.liveSourceContext.url}
+          </p>
+        ) : null}
+        {normalizedLiveSource ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Source domain: {normalizedLiveSource.hostname}
+          </p>
+        ) : null}
+      </section>
+
+      <section className="vault-source-grid">
+        <article className="vault-source-cell">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-mono text-[0.68rem] tracking-[0.1em] uppercase text-muted-foreground/60">
+                Shopify
+              </p>
+              <h2 className="mt-1.5 text-base font-semibold tracking-tight">
+                Connected system | checkout and activation depth
+              </h2>
+            </div>
+            <SourceStatusBadge status={connectData.shopifySourceState.status} />
+          </div>
+          <p className="mt-2.5 text-sm leading-[1.72] text-muted-foreground">
+            Detects checkout friction, payment method gaps, and activation progression leaks.
+          </p>
+          <div className="my-4 h-px bg-border/40" />
+          <form method="GET" action="/api/integrations/shopify/install" className="space-y-3">
+            <input type="hidden" name="orgId" value={connectData.organization.id} />
+            <div className="space-y-2">
+              <label
+                className="block font-mono text-[0.68rem] tracking-[0.08em] uppercase text-muted-foreground/60"
+                htmlFor="shop"
+              >
+                Shopify domain
+              </label>
+              <input
+                id="shop"
+                name="shop"
+                defaultValue={shopFromParams ?? connectData.shopifySourceState.shopDomain ?? ""}
+                placeholder="your-store.myshopify.com"
+                className="vault-input w-full rounded-lg px-3.5 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/40"
+                required
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                inputMode="url"
+                pattern="[a-z0-9-]+\.myshopify\.com"
+                title="Use format: your-store.myshopify.com"
+              />
+            </div>
+            <ShopifyConnectSubmitButton
+              disabled={!connectData.shopifyConfigured}
+              label={connectData.shopifyConfigured ? shopifyButtonLabel : "Shopify setup required"}
+            />
+          </form>
+          {connectData.shopifySourceState.status !== "not_connected" ? (
+            <div className="mt-2">
+              <DisconnectButton
+                label="Disconnect Shopify"
+                action="/api/integrations/shopify/disconnect"
+                next="/app/stores?provider=shopify&status=disconnected"
+              />
+            </div>
+          ) : null}
+          {connectData.shopifySourceState.shopDomain ? (
+            <p className="mt-3 font-mono text-[0.65rem] tracking-[0.06em] text-muted-foreground/45">
+              {connectData.shopifySourceState.shopDomain}
+            </p>
+          ) : null}
+          {shopifySetupMessage ? (
+            <p className="mt-2 text-xs text-amber-300">{shopifySetupMessage}</p>
+          ) : null}
+        </article>
+
+        <article className="vault-source-cell">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-mono text-[0.68rem] tracking-[0.1em] uppercase text-muted-foreground/60">
+                Stripe
+              </p>
+              <h2 className="mt-1.5 text-base font-semibold tracking-tight">
+                Connected system | billing recovery depth
+              </h2>
+            </div>
+            <SourceStatusBadge status={connectData.stripeSourceState.status} />
+          </div>
+          <p className="mt-2.5 text-sm leading-[1.72] text-muted-foreground">
+            Detects failed renewal leakage, retry gaps, and dunning lifecycle inefficiencies.
+          </p>
+          <div className="my-4 h-px bg-border/40" />
+          <div>
+            {isPendingStripe ? (
+              <div className="inline-flex items-center gap-2 rounded-lg border border-border/60 bg-card/50 px-4 py-3 text-sm text-foreground">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-foreground/50" />
+                First billing scan running
+              </div>
+            ) : connectData.stripeConfigured ? (
+              <form method="GET" action="/api/integrations/stripe/connect">
+                <input type="hidden" name="orgId" value={connectData.organization.id} />
+                <StripeConnectSubmitButton />
+              </form>
+            ) : (
+              <div className="space-y-3 rounded-lg border border-border/60 bg-background/30 p-4">
+                <p className="text-sm text-muted-foreground">
+                  Stripe connection is not configured in this environment.
+                </p>
+                <p className="font-mono text-[0.65rem] tracking-[0.06em] text-muted-foreground/50">
+                  {stripeMissingText}
+                </p>
+              </div>
+            )}
+          </div>
+          {connectData.stripeSourceState.accountId ? (
+            <p className="mt-3 font-mono text-[0.65rem] tracking-[0.06em] text-muted-foreground/45">
+              {connectData.stripeSourceState.accountId}
+            </p>
+          ) : null}
+        </article>
       </section>
 
       <section className="surface-card p-4 sm:p-5 lg:p-6">
-        {data.stagingSource ? (
+        {storesData.stagingSource ? (
           <article className="rounded-xl border border-border/70 bg-background/35 p-4 sm:p-5">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-base font-semibold tracking-tight sm:text-lg">
-                {data.stagingSource.label} source
+                {storesData.stagingSource.label} source
               </h2>
-              <span className={`text-xs ${data.stagingSource.statusTone}`}>
-                {data.stagingSource.statusLabel}
+              <span className={`text-xs ${storesData.stagingSource.statusTone}`}>
+                {storesData.stagingSource.statusLabel}
               </span>
             </div>
-            <p className="mt-2 text-sm text-muted-foreground">{data.stagingSource.message}</p>
-            <Link
-              href="/app/connect"
-              className="vault-link mt-4 inline-flex items-center gap-1 text-sm"
-            >
-              Open connection flow <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+            <p className="mt-2 text-sm text-muted-foreground">{storesData.stagingSource.message}</p>
           </article>
-        ) : data.stores.length ? (
+        ) : storesData.stores.length ? (
           <div className="divide-y divide-border/60">
-            {data.stores.map((store) => (
+            {storesData.stores.map((store) => (
               <article
                 key={store.id}
                 className="grid gap-3 py-4 sm:gap-4 sm:py-5 sm:grid-cols-[1.3fr_1fr_auto] sm:items-center"
@@ -88,19 +402,9 @@ export default async function StoresPage() {
                       ? `Shopify domain: ${store.displayDomain ?? "unknown"}`
                       : (store.domain ?? "Internal billing source")} | {store.activeIssueCount} active issues
                   </p>
-                  {store.platform === "shopify" &&
-                  store.canonicalShopifyDomain &&
-                  store.canonicalShopifyDomain !== store.displayDomain ? (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Internal canonical domain: {store.canonicalShopifyDomain}
-                    </p>
-                  ) : null}
                   <p className="mt-1 text-xs text-muted-foreground">
                     {store.topIssueTitle ? `Top issue: ${store.topIssueTitle}` : "No critical issue detected."}
                   </p>
-                  {store.setupAttentionMessage ? (
-                    <p className="mt-1 text-xs text-amber-300">{store.setupAttentionMessage}</p>
-                  ) : null}
                 </div>
 
                 <div className="grid gap-1 text-sm">
@@ -117,14 +421,14 @@ export default async function StoresPage() {
                     href={store.href}
                     className="vault-link inline-flex items-center gap-1 text-sm"
                   >
-                    Open store <ArrowRight className="h-3.5 w-3.5" />
+                    Open source <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
                   {store.platform === "shopify" && !isDemoMode ? (
                     <form method="POST" action="/api/integrations/shopify/disconnect">
                       <input
                         type="hidden"
                         name="next"
-                        value="/app/connect?provider=shopify&status=disconnected"
+                        value="/app/stores?provider=shopify&status=disconnected"
                       />
                       <button
                         type="submit"
@@ -140,22 +444,7 @@ export default async function StoresPage() {
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-border/70 p-8 text-center text-sm text-muted-foreground">
-            <p>No sources connected yet. Start by setting a live source URL, then connect Shopify or Stripe systems for deeper coverage.</p>
-            <div className="mt-4 flex flex-wrap justify-center gap-2.5">
-              <Link
-                href="/app/connect"
-                className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
-              >
-                Open source setup
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-              <Link
-                href="/api/mock/onboarding?state=demo&next=/app/stores"
-                className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Continue with demo data
-              </Link>
-            </div>
+            <p>No sources connected yet. Set a live source URL and connect Shopify or Stripe to begin monitoring.</p>
           </div>
         )}
       </section>
@@ -164,20 +453,20 @@ export default async function StoresPage() {
         <p className="data-mono text-muted-foreground">Coverage Snapshot</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-3 sm:gap-4">
           <div className="rounded-xl border border-border/70 bg-background/35 p-3.5 sm:p-4">
-            <p className="text-sm text-muted-foreground">Connected stores</p>
-            <p className="mt-1 text-2xl font-semibold tracking-tight">{data.stores.length}</p>
+            <p className="text-sm text-muted-foreground">Connected sources</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight">{storesData.stores.length}</p>
           </div>
           <div className="rounded-xl border border-border/70 bg-background/35 p-3.5 sm:p-4">
             <p className="text-sm text-muted-foreground">Total active issues</p>
             <p className="mt-1 text-2xl font-semibold tracking-tight">
-              {data.stores.reduce((count, store) => count + store.activeIssueCount, 0)}
+              {storesData.stores.reduce((count, store) => count + store.activeIssueCount, 0)}
             </p>
           </div>
           <div className="rounded-xl border border-border/70 bg-background/35 p-3.5 sm:p-4">
             <p className="text-sm text-muted-foreground">Combined leakage estimate</p>
             <p className="mt-1 text-2xl font-semibold tracking-tight text-primary">
               {formatCompactCurrency(
-                data.stores.reduce((total, store) => total + store.estimatedLeakage, 0)
+                storesData.stores.reduce((total, store) => total + store.estimatedLeakage, 0)
               )}
             </p>
           </div>
@@ -186,7 +475,7 @@ export default async function StoresPage() {
           <CircleDot className="h-3.5 w-3.5 text-muted-foreground/60" />
           {isDemoMode
             ? "Demo source health reflects simulated scan and issue changes."
-            : "Store health updates as scans complete and issue status changes."}
+            : "Source health updates as scans complete and issue status changes."}
         </p>
       </section>
     </div>

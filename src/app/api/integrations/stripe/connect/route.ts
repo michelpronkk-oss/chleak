@@ -24,7 +24,7 @@ export async function GET(request: Request) {
 
   if (!user) {
     const signInUrl = new URL("/auth/sign-in", url.origin)
-    signInUrl.searchParams.set("next", "/app/connect?provider=stripe")
+    signInUrl.searchParams.set("next", "/app/stores?provider=stripe")
     return NextResponse.redirect(signInUrl)
   }
 
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
   const setup = getStripeSetupState()
   if (!setup.configured) {
     const redirectUrl = new URL(
-      "/app/connect?provider=stripe&status=setup_required",
+      "/app/stores?provider=stripe&status=setup_required",
       url.origin
     )
     if (setup.missing.length) {
@@ -97,7 +97,7 @@ export async function GET(request: Request) {
     return response
   } catch {
     return NextResponse.redirect(
-      new URL("/app/connect?provider=stripe&status=callback_failed", url.origin)
+      new URL("/app/stores?provider=stripe&status=callback_failed", url.origin)
     )
   }
 }

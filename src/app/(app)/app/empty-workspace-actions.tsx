@@ -19,7 +19,7 @@ export function EmptyWorkspaceActions() {
   return (
     <div className="flex flex-wrap gap-3">
       <Link
-        href="/app/connect"
+        href="/app/stores"
         className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
       >
         Set live source

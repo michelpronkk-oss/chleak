@@ -1047,7 +1047,7 @@ function buildConnectingMonitor(state: OnboardingState) {
   return {
     storeId: `source_${sourceLabel.toLowerCase()}`,
     name: `${sourceLabel} source`,
-    href: "/app/connect",
+    href: "/app/stores",
     statusLabel: "Connecting",
     statusTone: "text-sky-300",
     activeIssues: 0,
@@ -1061,7 +1061,7 @@ function buildPendingMonitor(state: OnboardingState, store: Store | null) {
   return {
     storeId: store?.id ?? `source_${sourceLabel.toLowerCase()}`,
     name: store?.name ?? `${sourceLabel} source`,
-    href: store ? `/app/stores/${store.id}` : "/app/connect",
+    href: store ? `/app/stores/${store.id}` : "/app/stores",
     statusLabel: "First scan running",
     statusTone: "text-primary",
     activeIssues: 0,
@@ -1075,7 +1075,7 @@ function buildFirstResultMonitor(state: OnboardingState, store: Store | null, is
   return {
     storeId: store?.id ?? `source_${sourceLabel.toLowerCase()}`,
     name: store?.name ?? `${sourceLabel} source`,
-    href: store ? `/app/stores/${store.id}` : "/app/connect",
+    href: store ? `/app/stores/${store.id}` : "/app/stores",
     statusLabel: "First findings ready",
     statusTone: "text-primary",
     activeIssues: issueCount,

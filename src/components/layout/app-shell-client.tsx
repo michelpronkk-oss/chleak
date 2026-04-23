@@ -50,14 +50,18 @@ interface AppShellClientProps {
 
 const navigationItems = [
   { href: "/app", label: "Overview", icon: LayoutDashboard },
-  { href: "/app/stores", label: "Stores", icon: Store },
+  { href: "/app/stores", label: "Sources", icon: Store },
   { href: "/app/billing", label: "Billing", icon: CreditCard },
   { href: "/app/settings", label: "Settings", icon: Settings },
 ]
 
 function isNavActive(pathname: string, href: string) {
   if (href === "/app") {
-    return pathname === "/app" || pathname === "/app/connect"
+    return pathname === "/app"
+  }
+
+  if (href === "/app/stores") {
+    return pathname === "/app/connect" || pathname === "/app/stores" || pathname.startsWith("/app/stores/")
   }
 
   return pathname === href || pathname.startsWith(`${href}/`)

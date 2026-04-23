@@ -138,7 +138,7 @@ export default async function SettingsPage() {
         <div className="vault-settings-table">
           <div className="vault-settings-row">
             <div>
-              <p className="vault-settings-key">Connected stores</p>
+              <p className="vault-settings-key">Connected sources</p>
               <p className="vault-settings-desc">Sources available for monitoring.</p>
             </div>
             <div>
@@ -163,10 +163,10 @@ export default async function SettingsPage() {
               )}
             </div>
             <Link
-              href={data.connectedStores.length ? "/app/stores" : "/app/connect"}
+              href="/app/stores"
               className="rounded-md border border-border/70 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
-              {data.connectedStores.length ? "Open sources" : "Open setup"}
+              Open sources
             </Link>
           </div>
         </div>

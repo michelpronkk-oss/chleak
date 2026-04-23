@@ -33,7 +33,7 @@ export async function GET(request: Request) {
   if (!user) {
     console.info(`[shopify] install early_return: reason=unauthenticated; shop=${shop ?? "none"}`)
     const signInUrl = new URL("/auth/sign-in", url.origin)
-    signInUrl.searchParams.set("next", "/app/connect?provider=shopify")
+    signInUrl.searchParams.set("next", "/app/stores?provider=shopify")
     return NextResponse.redirect(signInUrl)
   }
 
@@ -54,7 +54,7 @@ export async function GET(request: Request) {
     const errMsg = err instanceof Error ? err.message : String(err)
     console.error(`[shopify] install early_return: reason=workspace_error; shop=${shop ?? "none"}; user=${user.id}; error=${errMsg}`)
     return NextResponse.redirect(
-      new URL("/app/connect?provider=shopify&status=callback_failed", url.origin)
+      new URL("/app/stores?provider=shopify&status=callback_failed", url.origin)
     )
   }
   const organizationId = membership.organizationId
@@ -63,14 +63,14 @@ export async function GET(request: Request) {
   if (!setup.configured) {
     console.warn(`[shopify] install early_return: reason=not_configured; shop=${shop ?? "none"}; organization=${organizationId}`)
     return NextResponse.redirect(
-      new URL("/app/connect?provider=shopify&status=setup_required", url.origin)
+      new URL("/app/stores?provider=shopify&status=setup_required", url.origin)
     )
   }
 
   if (!shop) {
     console.warn(`[shopify] install early_return: reason=missing_shop; organization=${organizationId}`)
     return NextResponse.redirect(
-      new URL("/app/connect?provider=shopify&status=invalid_shop", url.origin)
+      new URL("/app/stores?provider=shopify&status=invalid_shop", url.origin)
     )
   }
 
@@ -143,7 +143,7 @@ export async function GET(request: Request) {
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err)
     console.error(`[shopify] install early_return: reason=install_error; shop=${shop}; organization=${organizationId}; error=${errMsg}`)
-    const fallback = new URL("/app/connect?provider=shopify&status=invalid_shop", url.origin)
+    const fallback = new URL("/app/stores?provider=shopify&status=invalid_shop", url.origin)
     fallback.searchParams.set("shop", shop)
     return NextResponse.redirect(fallback)
   }

@@ -25,12 +25,12 @@ export async function setLiveSourceContext(formData: FormData) {
   const normalized = normalizeLiveSourceUrl(raw)
 
   if (!normalized) {
-    redirect("/app/connect?provider=source_url&status=invalid_source_url")
+    redirect("/app/stores?provider=source_url&status=invalid_source_url")
   }
 
   const session = await getServerSession()
   if (!session) {
-    redirect("/auth/sign-in?next=/app/connect")
+    redirect("/auth/sign-in?next=/app/stores")
   }
 
   const cookieStore = await cookies()
@@ -58,7 +58,7 @@ export async function setLiveSourceContext(formData: FormData) {
     .single()
 
   if (membershipResult.error || !membershipResult.data) {
-    redirect("/app/connect?provider=source_url&status=context_save_failed")
+    redirect("/app/stores?provider=source_url&status=context_save_failed")
   }
 
   const integrationsResult = await admin
@@ -69,7 +69,7 @@ export async function setLiveSourceContext(formData: FormData) {
     .neq("status", "disconnected")
 
   if (integrationsResult.error) {
-    redirect("/app/connect?provider=source_url&status=context_save_failed")
+    redirect("/app/stores?provider=source_url&status=context_save_failed")
   }
 
   for (const integration of integrationsResult.data ?? []) {
@@ -87,11 +87,11 @@ export async function setLiveSourceContext(formData: FormData) {
       .eq("id", integration.id)
 
     if (update.error) {
-      redirect("/app/connect?provider=source_url&status=context_save_failed")
+      redirect("/app/stores?provider=source_url&status=context_save_failed")
     }
   }
 
   revalidatePath("/app/connect")
   revalidatePath("/app/stores")
-  redirect("/app/connect?provider=source_url&status=context_saved")
+  redirect("/app/stores?provider=source_url&status=context_saved")
 }

@@ -171,7 +171,7 @@ export default async function BillingPage({
         ) : null}
         {data.onboardingState === "empty" ? (
           <Link
-            href="/app/connect"
+            href="/app/stores"
             className="vault-link inline-flex items-center gap-1 text-sm"
           >
             Continue onboarding by connecting your first source

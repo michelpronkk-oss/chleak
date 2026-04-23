@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 
   const redirectError = (status: string) =>
     NextResponse.redirect(
-      new URL(`/app/connect?provider=stripe&status=${status}`, url.origin)
+      new URL(`/app/stores?provider=stripe&status=${status}`, url.origin)
     )
 
   const withErrorState = async (
@@ -125,7 +125,7 @@ export async function GET(request: Request) {
     }
 
     const response = NextResponse.redirect(
-      new URL("/app/connect?provider=stripe&status=connected", url.origin)
+      new URL("/app/stores?provider=stripe&status=connected", url.origin)
     )
     response.cookies.set(ONBOARDING_STATE_COOKIE, "pending_stripe", {
       httpOnly: true,

@@ -12,7 +12,7 @@ import {
 
 async function disconnect(request: Request, nextOverride?: string | null) {
   const url = new URL(request.url)
-  const next = sanitizeNextPath(nextOverride ?? url.searchParams.get("next"), "/app/connect")
+  const next = sanitizeNextPath(nextOverride ?? url.searchParams.get("next"), "/app/stores")
 
   const supabase = await createSupabaseServerClient()
   const {
@@ -62,7 +62,7 @@ async function disconnect(request: Request, nextOverride?: string | null) {
     console.error(
       `[shopify] disconnect failed: organization=${membership.organizationId}; error=${JSON.stringify({ code: updateResult.error.code, message: updateResult.error.message, details: updateResult.error.details, hint: updateResult.error.hint })}`
     )
-    const failed = new URL("/app/connect", url.origin)
+    const failed = new URL("/app/stores", url.origin)
     failed.searchParams.set("provider", "shopify")
     failed.searchParams.set("status", "disconnect_failed")
     return NextResponse.redirect(failed)

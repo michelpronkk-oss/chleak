@@ -78,10 +78,10 @@ export default async function DashboardOverviewPage() {
         </section>
         <section className="surface-card p-5 sm:p-6">
           <p className="text-sm leading-[1.72] text-muted-foreground">
-            Authorization incomplete. Open the connect flow to verify data access scope and queue the first scan.
+            Authorization incomplete. Open Sources to verify data access scope and queue the first scan.
           </p>
           <Link
-            href="/app/connect"
+            href="/app/stores"
             className="marketing-primary-cta mt-5 inline-flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-transform hover:-translate-y-px"
           >
             Complete connection setup
@@ -104,13 +104,13 @@ export default async function DashboardOverviewPage() {
         </section>
         <section className="surface-card p-5 sm:p-6 lg:p-7">
           <p className="text-sm text-muted-foreground">
-            Retry authorization from the connect flow.
+            Retry authorization from Sources.
           </p>
           <Link
-            href="/app/connect"
+            href="/app/stores"
             className="marketing-primary-cta mt-5 inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
           >
-            Open connect flow
+            Open sources
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </section>
@@ -171,7 +171,7 @@ export default async function DashboardOverviewPage() {
               href="/app/stores"
               className="rounded-lg border border-border/70 px-4 py-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
-              Open stores
+              Open sources
             </Link>
           </div>
           <PendingScanLiveRefresh />
@@ -297,11 +297,11 @@ export default async function DashboardOverviewPage() {
                 href="/app/stores"
                 className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
               >
-                Open store details
+                Open source details
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
               <Link
-                href="/app/connect"
+                href="/app/stores"
                 className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
                 Connect another source
@@ -316,7 +316,7 @@ export default async function DashboardOverviewPage() {
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link
-              href="/app/connect"
+              href="/app/stores"
               className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
             >
               Open connection status
@@ -374,7 +374,7 @@ export default async function DashboardOverviewPage() {
                 href="/app/stores"
                 className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
               >
-                {isDemoMode ? "Open demo source detail" : "Open store details"}
+                {isDemoMode ? "Open demo source detail" : "Open source details"}
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
               {isDemoMode ? (
@@ -386,7 +386,7 @@ export default async function DashboardOverviewPage() {
                 </Link>
               ) : (
                 <Link
-                  href="/app/connect"
+                  href="/app/stores"
                   className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
                   Connect another source

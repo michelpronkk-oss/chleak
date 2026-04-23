@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 
 export const metadata: Metadata = {
-  title: "Store Detail",
+  title: "Source Detail",
 }
 
 import { MetaPill, RankedQueueRow, SeverityPill, VaultPanel } from "@/components/dashboard/vault-primitives"
@@ -69,7 +69,7 @@ export default async function StoreDetailPage({
   }
 
   if (storesData.onboardingState === "empty") {
-    redirect("/app/connect")
+    redirect("/app/stores")
   }
 
   const data = await getStoreDetailData(id)
@@ -130,7 +130,7 @@ export default async function StoreDetailPage({
           className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          Back to stores
+          Back to sources
         </Link>
         <p className="data-mono text-muted-foreground">Source Detail</p>
         <h1 className="vault-page-intro-title">{data.store.name}</h1>
@@ -622,7 +622,7 @@ export default async function StoreDetailPage({
 
       {isShopifySource && !isDemoMode ? (
         <form method="POST" action="/api/integrations/shopify/disconnect">
-          <input type="hidden" name="next" value="/app/connect?provider=shopify&status=disconnected" />
+          <input type="hidden" name="next" value="/app/stores?provider=shopify&status=disconnected" />
           <button
             type="submit"
             className="inline-flex items-center rounded-md border border-border/70 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
