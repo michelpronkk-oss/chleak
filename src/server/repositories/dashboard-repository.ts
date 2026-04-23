@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 import { getMockDashboardSnapshot } from "@/data/mock/dashboard"
+import {
+  formatLeakFamilyLabel,
+  summarizeIssueImpactByLeakFamily,
+} from "@/lib/revenue-flow-taxonomy"
 import type { Database } from "@/types/database"
 import type {
   DashboardSnapshot,
@@ -25,20 +29,13 @@ export class MockDashboardRepository implements DashboardRepository {
 }
 
 function buildRevenueOpportunities(issues: Issue[]): RevenueOpportunity[] {
-  const byType = new Map<string, number>()
-
-  issues.forEach((issue) => {
-    const existing = byType.get(issue.type) ?? 0
-    byType.set(issue.type, existing + issue.estimatedMonthlyRevenueImpact)
-  })
-
-  return Array.from(byType.entries())
-    .map(([type, estimatedMonthlyRevenueImpact]) => {
+  return summarizeIssueImpactByLeakFamily(issues)
+    .map(([family, estimatedMonthlyRevenueImpact]) => {
       const confidence: RevenueOpportunity["confidence"] =
         estimatedMonthlyRevenueImpact > 20000 ? "high" : "medium"
 
       return {
-        label: type.replaceAll("_", " "),
+        label: formatLeakFamilyLabel(family),
         estimatedMonthlyRevenueImpact,
         confidence,
       }

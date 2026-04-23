@@ -5,16 +5,16 @@ import { MarketingPageLayout, PageSection } from "@/components/marketing/page-la
 export const metadata: Metadata = {
   title: "Terms of Use",
   description:
-    "Terms of use governing access to CheckoutLeak, including subscription, billing, acceptable use, and service conditions.",
+    "Terms of use governing access to CheckoutLeak, including subscriptions, billing, acceptable use, integrations, and service conditions.",
   openGraph: {
     title: "Terms of Use | CheckoutLeak",
-    description: "Terms of use governing access to CheckoutLeak, including subscription, billing, acceptable use, and service conditions.",
+    description: "Terms of use governing access to CheckoutLeak, including subscriptions, billing, acceptable use, integrations, and service conditions.",
     url: "/terms",
     type: "website",
   },
   twitter: {
     title: "Terms of Use | CheckoutLeak",
-    description: "Terms of use governing access to CheckoutLeak, including subscription, billing, acceptable use, and service conditions.",
+    description: "Terms of use governing access to CheckoutLeak, including subscriptions, billing, acceptable use, integrations, and service conditions.",
   },
   alternates: {
     canonical: "/terms",
@@ -26,13 +26,20 @@ export default function TermsPage() {
     <MarketingPageLayout
       eyebrow="Legal"
       title="Terms of Use"
-      description="These terms govern access to CheckoutLeak. They are written for commercial teams using the platform in live revenue operations."
+      description="These terms govern access to CheckoutLeak for teams running operator-grade revenue leak detection across activation, checkout, setup, and billing recovery workflows."
     >
       <PageSection title="Acceptance of terms">
         <p>
           By creating an account, purchasing a subscription, or otherwise using
-          CheckoutLeak, you agree to these Terms of Use and our Privacy Policy.
-          If you do not agree, do not use the service.
+          CheckoutLeak, you agree to these Terms of Use, Privacy Policy, and
+          {" "}
+          <a
+            href="/cookies"
+            className="vault-link"
+          >
+            Cookie Policy
+          </a>
+          . If you do not agree, do not use the service.
         </p>
         <p>
           If you use CheckoutLeak on behalf of an organization, you confirm you
@@ -92,13 +99,32 @@ export default function TermsPage() {
 
       <PageSection title="Integrations and third-party services">
         <p>
-          CheckoutLeak may connect to third-party services such as Shopify,
-          Stripe, Supabase, Dodo Payments, and Resend. Your use of those
-          services is governed by their own terms and policies.
+          CheckoutLeak may connect to third-party services used in revenue
+          operations, including commerce, payments, billing, authentication,
+          messaging, and infrastructure providers such as Shopify, Stripe,
+          Supabase, Dodo Payments, and Resend. Your use of those services is
+          governed by their own terms and policies.
         </p>
         <p>
           We are not responsible for outages, API changes, policy changes, or
           failures originating from third-party providers.
+        </p>
+      </PageSection>
+
+      <PageSection title="Product outputs and operator responsibility">
+        <p>
+          CheckoutLeak produces evidence-backed findings, impact estimates, and
+          recommended next actions across activation, checkout, setup, and
+          billing recovery surfaces.
+        </p>
+        <p>
+          These outputs are decision-support signals. They do not constitute
+          legal, tax, accounting, or financial advice, and they do not
+          guarantee commercial outcomes.
+        </p>
+        <p>
+          Your organization is responsible for operational decisions and for
+          validating changes before release.
         </p>
       </PageSection>
 
@@ -161,6 +187,16 @@ export default function TermsPage() {
           We may update these terms as the product and legal requirements
           evolve. Material updates will be communicated through the app or
           account email.
+        </p>
+        <p>
+          Cookie practices are described in our{" "}
+          <a
+            href="/cookies"
+            className="vault-link"
+          >
+            Cookie Policy
+          </a>
+          .
         </p>
         <p>
           Questions about these terms can be sent to{" "}

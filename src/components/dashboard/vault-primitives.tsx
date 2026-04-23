@@ -2,8 +2,13 @@ import type { ReactNode } from "react"
 import { Clock3 } from "lucide-react"
 
 import { formatCompactCurrency } from "@/lib/format"
+import {
+  formatIssueTypeLabel as formatIssueTypeLabelFromTaxonomy,
+  formatLeakFamilyLabel,
+  getLeakFamilyForIssueType,
+} from "@/lib/revenue-flow-taxonomy"
 import { cn } from "@/lib/utils"
-import type { IssueSeverity, ScanStatus, SuggestedAction } from "@/types/domain"
+import type { IssueSeverity, IssueType, ScanStatus, SuggestedAction } from "@/types/domain"
 
 const confidenceBySeverity: Record<IssueSeverity, string> = {
   critical: "Strong signal",
@@ -59,11 +64,21 @@ export function cleanPrimaryCopy(text: string) {
 export function formatSourceLabel(source: string) {
   if (source.startsWith("shopify_simulation")) return "shopify_monitoring"
   if (source.startsWith("shopify_monitoring")) return "shopify_monitoring"
+  if (source.startsWith("stripe_simulation")) return "stripe_billing_monitoring"
+  if (source.startsWith("stripe_monitoring")) return "stripe_billing_monitoring"
   return source
 }
 
 export function formatImpactLabel(value: number) {
   return value > 0 ? formatCompactCurrency(value) : "Impact pending"
+}
+
+export function formatIssueTypeLabel(type: IssueType) {
+  return formatIssueTypeLabelFromTaxonomy(type)
+}
+
+export function formatLeakFamilyFromIssueType(type: IssueType) {
+  return formatLeakFamilyLabel(getLeakFamilyForIssueType(type))
 }
 
 export function formatSeverityShortLabel(severity: IssueSeverity) {

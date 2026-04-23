@@ -4,6 +4,11 @@ export type IssueType =
   | "checkout_friction"
   | "payment_method_coverage"
   | "failed_payment_recovery"
+  | "signup_form_abandonment"
+  | "signup_identity_verification_dropoff"
+  | "activation_funnel_dropout"
+  | "upgrade_handoff_friction"
+  | "pricing_page_to_checkout_dropoff"
   | "setup_gap"
   | "fraud_false_decline"
 
@@ -146,6 +151,8 @@ export type FixPlanConfidence = "strong_signal" | "high" | "medium" | "emerging"
 
 export type FixPlanStatus = "open" | "in_progress" | "resolved"
 
+export type FixPlanSignalStrength = "strong" | "moderate" | "early"
+
 export interface FixPlanStep {
   id: string
   title: string
@@ -156,6 +163,22 @@ export interface FixPlanRelatedIssue {
   issueId: string
   title: string
   estimatedMonthlyRevenueImpact: number
+}
+
+export interface FixPlanEvidenceRow {
+  label: string
+  value: string
+}
+
+export interface FixPlanEvidence {
+  detectionSummary: string
+  whyTriggered: string
+  leakFamilyLabel: string
+  scanTimestamp: string | null
+  signalStrength: FixPlanSignalStrength | null
+  rows: FixPlanEvidenceRow[]
+  recommendedNextAction: string
+  successSignal: string | null
 }
 
 export interface FixPlan {
@@ -177,6 +200,7 @@ export interface FixPlan {
   expectedOutcome: string
   status: FixPlanStatus
   relatedIssues: FixPlanRelatedIssue[]
+  evidence?: FixPlanEvidence | null
 }
 
 export interface DashboardSummary {

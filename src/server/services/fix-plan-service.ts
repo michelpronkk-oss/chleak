@@ -3,15 +3,777 @@ import {
   getFixPlanIdForIssue,
   getMockFixPlanById,
 } from "@/data/mock/fix-plans"
+import {
+  formatIssueTypeLabel,
+  formatLeakFamilyLabel,
+  getLeakFamilyForIssueType,
+} from "@/lib/revenue-flow-taxonomy"
+import { getServerSession } from "@/lib/auth/session"
+import { createSupabaseAdminClient } from "@/lib/supabase/shared"
+import type { Database } from "@/types/database"
+import type {
+  FixPlan,
+  FixPlanEvidence,
+  FixPlanSignalStrength,
+  FixPlanStep,
+  IssueSeverity,
+  IssueType,
+} from "@/types/domain"
 
-export async function getFixPlanById(id: string) {
-  const dataSource = process.env.CHECKOUTLEAK_DATA_SOURCE ?? "mock"
+type IssueRow = Database["public"]["Tables"]["issues"]["Row"]
+type StoreIntegrationRow = Pick<
+  Database["public"]["Tables"]["store_integrations"]["Row"],
+  "metadata" | "status" | "sync_status" | "connection_health" | "scopes" | "installed_at"
+>
 
-  if (dataSource === "supabase") {
-    return getMockFixPlanById(id)
+const GENERATED_FIX_PLAN_PREFIX = "generated-issue-"
+
+interface FixPlanTemplate {
+  recommendedFix: string
+  steps: FixPlanStep[]
+  platformContext: string[]
+  successSignal: string
+  expectedOutcome: string
+}
+
+function toGeneratedFixPlanId(issueId: string) {
+  return `${GENERATED_FIX_PLAN_PREFIX}${issueId}`
+}
+
+function parseGeneratedFixPlanId(id: string) {
+  if (!id.startsWith(GENERATED_FIX_PLAN_PREFIX)) {
+    return null
   }
 
-  return getMockFixPlanById(id)
+  const issueId = id.slice(GENERATED_FIX_PLAN_PREFIX.length).trim()
+  return issueId.length > 0 ? issueId : null
+}
+
+function toIssueType(value: string): IssueType {
+  const known: IssueType[] = [
+    "checkout_friction",
+    "payment_method_coverage",
+    "failed_payment_recovery",
+    "signup_form_abandonment",
+    "signup_identity_verification_dropoff",
+    "activation_funnel_dropout",
+    "upgrade_handoff_friction",
+    "pricing_page_to_checkout_dropoff",
+    "setup_gap",
+    "fraud_false_decline",
+  ]
+  return known.includes(value as IssueType) ? (value as IssueType) : "setup_gap"
+}
+
+function toSeverity(value: string): IssueSeverity {
+  if (value === "critical" || value === "high" || value === "medium" || value === "low") {
+    return value
+  }
+
+  return "medium"
+}
+
+function toFixPlanConfidence(severity: IssueSeverity): FixPlan["confidence"] {
+  if (severity === "critical") {
+    return "strong_signal"
+  }
+
+  if (severity === "high") {
+    return "high"
+  }
+
+  if (severity === "medium") {
+    return "medium"
+  }
+
+  return "emerging"
+}
+
+function asRecord(input: unknown): Record<string, unknown> | null {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return null
+  }
+
+  return input as Record<string, unknown>
+}
+
+function asString(input: unknown) {
+  return typeof input === "string" ? input : null
+}
+
+function asNumber(input: unknown) {
+  return typeof input === "number" && Number.isFinite(input) ? input : null
+}
+
+function asBoolean(input: unknown) {
+  return typeof input === "boolean" ? input : null
+}
+
+function formatInteger(value: number) {
+  return new Intl.NumberFormat("en-US").format(value)
+}
+
+function formatPercent(value: number) {
+  return `${value.toFixed(1)}%`
+}
+
+function formatTimestamp(value: string) {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) {
+    return value
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(parsed)
+}
+
+function formatAmountFromCents(input: {
+  amountCents: number
+  primaryCurrency: string | null
+  multipleCurrencies: boolean
+}) {
+  if (input.multipleCurrencies) {
+    return `${formatInteger(input.amountCents)} cents (multi-currency)`
+  }
+
+  const currency = input.primaryCurrency ?? "USD"
+  const amount = input.amountCents / 100
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(amount)
+}
+
+function toSignalStrength(confidence: FixPlan["confidence"]): FixPlanSignalStrength {
+  if (confidence === "strong_signal" || confidence === "high") {
+    return "strong"
+  }
+
+  if (confidence === "medium") {
+    return "moderate"
+  }
+
+  return "early"
+}
+
+function readFindingEvidenceForIssueType(input: {
+  issueType: IssueType
+  metadata: Record<string, unknown> | null
+}) {
+  const findingEvidence = asRecord(input.metadata?.finding_evidence)
+  if (!findingEvidence) {
+    return null
+  }
+
+  const keysByIssueType: Record<IssueType, string[]> = {
+    activation_funnel_dropout: ["shopify_activation_funnel_dropout_v1"],
+    failed_payment_recovery: ["stripe_failed_payment_recovery_gap_v1"],
+    setup_gap: [
+      "shopify_webhook_registration_incomplete",
+      "shopify_monitoring_coverage_incomplete",
+      "simulated_webhook_coverage_gap",
+      "simulated_signal_confidence_limited",
+    ],
+    checkout_friction: [],
+    payment_method_coverage: [],
+    signup_form_abandonment: [],
+    signup_identity_verification_dropoff: [],
+    upgrade_handoff_friction: [],
+    pricing_page_to_checkout_dropoff: [],
+    fraud_false_decline: [],
+  }
+
+  const preferredKeys = keysByIssueType[input.issueType]
+  for (const key of preferredKeys) {
+    const row = asRecord(findingEvidence[key])
+    if (row) {
+      return row
+    }
+  }
+
+  const firstStructured = Object.values(findingEvidence).find((value) => asRecord(value))
+  return firstStructured ? asRecord(firstStructured) : null
+}
+
+function buildActivationEvidenceRows(input: {
+  evidence: Record<string, unknown>
+  issueDetectedAt: string
+}) {
+  const rows: FixPlanEvidence["rows"] = []
+  const customers = asNumber(input.evidence.customers)
+  const products = asNumber(input.evidence.products)
+  const orders30d = asNumber(input.evidence.orders_30d)
+  const totalOrders = asNumber(input.evidence.total_orders)
+  const daysSinceInstall = asNumber(input.evidence.days_since_install)
+  const activationRatePct = asNumber(input.evidence.activation_rate_pct_30d)
+  const detectorVersion = asString(input.evidence.detector_version)
+  const thresholdOrders30dMax = asNumber(input.evidence.threshold_orders_30d_max)
+  const thresholdRateMax = asNumber(
+    input.evidence.threshold_order_to_customer_rate_max
+  )
+  const thresholdCustomersMin = asNumber(input.evidence.threshold_customers_min)
+  const thresholdProductsMin = asNumber(input.evidence.threshold_products_min)
+  const thresholdTotalOrdersMin = asNumber(
+    input.evidence.threshold_total_orders_min
+  )
+
+  if (daysSinceInstall !== null) {
+    rows.push({ label: "Days since install", value: formatInteger(daysSinceInstall) })
+  }
+  if (customers !== null) {
+    rows.push({ label: "Customers", value: formatInteger(customers) })
+  }
+  if (products !== null) {
+    rows.push({ label: "Products", value: formatInteger(products) })
+  }
+  if (orders30d !== null) {
+    rows.push({ label: "Orders (last 30 days)", value: formatInteger(orders30d) })
+  }
+  if (totalOrders !== null) {
+    rows.push({ label: "Lifetime orders", value: formatInteger(totalOrders) })
+  }
+  if (activationRatePct !== null) {
+    rows.push({
+      label: "30-day customer-to-order rate",
+      value: formatPercent(activationRatePct),
+    })
+  }
+
+  if (
+    thresholdOrders30dMax !== null &&
+    thresholdRateMax !== null &&
+    thresholdCustomersMin !== null &&
+    thresholdProductsMin !== null &&
+    thresholdTotalOrdersMin !== null
+  ) {
+    rows.push({
+      label: "Threshold snapshot",
+      value:
+        `orders <= ${formatInteger(thresholdOrders30dMax)} | ` +
+        `rate <= ${formatPercent(thresholdRateMax * 100)} | ` +
+        `customers >= ${formatInteger(thresholdCustomersMin)} | ` +
+        `products >= ${formatInteger(thresholdProductsMin)} | ` +
+        `lifetime orders >= ${formatInteger(thresholdTotalOrdersMin)}`,
+    })
+  }
+
+  if (detectorVersion) {
+    rows.push({ label: "Detector version", value: detectorVersion })
+  }
+
+  rows.push({
+    label: "Scan timestamp",
+    value: formatTimestamp(input.issueDetectedAt),
+  })
+
+  const triggerLine =
+    customers !== null &&
+    products !== null &&
+    orders30d !== null &&
+    activationRatePct !== null &&
+    daysSinceInstall !== null
+      ? `Triggered because the source is ${formatInteger(daysSinceInstall)} days past install with ${formatInteger(customers)} customers and ${formatInteger(products)} products, but only ${formatInteger(orders30d)} recent orders (${formatPercent(activationRatePct)} customer-to-order rate).`
+      : "Triggered because activation progression signals remained below first-value thresholds despite established source activity."
+
+  const summaryLine =
+    orders30d !== null && customers !== null
+      ? `Activation dropout signal detected with ${formatInteger(orders30d)} recent orders across ${formatInteger(customers)} customers.`
+      : "Activation dropout signal detected from onboarding-to-first-value progression mismatch."
+
+  return {
+    rows,
+    triggerLine,
+    summaryLine,
+  }
+}
+
+function buildBillingRecoveryEvidenceRows(input: {
+  evidence: Record<string, unknown>
+  issueDetectedAt: string
+}) {
+  const rows: FixPlanEvidence["rows"] = []
+  const failedInvoices = asNumber(input.evidence.failed_invoice_count)
+  const paidInvoices = asNumber(input.evidence.paid_invoice_count)
+  const failureRatePct = asNumber(input.evidence.invoice_failure_rate_pct)
+  const paidToFailedRatio = asNumber(input.evidence.invoice_paid_to_failed_ratio)
+  const pastDueCount = asNumber(input.evidence.past_due_subscription_count)
+  const deletedCount = asNumber(input.evidence.deleted_subscription_count)
+  const failedAmountCents = asNumber(input.evidence.failed_amount_cents)
+  const recoveredAmountCents = asNumber(input.evidence.recovered_amount_cents)
+  const detectorVersion = asString(input.evidence.detector_version)
+  const lookbackDays = asNumber(input.evidence.lookback_days)
+  const latestEventAt = asString(input.evidence.latest_event_at)
+  const primaryCurrency = asString(input.evidence.primary_currency)
+  const multipleCurrencies = asBoolean(input.evidence.multiple_currencies) ?? false
+
+  if (failedInvoices !== null) {
+    rows.push({ label: "Failed invoices", value: formatInteger(failedInvoices) })
+  }
+  if (paidInvoices !== null) {
+    rows.push({ label: "Paid invoices", value: formatInteger(paidInvoices) })
+  }
+  if (failureRatePct !== null) {
+    rows.push({ label: "Invoice failure rate", value: formatPercent(failureRatePct) })
+  }
+  if (paidToFailedRatio !== null) {
+    rows.push({
+      label: "Paid-to-failed ratio",
+      value: paidToFailedRatio.toFixed(2),
+    })
+  }
+  if (pastDueCount !== null) {
+    rows.push({
+      label: "Past-due subscriptions",
+      value: formatInteger(pastDueCount),
+    })
+  }
+  if (deletedCount !== null) {
+    rows.push({
+      label: "Deleted subscriptions",
+      value: formatInteger(deletedCount),
+    })
+  }
+  if (failedAmountCents !== null) {
+    rows.push({
+      label: "Failed amount",
+      value: formatAmountFromCents({
+        amountCents: failedAmountCents,
+        primaryCurrency,
+        multipleCurrencies,
+      }),
+    })
+  }
+  if (recoveredAmountCents !== null) {
+    rows.push({
+      label: "Recovered amount",
+      value: formatAmountFromCents({
+        amountCents: recoveredAmountCents,
+        primaryCurrency,
+        multipleCurrencies,
+      }),
+    })
+  }
+  if (latestEventAt) {
+    rows.push({ label: "Latest event time", value: formatTimestamp(latestEventAt) })
+  }
+  if (lookbackDays !== null) {
+    rows.push({
+      label: "Lookback window",
+      value: `${formatInteger(lookbackDays)} days`,
+    })
+  }
+  if (detectorVersion) {
+    rows.push({ label: "Detector version", value: detectorVersion })
+  }
+
+  rows.push({
+    label: "Scan timestamp",
+    value: formatTimestamp(input.issueDetectedAt),
+  })
+
+  const triggerLine =
+    failedInvoices !== null && lookbackDays !== null
+      ? `Triggered because billing recovery showed ${formatInteger(failedInvoices)} failed invoices within ${formatInteger(lookbackDays)} days, with recovery efficiency below target thresholds.`
+      : "Triggered because billing failures and recovery signals crossed dunning and retry risk thresholds."
+
+  const summaryLine =
+    failedInvoices !== null && paidInvoices !== null
+      ? `Billing recovery leakage detected from ${formatInteger(failedInvoices)} failed invoices versus ${formatInteger(paidInvoices)} paid invoices in the observed window.`
+      : "Billing recovery leakage detected from failed payment and subscription recovery signals."
+
+  return {
+    rows,
+    triggerLine,
+    summaryLine,
+  }
+}
+
+function buildGenericEvidenceRows(input: {
+  issue: IssueRow
+  integration: StoreIntegrationRow | null
+  metadata: Record<string, unknown> | null
+}) {
+  const rows: FixPlanEvidence["rows"] = []
+  const scanOutcome = asString(input.metadata?.scan_outcome)
+  const scanOutcomeUpdatedAt = asString(input.metadata?.scan_outcome_updated_at)
+  const meaningfulSignal = asBoolean(input.metadata?.meaningful_signal_detected)
+  const scopes = input.integration?.scopes ?? null
+
+  rows.push({ label: "Detection source", value: input.issue.source })
+
+  if (input.integration?.status) {
+    rows.push({ label: "Integration status", value: input.integration.status })
+  }
+  if (input.integration?.sync_status) {
+    rows.push({ label: "Sync status", value: input.integration.sync_status })
+  }
+  if (input.integration?.connection_health) {
+    rows.push({
+      label: "Connection health",
+      value: input.integration.connection_health,
+    })
+  }
+  if (scanOutcome) {
+    rows.push({ label: "Scan outcome", value: scanOutcome })
+  }
+  if (meaningfulSignal !== null) {
+    rows.push({
+      label: "Meaningful signal detected",
+      value: meaningfulSignal ? "Yes" : "No",
+    })
+  }
+  if (Array.isArray(scopes)) {
+    rows.push({
+      label: "Granted scopes",
+      value: `${formatInteger(scopes.length)} scopes`,
+    })
+  }
+  if (scanOutcomeUpdatedAt) {
+    rows.push({
+      label: "Outcome updated at",
+      value: formatTimestamp(scanOutcomeUpdatedAt),
+    })
+  }
+
+  rows.push({
+    label: "Scan timestamp",
+    value: formatTimestamp(input.issue.detected_at),
+  })
+
+  return {
+    rows,
+    triggerLine: "Triggered because the latest scan and integration health signals indicate a material leakage or coverage condition that requires operator action.",
+    summaryLine: `${formatIssueTypeLabel(toIssueType(input.issue.type))} detected from the latest monitoring cycle.`,
+  }
+}
+
+function buildFixPlanEvidence(input: {
+  issue: IssueRow
+  issueType: IssueType
+  confidence: FixPlan["confidence"]
+  successSignal: string
+  integration: StoreIntegrationRow | null
+}) {
+  const metadata = asRecord(input.integration?.metadata)
+  const findingEvidence = readFindingEvidenceForIssueType({
+    issueType: input.issueType,
+    metadata,
+  })
+
+  const leakFamilyLabel = formatLeakFamilyLabel(
+    getLeakFamilyForIssueType(input.issueType)
+  )
+  const signalStrength = toSignalStrength(input.confidence)
+
+  let evidenceRows: FixPlanEvidence["rows"] = []
+  let triggerLine = "Triggered because monitored leakage indicators crossed configured thresholds."
+  let summaryLine = `${formatIssueTypeLabel(input.issueType)} detected in the ${leakFamilyLabel.toLowerCase()} family.`
+
+  if (findingEvidence && input.issueType === "activation_funnel_dropout") {
+    const shaped = buildActivationEvidenceRows({
+      evidence: findingEvidence,
+      issueDetectedAt: input.issue.detected_at,
+    })
+    evidenceRows = shaped.rows
+    triggerLine = shaped.triggerLine
+    summaryLine = shaped.summaryLine
+  } else if (findingEvidence && input.issueType === "failed_payment_recovery") {
+    const shaped = buildBillingRecoveryEvidenceRows({
+      evidence: findingEvidence,
+      issueDetectedAt: input.issue.detected_at,
+    })
+    evidenceRows = shaped.rows
+    triggerLine = shaped.triggerLine
+    summaryLine = shaped.summaryLine
+  } else {
+    const shaped = buildGenericEvidenceRows({
+      issue: input.issue,
+      integration: input.integration,
+      metadata,
+    })
+    evidenceRows = shaped.rows
+    triggerLine = shaped.triggerLine
+    summaryLine = shaped.summaryLine
+  }
+
+  return {
+    detectionSummary: summaryLine,
+    whyTriggered: triggerLine,
+    leakFamilyLabel,
+    scanTimestamp: input.issue.detected_at,
+    signalStrength,
+    rows: evidenceRows,
+    recommendedNextAction: input.issue.recommended_action,
+    successSignal: input.successSignal,
+  } satisfies FixPlanEvidence
+}
+
+function toFixPlanStatus(status: string): FixPlan["status"] {
+  if (status === "resolved" || status === "ignored") {
+    return "resolved"
+  }
+
+  if (status === "monitoring") {
+    return "in_progress"
+  }
+
+  return "open"
+}
+
+function formatSourceLabel(source: string) {
+  if (source.startsWith("shopify_monitoring")) {
+    return "Shopify monitoring pipeline"
+  }
+
+  if (source.startsWith("shopify_simulation")) {
+    return "Shopify simulation pipeline"
+  }
+
+  if (source.startsWith("stripe_monitoring")) {
+    return "Stripe billing monitoring pipeline"
+  }
+
+  if (source.startsWith("stripe_simulation")) {
+    return "Stripe billing simulation pipeline"
+  }
+
+  return source
+}
+
+function getTemplateForIssue(issueType: IssueType): FixPlanTemplate {
+  if (issueType === "activation_funnel_dropout") {
+    return {
+      recommendedFix:
+        "Tighten the onboarding handoff to first value with explicit checkpoints and a guided first-purchase path.",
+      steps: [
+        {
+          id: "activation_step_01",
+          title: "Audit first-session dropoff checkpoints",
+          detail:
+            "Measure where new operators stall between entry, setup milestones, and first checkout completion.",
+        },
+        {
+          id: "activation_step_02",
+          title: "Ship guided first-value path",
+          detail:
+            "Add a clear next-action sequence that walks operators to first checkout completion in the same session.",
+        },
+        {
+          id: "activation_step_03",
+          title: "Launch activation rescue sequence",
+          detail:
+            "Trigger timed reminders for operators who stop before first value and route them back to the next unfinished step.",
+        },
+      ],
+      platformContext: [
+        "Onboarding journey checkpoints and entry-to-value milestones",
+        "First-session UI action hierarchy and guided sequencing",
+        "Lifecycle messaging for activation rescue",
+      ],
+      successSignal:
+        "Share of newly activated operators reaching first checkout completion increases over the next two scan cycles.",
+      expectedOutcome:
+        "More operators progress from onboarding into revenue-generating checkout activity without stalling.",
+    }
+  }
+
+  if (issueType === "failed_payment_recovery") {
+    return {
+      recommendedFix:
+        "Strengthen failed-payment recovery with tighter retries, longer dunning coverage, and faster payment-method recovery prompts.",
+      steps: [
+        {
+          id: "billing_recovery_step_01",
+          title: "Audit failed invoice and retry outcomes",
+          detail:
+            "Break down failures by decline reason, retry attempt, and recovery stage to identify where recoverable invoices are dropping.",
+        },
+        {
+          id: "billing_recovery_step_02",
+          title: "Tune retry and dunning sequence",
+          detail:
+            "Adjust smart retry timing and extend reminder coverage through the highest historical recovery window.",
+        },
+        {
+          id: "billing_recovery_step_03",
+          title: "Improve payment method rescue path",
+          detail:
+            "Route past-due accounts to a direct payment method update flow and verify completion-to-payment conversion.",
+        },
+      ],
+      platformContext: [
+        "Stripe invoice and payment failure lifecycle",
+        "Retry timing and dunning cadence configuration",
+        "Customer payment method update recovery path",
+      ],
+      successSignal:
+        "Failed invoice recovery rate improves and past-due to cancellation transitions decline over the next two scan cycles.",
+      expectedOutcome:
+        "More failed billing events are recovered before churn, reducing recurring revenue leakage.",
+    }
+  }
+
+  return {
+    recommendedFix:
+      "Treat this issue as a prioritized leakage control, implement the recommended action, and validate movement on the next scan cycle.",
+    steps: [
+      {
+        id: "generic_step_01",
+        title: "Confirm issue scope and ownership",
+        detail:
+          "Identify the affected flow segment and assign a clear owner for implementation and validation.",
+      },
+      {
+        id: "generic_step_02",
+        title: "Implement corrective action",
+        detail:
+          "Ship the recommended fix with instrumentation to verify impact in production.",
+      },
+      {
+        id: "generic_step_03",
+        title: "Validate post-release movement",
+        detail:
+          "Compare leakage indicators before and after release to confirm sustained improvement.",
+      },
+    ],
+    platformContext: [
+      "Issue-level flow diagnostics and source telemetry",
+      "Implementation ownership and release controls",
+      "Post-release validation metrics",
+    ],
+    successSignal:
+      "Issue severity or impact reduces across the next two completed scans.",
+    expectedOutcome:
+      "Leakage exposure declines for this flow stage with stable operational coverage.",
+  }
+}
+
+function buildFixPlanFromIssue(input: {
+  issue: IssueRow
+  relatedIssues: Array<Pick<IssueRow, "id" | "title" | "estimated_monthly_revenue_impact">>
+  integration: StoreIntegrationRow | null
+}): FixPlan {
+  const issueType = toIssueType(input.issue.type)
+  const severity = toSeverity(input.issue.severity)
+  const template = getTemplateForIssue(issueType)
+  const confidence = toFixPlanConfidence(severity)
+  const evidenceLine = `Detection evidence: ${input.issue.summary}`
+  const evidence = buildFixPlanEvidence({
+    issue: input.issue,
+    issueType,
+    confidence,
+    successSignal: template.successSignal,
+    integration: input.integration,
+  })
+
+  return {
+    id: toGeneratedFixPlanId(input.issue.id),
+    issueId: input.issue.id,
+    title: input.issue.title,
+    issueType,
+    severity,
+    confidence,
+    estimatedMonthlyImpact: input.issue.estimated_monthly_revenue_impact,
+    summary: input.issue.summary,
+    whyItMatters: input.issue.why_it_matters,
+    recommendedFix: template.recommendedFix,
+    steps: template.steps,
+    platformContext: [evidenceLine, ...template.platformContext],
+    source: formatSourceLabel(input.issue.source),
+    detectedAt: input.issue.detected_at,
+    successSignal: template.successSignal,
+    expectedOutcome: template.expectedOutcome,
+    status: toFixPlanStatus(input.issue.status),
+    relatedIssues: input.relatedIssues.map((issue) => ({
+      issueId: issue.id,
+      title: issue.title,
+      estimatedMonthlyRevenueImpact: issue.estimated_monthly_revenue_impact,
+    })),
+    evidence,
+  }
+}
+
+async function getGeneratedFixPlanByIssueId(input: {
+  issueId: string
+  organizationId: string
+}) {
+  const admin = createSupabaseAdminClient()
+  const issueResult = await admin
+    .from("issues")
+    .select("*")
+    .eq("id", input.issueId)
+    .eq("organization_id", input.organizationId)
+    .maybeSingle()
+
+  if (issueResult.error || !issueResult.data) {
+    return null
+  }
+
+  const integrationResult = await admin
+    .from("store_integrations")
+    .select("metadata, status, sync_status, connection_health, scopes, installed_at")
+    .eq("organization_id", issueResult.data.organization_id)
+    .eq("store_id", issueResult.data.store_id)
+    .neq("status", "disconnected")
+    .order("installed_at", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const relatedIssuesResult = await admin
+    .from("issues")
+    .select("id, title, estimated_monthly_revenue_impact")
+    .eq("organization_id", issueResult.data.organization_id)
+    .eq("store_id", issueResult.data.store_id)
+    .neq("id", issueResult.data.id)
+    .neq("status", "resolved")
+    .order("estimated_monthly_revenue_impact", { ascending: false })
+    .limit(2)
+
+  const relatedIssues =
+    relatedIssuesResult.error || !relatedIssuesResult.data
+      ? []
+      : relatedIssuesResult.data
+  const integration =
+    integrationResult.error || !integrationResult.data
+      ? null
+      : integrationResult.data
+
+  return buildFixPlanFromIssue({
+    issue: issueResult.data,
+    relatedIssues,
+    integration,
+  })
+}
+
+export async function getFixPlanById(id: string) {
+  const directPlan = await getMockFixPlanById(id)
+  if (directPlan) {
+    return directPlan
+  }
+
+  const dataSource = process.env.CHECKOUTLEAK_DATA_SOURCE ?? "mock"
+  const generatedIssueId = parseGeneratedFixPlanId(id)
+  if (!generatedIssueId || dataSource !== "supabase") {
+    return null
+  }
+
+  const session = await getServerSession()
+  const organizationId = session?.membership?.organizationId
+  if (!organizationId) {
+    return null
+  }
+
+  return getGeneratedFixPlanByIssueId({
+    issueId: generatedIssueId,
+    organizationId,
+  })
 }
 
 export function resolveFixPlanIdForIssue(issueId: string) {
@@ -21,7 +783,12 @@ export function resolveFixPlanIdForIssue(issueId: string) {
 export function getFixPlanHrefForIssue(issueId: string) {
   const fixPlanId = resolveFixPlanIdForIssue(issueId)
   if (!fixPlanId) {
-    return null
+    const dataSource = process.env.CHECKOUTLEAK_DATA_SOURCE ?? "mock"
+    if (dataSource !== "supabase") {
+      return null
+    }
+
+    return `/app/fix-plans/${toGeneratedFixPlanId(issueId)}`
   }
 
   return `/app/fix-plans/${fixPlanId}`

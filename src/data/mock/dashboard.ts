@@ -1,5 +1,9 @@
 import { subHours } from "date-fns"
 
+import {
+  formatLeakFamilyLabel,
+  summarizeIssueImpactByLeakFamily,
+} from "@/lib/revenue-flow-taxonomy"
 import type {
   DashboardSnapshot,
   Issue,
@@ -154,23 +158,24 @@ const issues: Issue[] = [
     whyItMatters:
       "Lifecycle timing is leaving recoverable invoices untouched before cancellation.",
   },
-]
-
-const revenueOpportunities: RevenueOpportunity[] = [
   {
-    label: "Checkout friction fixes",
-    estimatedMonthlyRevenueImpact: 32100,
-    confidence: "high",
-  },
-  {
-    label: "Payment method coverage",
-    estimatedMonthlyRevenueImpact: 12400,
-    confidence: "high",
-  },
-  {
-    label: "Failed payment recovery",
-    estimatedMonthlyRevenueImpact: 24100,
-    confidence: "medium",
+    id: "issue_1005",
+    organizationId: organization.id,
+    storeId: stores[0].id,
+    scanId: scans[0].id,
+    title: "Trial signups fail to reach first purchase milestone",
+    summary:
+      "A high share of new trial operators complete account creation but do not reach first checkout completion within the expected window.",
+    type: "activation_funnel_dropout",
+    severity: "medium",
+    status: "open",
+    estimatedMonthlyRevenueImpact: 9400,
+    recommendedAction:
+      "Tighten first-session onboarding handoff to checkout with a guided path and activation reminder sequence.",
+    source: "Activation flow diagnostics",
+    detectedAt: subHours(now, 1.5).toISOString(),
+    whyItMatters:
+      "Activation leakage suppresses downstream checkout volume and delays time-to-value for newly acquired operators.",
   },
 ]
 
@@ -205,6 +210,16 @@ const suggestedActions: SuggestedAction[] = [
     estimatedMonthlyRevenueImpact: 24100,
     urgency: "this_week",
   },
+  {
+    id: "action_04",
+    title: "Tighten first-session activation handoff",
+    description:
+      "Guide newly signed-up operators to first checkout completion with a shorter activation sequence.",
+    issueIds: ["issue_1005"],
+    fixPlanId: "fixplan_activation_first_value_gap",
+    estimatedMonthlyRevenueImpact: 9400,
+    urgency: "watch",
+  },
 ]
 
 export async function getMockDashboardSnapshot(): Promise<DashboardSnapshot> {
@@ -217,6 +232,20 @@ export async function getMockDashboardSnapshot(): Promise<DashboardSnapshot> {
     (total, issue) => total + issue.estimatedMonthlyRevenueImpact,
     0
   )
+
+  const revenueOpportunities: RevenueOpportunity[] = summarizeIssueImpactByLeakFamily(
+    activeIssues
+  )
+    .map(([family, impact]) => {
+      const confidence: RevenueOpportunity["confidence"] =
+        impact > 20000 ? "high" : "medium"
+      return {
+        label: formatLeakFamilyLabel(family),
+        estimatedMonthlyRevenueImpact: impact,
+        confidence,
+      }
+    })
+    .sort((a, b) => b.estimatedMonthlyRevenueImpact - a.estimatedMonthlyRevenueImpact)
 
   return {
     organization,

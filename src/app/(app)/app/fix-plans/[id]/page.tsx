@@ -1,11 +1,13 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
-import { ArrowLeft, ArrowRight, CircleDot } from "lucide-react"
+import { ArrowLeft, ArrowRight } from "lucide-react"
 
 import { FixPlanControls } from "@/components/fix-plans/fix-plan-controls"
+import { FixPlanEvidenceSection } from "@/components/fix-plans/fix-plan-evidence-section"
 import { Badge } from "@/components/ui/badge"
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
+import { formatIssueTypeLabel } from "@/lib/revenue-flow-taxonomy"
 import { getFixPlanById } from "@/server/services/fix-plan-service"
 import { getBillingData } from "@/server/services/app-service"
 import { cn } from "@/lib/utils"
@@ -23,14 +25,6 @@ const confidenceLabel: Record<FixPlan["confidence"], string> = {
   high: "High confidence",
   medium: "Medium confidence",
   emerging: "Emerging signal",
-}
-
-const issueTypeLabel: Record<FixPlan["issueType"], string> = {
-  checkout_friction: "Checkout friction",
-  payment_method_coverage: "Payment method coverage",
-  failed_payment_recovery: "Failed payment recovery",
-  setup_gap: "Setup gap",
-  fraud_false_decline: "Fraud false decline",
 }
 
 const statusLabel: Record<FixPlan["status"], string> = {
@@ -99,7 +93,7 @@ export default async function FixPlanPage({
                 {fixPlan.severity}
               </Badge>
               <Badge variant="outline" className="text-[11px] uppercase text-muted-foreground">
-                {issueTypeLabel[fixPlan.issueType]}
+                {formatIssueTypeLabel(fixPlan.issueType)}
               </Badge>
               <Badge variant="outline" className="text-[11px] uppercase text-muted-foreground">
                 {confidenceLabel[fixPlan.confidence]}
@@ -161,6 +155,8 @@ export default async function FixPlanPage({
             </p>
           </section>
 
+          <FixPlanEvidenceSection fixPlan={fixPlan} />
+
           <section className="surface-card p-4 sm:p-5 lg:p-6">
             <p className="data-mono text-muted-foreground">Action steps</p>
             <ol className="mt-4 space-y-3 sm:space-y-4">
@@ -181,25 +177,8 @@ export default async function FixPlanPage({
 
         <div className="space-y-5">
           <section className="surface-card p-4 sm:p-5 lg:p-6">
-            <p className="data-mono text-muted-foreground">Platform context</p>
-            <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
-              {fixPlan.platformContext.map((item) => (
-                <li key={item} className="flex items-start gap-2">
-                  <CircleDot className="mt-0.5 h-3.5 w-3.5 text-muted-foreground/60" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section className="surface-card p-4 sm:p-5 lg:p-6">
             <p className="data-mono text-muted-foreground">Expected outcome</p>
             <p className="mt-3 text-sm text-muted-foreground">{fixPlan.expectedOutcome}</p>
-          </section>
-
-          <section className="surface-card p-4 sm:p-5 lg:p-6">
-            <p className="data-mono text-muted-foreground">Success signal</p>
-            <p className="mt-3 text-sm text-muted-foreground">{fixPlan.successSignal}</p>
           </section>
 
           {fixPlan.relatedIssues.length ? (
@@ -225,4 +204,3 @@ export default async function FixPlanPage({
     </div>
   )
 }
-

@@ -36,7 +36,7 @@ export function FixPlanControls({
         <div>
           <p className="data-mono text-muted-foreground">Action Controls</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Update execution status as the team completes this fix.
+            Status controls currently update this view only during review.
           </p>
         </div>
         <p className={`text-sm font-medium ${statusTone}`}>Status: {statusLabel[status]}</p>
@@ -67,4 +67,3 @@ export function FixPlanControls({
     </section>
   )
 }
-

@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og"
 
 export const runtime = "edge"
-export const alt = "CheckoutLeak — Revenue Leak Detection for Shopify and Stripe"
+export const alt = "CheckoutLeak - Revenue Leak Detection for Activation, Checkout, and Billing"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
@@ -92,7 +92,7 @@ export default async function Image() {
               maxWidth: "620px",
             }}
           >
-            Checkout and billing leaks detected across Shopify and Stripe, ranked by monthly revenue exposure.
+            Activation, checkout setup, and billing recovery leaks ranked by monthly revenue exposure and clear next action.
           </div>
         </div>
 
@@ -127,3 +127,4 @@ export default async function Image() {
     { ...size }
   )
 }
+

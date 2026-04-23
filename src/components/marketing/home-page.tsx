@@ -11,14 +11,14 @@ import type { PublicAccessState } from "@/lib/auth/public-access"
 
 const signals = [
   {
-    label: "Checkout completion variance",
-    finding: "Shipping step friction on mobile checkout traffic",
+    label: "Activation funnel dropout",
+    finding: "New operators stall before first checkout completion",
     impact: "High priority",
     severity: "high" as const,
   },
   {
-    label: "Wallet method mismatch",
-    finding: "iOS high-intent sessions without wallet coverage",
+    label: "Checkout completion variance",
+    finding: "Shipping step friction on mobile checkout traffic",
     impact: "Coverage gap",
     severity: "medium" as const,
   },
@@ -29,9 +29,9 @@ const signals = [
     severity: "medium" as const,
   },
   {
-    label: "Payment method decline rate",
-    finding: "Elevated card declines on cross-border traffic segment",
-    impact: "Recovery gap",
+    label: "Monitoring coverage gap",
+    finding: "Webhook and scope gaps limit confidence in leak detection",
+    impact: "Setup gap",
     severity: "medium" as const,
   },
 ]
@@ -39,23 +39,23 @@ const signals = [
 const detectionCategories = [
   {
     index: "01",
-    title: "Checkout friction",
-    body: "Exit points by step and device type, ranked by conversion loss.",
+    title: "Activation leakage",
+    body: "Operators entering the product but stalling before first value.",
   },
   {
     index: "02",
-    title: "Payment method gaps",
-    body: "Missing wallets and local methods against your actual traffic mix.",
+    title: "Checkout leakage",
+    body: "Conversion breaks by step and traffic segment, ranked by exposure.",
   },
   {
     index: "03",
-    title: "Failed billing recovery",
-    body: "Recoverable revenue scored against your retry and dunning setup.",
+    title: "Billing recovery leakage",
+    body: "Recoverable recurring revenue missed by weak retry and dunning paths.",
   },
   {
     index: "04",
-    title: "Setup gaps",
-    body: "Configuration misses reducing approved rates without surfacing in reports.",
+    title: "Setup leakage",
+    body: "Coverage and configuration gaps that suppress trustworthy detection.",
   },
 ]
 
@@ -168,7 +168,7 @@ export default async function MarketingHomePage({ accessState, isAuthenticated }
 
           <FadeIn delay={0.12}>
             <p className="mx-auto mt-6 max-w-[32ch] text-[0.92rem] leading-[1.7] text-muted-foreground sm:mt-5 sm:max-w-[44ch] sm:text-[1.04rem] sm:leading-[1.86]">
-              Checkout and billing leaks ranked by monthly revenue exposure. Each finding includes root cause, impact estimate, and fix path. Shopify and Stripe.
+              Activation, checkout setup, and billing recovery leaks ranked by monthly revenue exposure. Each finding includes root cause, impact estimate, and fix path with operator-grade next actions.
             </p>
           </FadeIn>
 
@@ -260,7 +260,7 @@ export default async function MarketingHomePage({ accessState, isAuthenticated }
               What gets detected first.
             </h2>
             <p className="mt-3 max-w-[34ch] text-[0.9rem] leading-[1.72] text-muted-foreground sm:mt-4 sm:max-w-[40ch] sm:text-[0.97rem] sm:leading-[1.85]">
-              Each issue includes root cause, impact level, and the next action. Ranked by recovery opportunity.
+              Activation, checkout, billing recovery, and setup gaps with root cause, impact level, and the next action. Ranked by recovery opportunity.
             </p>
           </div>
 
@@ -316,7 +316,7 @@ export default async function MarketingHomePage({ accessState, isAuthenticated }
               Plans by operating maturity.
             </h2>
             <p className="mt-3 max-w-[32ch] text-[0.9rem] leading-[1.75] text-muted-foreground sm:mt-4 sm:max-w-[38ch] sm:text-[0.97rem] sm:leading-[1.85]">
-              Start lean, then expand coverage as store count and billing complexity grow.
+              Start with core coverage, then scale monitoring cadence, prioritization, and operator workflow as revenue complexity grows.
             </p>
           </div>
 
@@ -490,7 +490,7 @@ export default async function MarketingHomePage({ accessState, isAuthenticated }
                   Request private access.
                 </h2>
                 <p className="mx-auto mt-3 max-w-[28ch] text-[0.88rem] leading-[1.68] text-muted-foreground sm:mt-4 sm:max-w-[36ch] sm:text-[0.97rem] sm:leading-[1.85]">
-                  Reviewed intake for teams running Shopify and Stripe at scale.
+                  Reviewed intake for operator teams. Current live integrations include Shopify and Stripe.
                 </p>
                 <div className="mt-6">
                   <Link

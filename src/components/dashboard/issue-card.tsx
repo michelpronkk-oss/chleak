@@ -6,6 +6,8 @@ import {
   SeverityPill,
   cleanPrimaryCopy,
   formatImpactLabel,
+  formatIssueTypeLabel,
+  formatLeakFamilyFromIssueType,
   formatSourceLabel,
   getSeverityConfidence,
 } from "@/components/dashboard/vault-primitives"
@@ -37,7 +39,8 @@ export function IssueCard({
 
       <div className="mt-3 flex flex-wrap items-center gap-1.5 sm:mt-4 sm:gap-2">
         <SeverityPill severity={issue.severity} />
-        <MetaPill>{issue.type.replaceAll("_", " ")}</MetaPill>
+        <MetaPill>{formatIssueTypeLabel(issue.type)}</MetaPill>
+        <MetaPill>{formatLeakFamilyFromIssueType(issue.type)}</MetaPill>
         <MetaPill>{getSeverityConfidence(issue.severity)}</MetaPill>
       </div>
 

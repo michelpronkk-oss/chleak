@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -128,14 +129,19 @@ export function RequestAccessFullForm({ defaultEmail = "" }: Props) {
         </h3>
 
         <p className="mx-auto mt-2.5 max-w-[34ch] text-[0.84rem] leading-[1.72] text-muted-foreground sm:mt-3 sm:text-[0.9rem] sm:leading-[1.78]">
-          This email is already registered. Your request is under review — we will reach out directly.
+          This email is already registered. Your request is under review and we will reach out directly.
         </p>
 
         <div className="mx-auto mt-5 h-px max-w-[120px] bg-border" />
 
         <p className="mt-4 font-mono text-[0.6rem] tracking-[0.08em] uppercase text-muted-foreground/46">
-          Reviewed manually · no automated response
+          Reviewed manually | no automated response
         </p>
+        <div className="mt-4">
+          <Link href="/access-review" className="vault-link text-xs">
+            View request status
+          </Link>
+        </div>
       </div>
     )
   }
@@ -167,8 +173,13 @@ export function RequestAccessFullForm({ defaultEmail = "" }: Props) {
         <div className="mx-auto mt-5 h-px max-w-[120px] bg-border" />
 
         <p className="mt-4 font-mono text-[0.6rem] tracking-[0.08em] uppercase text-muted-foreground/46">
-          Reviewed manually / no automated response
+          Reviewed manually | no automated response
         </p>
+        <div className="mt-4">
+          <Link href="/access-review" className="vault-link text-xs">
+            View request status
+          </Link>
+        </div>
       </div>
     )
   }
@@ -318,7 +329,23 @@ export function RequestAccessFullForm({ defaultEmail = "" }: Props) {
         <p className="mt-3 text-center font-mono text-[0.6rem] tracking-[0.08em] uppercase text-muted-foreground/44">
           Invite-only / reviewed manually / early operator access
         </p>
+        <p className="mt-2 text-center text-[0.72rem] leading-[1.6] text-muted-foreground/70">
+          By sending a request, you agree to our{" "}
+          <Link href="/terms" className="vault-link">
+            Terms of Use
+          </Link>
+          ,{" "}
+          <Link href="/privacy" className="vault-link">
+            Privacy Policy
+          </Link>
+          , and{" "}
+          <Link href="/cookies" className="vault-link">
+            Cookie Policy
+          </Link>
+          .
+        </p>
       </div>
     </form>
   )
 }
+

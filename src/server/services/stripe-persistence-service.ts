@@ -5,6 +5,7 @@ type StoreInsert = Database["public"]["Tables"]["stores"]["Insert"]
 type StoreUpdate = Database["public"]["Tables"]["stores"]["Update"]
 type StoreIntegrationInsert =
   Database["public"]["Tables"]["store_integrations"]["Insert"]
+type ScanInsert = Database["public"]["Tables"]["scans"]["Insert"]
 type IntegrationWebhookEventInsert =
   Database["public"]["Tables"]["integration_webhook_events"]["Insert"]
 
@@ -126,9 +127,26 @@ export async function persistStripeIntegration(input: {
   // This placeholder documents where secure token references are persisted.
   void input.accessToken
 
+  const scanInsert: ScanInsert = {
+    organization_id: input.organizationId,
+    store_id: storeId,
+    status: "queued",
+    scanned_at: new Date().toISOString(),
+    detected_issues_count: 0,
+    estimated_monthly_leakage: 0,
+  }
+
+  const scanResult = await supabase.from("scans").insert(scanInsert).select("id").single()
+  if (scanResult.error) {
+    console.error(
+      `[stripe] scan insert failed: organization=${input.organizationId}; store_id=${storeId}; error=${scanResult.error.message}`
+    )
+  }
+
   return {
     storeId,
     integrationId: integrationResult.data.id,
+    scanId: scanResult.error ? null : (scanResult.data?.id ?? null),
   }
 }
 

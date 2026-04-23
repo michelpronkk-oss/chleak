@@ -9,20 +9,20 @@ import { InViewReveal } from "@/components/motion/in-view-reveal"
 import { LiveIntelligencePanel } from "@/components/marketing/live-intelligence-panel"
 
 export const metadata: Metadata = {
-  title: "Revenue Intelligence for Checkout and Billing Operators",
+  title: "Revenue Leak Detection for Activation, Checkout, and Billing Recovery",
   description:
-    "CheckoutLeak connects to Shopify and Stripe, detects revenue leakage across checkout steps, payment methods, and billing recovery, and ranks each issue by monthly dollar impact.",
+    "CheckoutLeak detects revenue leakage across activation, checkout setup, and billing recovery, and ranks each issue by monthly dollar impact. Current live integrations include Shopify and Stripe.",
   openGraph: {
-    title: "Revenue Intelligence for Checkout and Billing Operators | CheckoutLeak",
+    title: "Revenue Leak Detection for Activation, Checkout, and Billing Recovery | CheckoutLeak",
     description:
-      "CheckoutLeak connects to Shopify and Stripe, detects revenue leakage across checkout steps, payment methods, and billing recovery, and ranks each issue by monthly dollar impact.",
+      "CheckoutLeak detects revenue leakage across activation, checkout setup, and billing recovery, and ranks each issue by monthly dollar impact. Current live integrations include Shopify and Stripe.",
     url: "/product",
     type: "website",
   },
   twitter: {
-    title: "Revenue Intelligence for Checkout and Billing Operators | CheckoutLeak",
+    title: "Revenue Leak Detection for Activation, Checkout, and Billing Recovery | CheckoutLeak",
     description:
-      "Detect revenue leakage across checkout steps, payment methods, and billing recovery. Ranked by monthly impact.",
+      "Detect revenue leakage across activation, checkout setup, and billing recovery. Ranked by monthly impact.",
   },
   alternates: {
     canonical: "/product",
@@ -45,39 +45,39 @@ const softwareSchema = {
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   description:
-    "Revenue intelligence platform for checkout and billing operators. Detects and quantifies lost revenue in Shopify and Stripe flows.",
+    "Revenue leak detection platform for activation, checkout setup, and billing recovery.",
   url: "https://checkoutleak.com/product",
 }
 
 const detectionSurfaces = [
   {
-    title: "Checkout intelligence",
+    title: "Activation leakage",
     description:
-      "Conversion breaks resolved to the step, device, and market segment where intent is lost. Each finding carries a monthly exposure estimate, not just a drop-off rate.",
-    signal: "Shipping step drop-off variance",
+      "Dropout between first entry and first value surfaced with clear evidence and monthly exposure, so stalled activation is treated as revenue leakage.",
+    signal: "First-value activation stall",
   },
   {
-    title: "Payment coverage",
+    title: "Checkout leakage",
     description:
-      "Method availability mapped against live traffic composition. Wallet gaps, local method deficits, and high-intent sessions without a matching option surface as ranked revenue findings.",
-    signal: "iOS wallet coverage gap",
+      "Checkout friction, payment coverage, and setup confidence gaps resolved to the step and segment where intent is lost, then ranked by impact.",
+    signal: "Shipping step drop-off variance",
   },
   {
     title: "Billing recovery",
     description:
-      "Failed renewals and retry inefficiency quantified as recoverable exposure. Dunning logic that underperforms against volume stops being invisible and becomes a ranked line item.",
-    signal: "Retry cadence underperforming",
+      "Failed invoices, weak retry recovery, and churn pressure from billing events quantified as recoverable exposure and surfaced as ranked action.",
+    signal: "Failed payment recovery gap",
   },
 ]
 
 const workflow = [
   {
     step: "Connect sources",
-    body: "Connect Shopify and Stripe to establish full checkout and billing visibility.",
+    body: "Connect your revenue surfaces to establish activation, checkout, and billing visibility.",
   },
   {
     step: "Scan and quantify",
-    body: "Continuously evaluate event flow, method coverage, and retry behavior with monthly impact estimates.",
+    body: "Continuously evaluate activation progression, checkout execution, and billing recovery behavior with monthly impact estimates.",
   },
   {
     step: "Prioritize fixes",
@@ -93,10 +93,10 @@ const outcomes = [
   {
     metric: "< 24h",
     title: "Time to first finding",
-    body: "Connect sources, run the first scan, receive ranked issues — same session.",
+    body: "Connect sources, run the first scan, receive ranked issues in the same session.",
   },
   {
-    metric: "3×",
+    metric: "3x",
     title: "Faster root cause",
     body: "Teams move from symptom to verified root cause without cross-tool investigation.",
   },
@@ -170,12 +170,12 @@ export default async function ProductPage() {
               </FadeIn>
               <FadeIn delay={0.07}>
                 <h1 className="mt-5 text-[2rem] font-semibold leading-[1.06] tracking-[-0.04em] sm:text-[2.8rem] sm:leading-[1.03] lg:text-[3.4rem] lg:leading-[1.02]">
-                  Revenue intelligence for checkout and billing operators.
+                  Revenue leak detection for activation, checkout, and billing.
                 </h1>
               </FadeIn>
               <FadeIn delay={0.12}>
                 <p className="mt-5 max-w-[40ch] text-[0.92rem] leading-[1.78] text-muted-foreground sm:text-[1rem] sm:leading-[1.86]">
-                  CheckoutLeak connects to Shopify and Stripe, detects revenue leakage across checkout steps, payment methods, and billing recovery, and ranks each issue by monthly dollar impact.
+                  CheckoutLeak detects revenue leakage across activation, checkout setup, and billing recovery, then ranks each issue by monthly dollar impact with clear operator-grade next actions.
                 </p>
               </FadeIn>
               <FadeIn delay={0.17}>
@@ -217,10 +217,10 @@ export default async function ProductPage() {
           <InViewReveal>
             <p className="vault-eyebrow mb-3">Recovery signal families</p>
             <h2 className="text-[1.55rem] font-semibold leading-[1.13] tracking-[-0.03em] sm:text-[2.05rem] lg:text-[2.35rem]">
-              Three surfaces. Every finding ranked by exposure.
+              Activation, checkout, and billing recovery. Every finding ranked by exposure.
             </h2>
             <p className="mt-3 max-w-[44ch] text-[0.9rem] leading-[1.75] text-muted-foreground sm:mt-4 sm:text-[0.97rem]">
-              CheckoutLeak analyzes checkout behavior, payment method coverage, and billing recovery as a unified system. Each finding carries a monthly impact estimate and a next action.
+              CheckoutLeak analyzes activation progression, checkout execution, and billing recovery as one money-first system. Each finding carries a monthly impact estimate and a next action.
             </p>
           </InViewReveal>
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

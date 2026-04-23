@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
 
 const statusItems = [
-  { id: "checkout", text: "Scanning checkout surface" },
+  { id: "activation", text: "Scanning activation and checkout surfaces" },
   { id: "payments", text: "Validating payment coverage" },
   { id: "recovery", text: "Ranking recovery paths" },
 ]

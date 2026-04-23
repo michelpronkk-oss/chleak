@@ -8,6 +8,10 @@ import {
   mockSubscriptionState,
 } from "@/data/mock/app-state"
 import { getMockDashboardSnapshot } from "@/data/mock/dashboard"
+import {
+  formatLeakFamilyLabel,
+  summarizeIssueImpactByLeakFamily,
+} from "@/lib/revenue-flow-taxonomy"
 import { getServerSession } from "@/lib/auth/session"
 import { createSupabaseAdminClient } from "@/lib/supabase/shared"
 import { ensureWorkspaceForUser } from "@/server/services/account-bootstrap-service"
@@ -471,7 +475,11 @@ function deriveOnboardingStateFromSignals(input: {
     return toStateForProvider({ provider, phase: "first_results" })
   }
 
-  if (input.cookieState === toStateForProvider({ provider, phase: "first_results" }) && scans < 2) {
+  if (
+    input.cookieState === toStateForProvider({ provider, phase: "first_results" }) &&
+    scans < 2 &&
+    issues > 0
+  ) {
     return input.cookieState
   }
 
@@ -647,16 +655,13 @@ function buildFirstResultSnapshot(
     0
   )
 
-  const revenueOpportunities = [
-    {
-      label:
-        source === "shopify"
-          ? "Immediate checkout recovery"
-          : "Immediate billing recovery",
-      estimatedMonthlyRevenueImpact: estimatedMonthlyLeakage,
+  const revenueOpportunities = summarizeIssueImpactByLeakFamily(issues).map(
+    ([family, impact]) => ({
+      label: `Immediate ${formatLeakFamilyLabel(family).toLowerCase()} recovery`,
+      estimatedMonthlyRevenueImpact: impact,
       confidence: "high" as const,
-    },
-  ]
+    })
+  )
 
   return {
     ...snapshot,

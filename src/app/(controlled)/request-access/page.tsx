@@ -23,9 +23,12 @@ export default async function RequestAccessPage({
 
   const params = await searchParams
   const emailRaw = Array.isArray(params.email) ? params.email[0] : params.email
+  const stateRaw = Array.isArray(params.state) ? params.state[0] : params.state
   const defaultEmail = typeof emailRaw === "string" ? emailRaw.trim() : ""
+  const requestedState = typeof stateRaw === "string" ? stateRaw : null
+  const showPendingState = accessState === "pending" || requestedState === "under_review"
 
-  if (accessState === "pending") {
+  if (showPendingState) {
     return (
       <div className="mx-auto w-full max-w-xl px-5 pb-16 pt-10 sm:px-8 sm:pb-20 sm:pt-14">
         <FadeIn delay={0.05}>
@@ -66,7 +69,7 @@ export default async function RequestAccessPage({
 
             <div className="mx-auto mt-7 h-px bg-border/30" />
             <p className="mt-4 font-mono text-[0.58rem] tracking-[0.08em] uppercase text-muted-foreground/40">
-              Reviewed manually · no automated response
+              Reviewed manually | no automated response
             </p>
           </div>
         </FadeIn>
@@ -86,7 +89,7 @@ export default async function RequestAccessPage({
               Request access.
             </h1>
             <p className="mt-3 max-w-[40ch] text-[0.88rem] leading-[1.72] text-muted-foreground sm:mt-3.5 sm:text-[0.95rem] sm:leading-[1.8]">
-              Tell us about your store and what you are trying to solve. We review every request and reach out directly.
+              Tell us about your revenue operation and what you are trying to solve. We review every request and reach out directly.
             </p>
           </div>
         </FadeIn>
@@ -100,3 +103,4 @@ export default async function RequestAccessPage({
     </div>
   )
 }
+

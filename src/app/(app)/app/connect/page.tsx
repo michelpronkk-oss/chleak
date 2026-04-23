@@ -24,7 +24,7 @@ const statusMessage: Record<string, string> = {
   state_mismatch: "Connection state did not match this session. Retry the connection.",
   webhook_registration_failed:
     "Shopify connected, but webhook registration needs attention. Review setup and retry.",
-  connected: "Source connected — first scan queued.",
+  connected: "Source connected. First scan queued.",
   disconnected: "Shopify has been disconnected. Reconnect when ready.",
   disconnect_failed: "Shopify disconnect failed. Retry in a moment.",
 }
@@ -336,7 +336,7 @@ export default async function ConnectPage({
       {/* Tertiary actions */}
       <section className="vault-panel-shell p-4 sm:p-5">
         <p className="text-sm text-muted-foreground">
-          Initial scans complete in minutes. CheckoutLeak then opens your first issue queue ranked by revenue impact.
+          Initial scans usually complete in minutes. Workspace states update automatically as soon as first results are ready.
         </p>
         <div className="mt-4 flex flex-wrap gap-2.5">
           <Link
@@ -361,20 +361,10 @@ export default async function ConnectPage({
           </Link>
           {(isPendingShopify || isPendingStripe || isReady || status === "connected") && (
             <Link
-              href={
-                isPendingShopify
-                  ? "/api/mock/onboarding?state=first_results_shopify&next=/app"
-                  : isPendingStripe || provider === "stripe"
-                    ? "/api/mock/onboarding?state=first_results_stripe&next=/app"
-                    : status === "connected"
-                      ? provider === "stripe"
-                        ? "/api/mock/onboarding?state=first_results_stripe&next=/app"
-                        : "/api/mock/onboarding?state=first_results_shopify&next=/app"
-                      : "/app"
-              }
+              href="/app"
               className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
             >
-              View first findings
+              Open workspace status
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           )}
@@ -383,3 +373,4 @@ export default async function ConnectPage({
     </div>
   )
 }
+

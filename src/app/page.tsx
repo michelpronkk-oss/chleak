@@ -9,21 +9,21 @@ import { getServerSession } from "@/lib/auth/session"
 
 export const metadata: Metadata = {
   title: {
-    absolute: "CheckoutLeak — Revenue Leak Detection for Shopify and Stripe",
+    absolute: "CheckoutLeak - Revenue Leak Detection for Activation, Checkout, and Billing",
   },
   description:
-    "Detect lost revenue in Shopify checkout and Stripe billing flows. CheckoutLeak scans for payment friction, coverage gaps, and billing recovery failures, and delivers ranked actions by monthly impact.",
+    "Detect revenue leaks across activation, checkout setup, and billing recovery. CheckoutLeak ranks findings by monthly impact and next action.",
   openGraph: {
-    title: "CheckoutLeak — Revenue Leak Detection for Shopify and Stripe",
+    title: "CheckoutLeak - Revenue Leak Detection for Activation, Checkout, and Billing",
     description:
-      "Detect lost revenue in Shopify checkout and Stripe billing flows. CheckoutLeak scans for payment friction, coverage gaps, and billing recovery failures, and delivers ranked actions by monthly impact.",
+      "Detect revenue leaks across activation, checkout setup, and billing recovery. CheckoutLeak ranks findings by monthly impact and next action.",
     url: "/",
     type: "website",
   },
   twitter: {
-    title: "CheckoutLeak — Revenue Leak Detection for Shopify and Stripe",
+    title: "CheckoutLeak - Revenue Leak Detection for Activation, Checkout, and Billing",
     description:
-      "Detect lost revenue in Shopify checkout and Stripe billing flows. Ranked recovery actions by monthly impact.",
+      "Detect activation, checkout setup, and billing recovery leaks. Ranked recovery actions by monthly impact.",
   },
   alternates: {
     canonical: "/",
@@ -35,7 +35,7 @@ const websiteSchema = {
   "@type": "WebSite",
   name: "CheckoutLeak",
   url: "https://checkoutleak.com",
-  description: "Revenue leak detection for Shopify and Stripe checkout and billing flows.",
+  description: "Revenue leak detection across activation, checkout setup, and billing recovery.",
 }
 
 export default async function HomePage({

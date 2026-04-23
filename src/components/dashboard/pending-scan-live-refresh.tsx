@@ -11,24 +11,22 @@ export function PendingScanLiveRefresh() {
     const interval = window.setInterval(() => {
       setTicks((prev) => prev + 1)
       router.refresh()
-    }, 2500)
-
-    const stop = window.setTimeout(() => {
-      window.clearInterval(interval)
-    }, 45000)
+    }, 4000)
 
     return () => {
       window.clearInterval(interval)
-      window.clearTimeout(stop)
     }
   }, [router])
 
+  const elapsedSeconds = ticks * 4
+
   return (
     <p className="mt-4 text-xs text-muted-foreground">
-      {ticks > 0
-        ? "Checking for first results..."
-        : "Scan in progress. Results appear automatically once ready."}
+      {ticks === 0
+        ? "Scan in progress. Results appear automatically once ready."
+        : elapsedSeconds < 60
+          ? "Checking for first results..."
+          : "Still scanning. You can keep working in other tabs and return here for the updated state."}
     </p>
   )
 }
-

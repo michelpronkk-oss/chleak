@@ -3,8 +3,8 @@
 import { motion } from "motion/react"
 
 const issues = [
-  { sev: "high", label: "Shipping step drop-off variance", impact: "$24.1k / mo" },
-  { sev: "high", label: "iOS wallet coverage gap", impact: "$18.7k / mo" },
+  { sev: "high", label: "Activation funnel dropout before first value", impact: "$24.1k / mo" },
+  { sev: "high", label: "Shipping step drop-off variance", impact: "$18.7k / mo" },
   { sev: "medium", label: "Retry cadence underperforming", impact: "$16.1k / mo" },
   { sev: "medium", label: "Cross-border decline elevation", impact: "$9.2k / mo" },
 ]
@@ -50,7 +50,7 @@ export function LiveIntelligencePanel() {
       <div className="vault-panel-head">
         <div className="flex items-center gap-2">
           <PulsingDot />
-          <span className="vault-panel-title">Revenue intelligence</span>
+          <span className="vault-panel-title">Revenue leak signals</span>
         </div>
         <div className="flex items-center gap-2.5">
           <span className="font-mono text-[0.58rem] tracking-[0.06em] text-muted-foreground/30">SCN-2847</span>
@@ -110,7 +110,7 @@ export function LiveIntelligencePanel() {
         style={{ borderTop: "1px solid var(--line-subtle)" }}
       >
         <p className="font-mono text-[0.58rem] tracking-[0.06em] uppercase text-muted-foreground/32">
-          Shopify + Stripe &middot; ranked by impact
+          Current live integrations: Shopify + Stripe &middot; ranked by impact
         </p>
         <p className="font-mono text-[0.58rem] tracking-[0.04em] text-muted-foreground/28">
           2m ago

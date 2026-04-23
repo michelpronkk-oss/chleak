@@ -70,7 +70,7 @@ export default async function SignInPage({
             Enter your workspace
           </h1>
           <p className="mt-2 text-sm leading-[1.7] text-muted-foreground">
-            Sign in with your approved email to enter the private CheckoutLeak workspace.
+            Sign in with your approved email to enter the private CheckoutLeak operator workspace.
           </p>
 
           {message ? (

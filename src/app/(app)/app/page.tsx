@@ -49,10 +49,10 @@ export default async function DashboardOverviewPage() {
         <section className="space-y-2">
           <p className="data-mono text-muted-foreground">Revenue Workspace</p>
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
-            Start your workspace with a real source or demo data
+            Start with a live source or explicit demo mode
           </h1>
           <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
-            Connect Shopify or Stripe to populate your live workspace. Use demo mode only when you want to evaluate the product flow with simulated data.
+            Connect Shopify or Stripe to run a live scan in your real workspace. Demo mode is opt-in and stays clearly labeled as simulated data.
           </p>
         </section>
 
@@ -129,7 +129,7 @@ export default async function DashboardOverviewPage() {
             {journey.sourceLabel} source connected. First scan running.
           </h1>
           <p className="max-w-xl text-sm text-muted-foreground sm:text-base">
-            First scan in progress. Findings appear as they land, ranked by exposure.
+            First scan is in progress. This view refreshes automatically and transitions when results are ready.
           </p>
         </section>
 
@@ -160,10 +160,10 @@ export default async function DashboardOverviewPage() {
 
           <div className="mt-5 flex flex-wrap gap-3">
             <Link
-              href={`/api/mock/onboarding?state=first_results_${journey.sourceLabel.toLowerCase()}&next=/app`}
+              href="/app"
               className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition-transform hover:-translate-y-px"
             >
-              View first results
+              Refresh scan status
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
             <Link
@@ -193,7 +193,7 @@ export default async function DashboardOverviewPage() {
             {journey.sourceLabel} scan completed. Initial leakage detected.
           </h1>
           <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-            First scan complete. Findings ranked by exposure.
+            Initial findings are ready with ranked impact and evidence-backed action briefs.
           </p>
         </section>
 
@@ -213,7 +213,7 @@ export default async function DashboardOverviewPage() {
               {formatImpactLabel(primaryIssue.estimatedMonthlyRevenueImpact)}
             </p>
             <p className="mt-3 text-xs text-muted-foreground">
-              First scan: {firstSnapshot.summary.activeIssues} findings.
+              First completed scan returned {firstSnapshot.summary.activeIssues} findings.
             </p>
             <Link
               href={primaryFixPlanHref}
@@ -251,10 +251,10 @@ export default async function DashboardOverviewPage() {
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
             <Link
-              href={`/api/mock/onboarding?state=completed_${journey.sourceLabel.toLowerCase()}&next=/app`}
+              href="/app/stores"
               className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
-              Open full dashboard
+              Review source health
             </Link>
           </div>
         </section>
@@ -268,10 +268,10 @@ export default async function DashboardOverviewPage() {
         <section className="space-y-2">
           <p className="data-mono text-muted-foreground">First Scan Complete</p>
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
-            {journey.sourceLabel} source connected. Monitoring is active.
+            {journey.sourceLabel} connected. Baseline signal is still building.
           </h1>
           <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-            First scan complete, insufficient signal for leakage analysis. Monitoring continues.
+            The latest scan completed, but there is not enough commercial signal yet to score leakage confidently.
           </p>
         </section>
 
@@ -279,17 +279,17 @@ export default async function DashboardOverviewPage() {
           <article className="surface-card-strong p-5 sm:p-6 lg:p-7">
             <p className="data-mono text-muted-foreground">No-Signal Outcome</p>
             <h2 className="mt-2 text-lg font-semibold tracking-tight">
-              Data pipeline healthy. Coverage increases with activity.
+              Signal intake is healthy. Coverage increases as event volume grows.
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Monitoring continues. Checkout and billing coverage active.
+              Keep the source connected while more activation, checkout, and billing events accumulate.
             </p>
           </article>
 
           <article className="surface-card p-4 sm:p-5 lg:p-6">
             <p className="data-mono text-muted-foreground">Next Operator Move</p>
             <p className="mt-3 text-sm text-muted-foreground">
-              Keep this source connected, then review store details after orders, checkout sessions, or billing events are available.
+              Validate source health and return after new orders, checkout sessions, or billing events are recorded.
             </p>
             <div className="mt-5 flex flex-wrap gap-2.5">
               <Link
@@ -311,14 +311,14 @@ export default async function DashboardOverviewPage() {
 
         <section className="surface-card p-5 sm:p-6 lg:p-7">
           <p className="text-sm text-muted-foreground">
-            No leakage signal detected. Monitoring active.
+            No leak findings yet because recent commercial signal is still limited. Monitoring remains active.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link
               href="/app/connect"
               className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
             >
-              Review connected source
+              Open connection status
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -333,10 +333,10 @@ export default async function DashboardOverviewPage() {
         <section className="space-y-2">
           <p className="data-mono text-muted-foreground">Baseline Analysis Complete</p>
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
-            {journey.snapshot.organization.name} is currently clean.
+            {journey.snapshot.organization.name} has no detected leaks in the latest cycle.
           </h1>
           <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-            No leaks detected. Coverage active.
+            Monitoring remains active across activation, checkout, and billing recovery.
           </p>
         </section>
 
@@ -344,10 +344,10 @@ export default async function DashboardOverviewPage() {
           <article className="surface-card-strong p-5 sm:p-6 lg:p-7">
             <p className="data-mono text-muted-foreground">Monitoring Status</p>
             <h2 className="mt-2 text-lg font-semibold tracking-tight">
-              No leaks detected. Monitoring active.
+              Leakage baseline is currently clean.
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Coverage healthy. Scan cycle continues.
+              No ranked fixes are required right now. Scan cycles continue automatically.
             </p>
           </article>
 

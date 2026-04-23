@@ -16,6 +16,7 @@ const companyLinks = [
 const legalLinks = [
   { label: "Terms of Use", href: "/terms" },
   { label: "Privacy Policy", href: "/privacy" },
+  { label: "Cookie Policy", href: "/cookies" },
 ]
 
 export async function MarketingFooter() {
@@ -44,10 +45,10 @@ export async function MarketingFooter() {
           <div className="max-w-sm space-y-3.5">
             <CheckoutLeakLogo />
             <p className="text-[0.86rem] leading-[1.65] text-muted-foreground sm:text-sm sm:leading-[1.72]">
-              Revenue leak intelligence for Shopify and Stripe operators.
+              Operator-grade revenue leak detection across activation, checkout, and billing.
             </p>
             <p className="text-[0.8rem] leading-[1.6] text-muted-foreground/70 sm:text-[0.83rem]">
-              Checkout friction, payment gaps, and failed billing recovery. Ranked by monthly impact.
+              Current live integrations include Shopify and Stripe. Findings are ranked by monthly impact.
             </p>
             <a
               href="mailto:support@checkoutleak.com"

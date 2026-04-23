@@ -6,6 +6,7 @@ import {
   markStripeIntegrationErrored,
   persistStripeIntegration,
 } from "@/server/services/stripe-persistence-service"
+import { processQueuedScanV1 } from "@/server/services/scan-processing-service"
 import {
   STRIPE_OAUTH_STATE_COOKIE,
   exchangeStripeCodeForToken,
@@ -97,7 +98,7 @@ export async function GET(request: Request) {
       accessToken: token.accessToken,
     })
 
-    await persistStripeIntegration({
+    const persistence = await persistStripeIntegration({
       organizationId: storedState.organizationId,
       stripeAccountId: token.stripeAccountId,
       sourceName: account.displayName ?? `Stripe ${token.stripeAccountId}`,
@@ -106,6 +107,15 @@ export async function GET(request: Request) {
       accessToken: token.accessToken,
       refreshToken: token.refreshToken,
     })
+
+    if (persistence.scanId) {
+      const autoProcessResult = await processQueuedScanV1({ scanId: persistence.scanId })
+      if (!autoProcessResult.processed) {
+        console.error(
+          `[stripe] automatic scan processing failed: organization=${storedState.organizationId}; scan_id=${persistence.scanId}; reason=${autoProcessResult.reason}`
+        )
+      }
+    }
 
     const response = NextResponse.redirect(
       new URL("/app/connect?provider=stripe&status=connected", url.origin)

@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og"
 
 export const runtime = "edge"
-export const alt = "CheckoutLeak Product — Revenue Intelligence for Checkout and Billing"
+export const alt = "CheckoutLeak Product - Revenue Leak Detection for Activation, Checkout, and Billing"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
@@ -46,10 +46,10 @@ export default async function Image() {
             Product
           </div>
           <div style={{ color: "#f1f5f9", fontSize: "56px", fontWeight: 600, lineHeight: 1.08, letterSpacing: "-0.03em", maxWidth: "780px" }}>
-            Revenue intelligence for checkout and billing operators.
+            Revenue leak detection for activation, checkout, and billing.
           </div>
           <div style={{ color: "#64748b", fontSize: "19px", lineHeight: 1.6, marginTop: "24px", maxWidth: "580px" }}>
-            Connects to Shopify and Stripe. Detects leakage across checkout steps, payment methods, and billing recovery. Ranked by monthly impact.
+            Detects activation, checkout setup, and billing recovery leakage, then ranks each issue by monthly impact and next action.
           </div>
         </div>
 
@@ -63,7 +63,7 @@ export default async function Image() {
             gap: "20px",
           }}
         >
-          {["Checkout friction", "Payment gaps", "Billing recovery", "Setup gaps"].map((label) => (
+          {["Activation leakage", "Checkout leakage", "Billing recovery", "Setup leakage"].map((label) => (
             <div
               key={label}
               style={{
@@ -91,3 +91,4 @@ export default async function Image() {
     { ...size }
   )
 }
+

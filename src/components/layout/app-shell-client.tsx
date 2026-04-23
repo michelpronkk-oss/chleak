@@ -134,7 +134,7 @@ export function AppShellClient({
                         <span className="truncate">{monitor.name}</span>
                       </span>
                       <span className={cn("shrink-0 text-xs", monitor.statusTone)}>
-                        {isDemoMode ? `${monitor.statusLabel} · Demo` : monitor.statusLabel}
+                        {isDemoMode ? `${monitor.statusLabel} | Demo` : monitor.statusLabel}
                       </span>
                     </div>
                     <p className="mt-0.5 pl-5 text-xs text-muted-foreground/55">

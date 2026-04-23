@@ -163,6 +163,60 @@ const fixPlans: FixPlan[] = [
       },
     ],
   },
+  {
+    id: "fixplan_activation_first_value_gap",
+    issueId: "issue_1005",
+    title: "Recover activation leakage before first checkout completion",
+    issueType: "activation_funnel_dropout",
+    severity: "medium",
+    confidence: "medium",
+    estimatedMonthlyImpact: 9400,
+    summary:
+      "Newly signed-up operators are stalling between account setup and first successful checkout completion.",
+    whyItMatters:
+      "Delayed first value reduces retained demand entering checkout and weakens downstream conversion efficiency.",
+    recommendedFix:
+      "Compress onboarding steps and add a guided first-session handoff into checkout completion.",
+    steps: [
+      {
+        id: "activation_step_01",
+        title: "Instrument first-session drop-off checkpoints",
+        detail:
+          "Track completion from signup through first checkout-ready milestone to pinpoint the highest-friction transition.",
+      },
+      {
+        id: "activation_step_02",
+        title: "Introduce guided activation handoff",
+        detail:
+          "Add a directed path from account creation to first checkout completion with contextual assistance.",
+      },
+      {
+        id: "activation_step_03",
+        title: "Deploy recovery reminders for stalled signups",
+        detail:
+          "Trigger targeted reminders for operators who stop before first checkout completion.",
+      },
+    ],
+    platformContext: [
+      "Signup and onboarding flow analytics",
+      "In-app activation checklist and guidance",
+      "Lifecycle reminder sequencing for new operators",
+    ],
+    source: "Activation flow diagnostics",
+    detectedAt: "2026-04-17T08:00:00.000Z",
+    successSignal:
+      "Share of new operators reaching first checkout completion rises within the next two scan cycles.",
+    expectedOutcome:
+      "More new operators reach revenue-generating flow stages, increasing downstream checkout opportunity.",
+    status: "open",
+    relatedIssues: [
+      {
+        issueId: "issue_1001",
+        title: "High drop-off at shipping method step",
+        estimatedMonthlyRevenueImpact: 28700,
+      },
+    ],
+  },
 ]
 
 const fixPlanById = new Map(fixPlans.map((plan) => [plan.id, plan]))

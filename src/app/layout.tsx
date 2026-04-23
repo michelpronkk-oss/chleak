@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     template: "%s | CheckoutLeak",
   },
   description:
-    "CheckoutLeak detects lost revenue in Shopify and Stripe checkout, payment setup, and failed billing flows.",
+    "CheckoutLeak detects revenue leakage across activation, checkout and setup, and billing recovery, with findings ranked by monthly impact.",
   openGraph: {
     siteName: "CheckoutLeak",
     type: "website",
@@ -65,7 +65,7 @@ const organizationSchema = {
   name: "CheckoutLeak",
   url: siteUrl,
   logo: `${siteUrl}/logo.png`,
-  description: "Revenue leak detection for Shopify and Stripe checkout and billing flows.",
+  description: "Operator-grade revenue leak detection across activation, checkout and setup, and billing recovery.",
   contactPoint: {
     "@type": "ContactPoint",
     email: "support@checkoutleak.com",
