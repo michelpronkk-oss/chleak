@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { ArrowRight, Check, ChevronRight, CircleCheck, CircleDashed, CircleDot } from "lucide-react"
+import { ArrowRight, Check, ChevronRight, CircleCheck, CircleDashed, CircleDot, Globe2 } from "lucide-react"
 
 export const metadata: Metadata = {
   title: "Sources",
@@ -178,6 +178,48 @@ export default async function SourcesPage({
     (connectData.shopifySetupAttention
       ? "Shopify connected, but webhook registration needs attention. Retry setup."
       : null)
+  const primarySourceSaved = Boolean(normalizedLiveSource)
+  const connectedSystems = [
+    { label: "Shopify", status: connectData.shopifySourceState.status },
+    { label: "Stripe", status: connectData.stripeSourceState.status },
+  ]
+  const connectedSystemsCount = connectedSystems.filter(
+    (system) => system.status !== "not_connected"
+  ).length
+  const hasCompletedSystemScan = storesData.stores.some((store) => Boolean(store.latestScanAt))
+  const latestScanAt = [...storesData.stores]
+    .map((store) => store.latestScanAt)
+    .filter((value): value is string => Boolean(value))
+    .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0] ?? null
+  const sourceScanStateLabel = !primarySourceSaved
+    ? "Not set"
+    : connectedSystemsCount === 0
+      ? "Saved | ready for scan"
+      : hasCompletedSystemScan
+        ? "Active context"
+        : isPendingShopify || isPendingStripe
+          ? "Saved | first scan running"
+          : "Saved | waiting for first scan"
+  const sourceScanStateTone = !primarySourceSaved
+    ? "text-muted-foreground"
+    : hasCompletedSystemScan
+      ? "text-emerald-300"
+      : isPendingShopify || isPendingStripe
+        ? "text-primary"
+        : "text-amber-300"
+  const sourceScanStateDetail = !primarySourceSaved
+    ? "Set a primary URL or domain to create the canonical source context."
+    : connectedSystemsCount === 0
+      ? "Primary URL source is saved. Connect Shopify or Stripe to start the first analysis cycle."
+      : hasCompletedSystemScan
+        ? "Primary URL source is active and currently used as canonical scan context."
+        : isPendingShopify || isPendingStripe
+          ? "Connected systems are running first analysis. The URL source is attached as canonical context."
+          : "Connected systems exist, but first analysis has not completed yet."
+  const liveSourceUpdatedAt =
+    connectData.liveSourceContext && "updatedAt" in connectData.liveSourceContext
+      ? connectData.liveSourceContext.updatedAt
+      : null
 
   return (
     <div className="space-y-5 pb-24 lg:pb-4">
@@ -251,6 +293,69 @@ export default async function SourcesPage({
             Source domain: {normalizedLiveSource.hostname}
           </p>
         ) : null}
+      </section>
+
+      <section className="surface-card p-4 sm:p-5 lg:p-6">
+        <p className="data-mono text-muted-foreground">Primary source object</p>
+        <article className="mt-4 rounded-xl border border-border/70 bg-background/35 p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="font-mono text-[0.68rem] tracking-[0.1em] uppercase text-muted-foreground/60">
+                Canonical live source
+              </p>
+              <h2 className="mt-1.5 flex items-center gap-2 text-base font-semibold tracking-tight sm:text-lg">
+                <Globe2 className="h-4 w-4 text-muted-foreground/70" />
+                {normalizedLiveSource?.hostname ?? "No primary source saved"}
+              </h2>
+            </div>
+            <span className={`text-xs ${sourceScanStateTone}`}>{sourceScanStateLabel}</span>
+          </div>
+
+          <p className="mt-2 text-sm text-muted-foreground">{sourceScanStateDetail}</p>
+
+          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+            <div className="rounded-lg border border-border/60 bg-background/30 p-3">
+              <dt className="data-mono text-muted-foreground">Primary URL</dt>
+              <dd className="mt-1 break-all text-foreground">
+                {normalizedLiveSource?.normalizedUrl ?? "Not set"}
+              </dd>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-background/30 p-3">
+              <dt className="data-mono text-muted-foreground">Last updated</dt>
+              <dd className="mt-1 text-foreground">
+                {liveSourceUpdatedAt ? formatRelativeTimestamp(liveSourceUpdatedAt) : "Not set"}
+              </dd>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-background/30 p-3">
+              <dt className="data-mono text-muted-foreground">Connected systems</dt>
+              <dd className="mt-1 text-foreground">
+                {connectedSystemsCount > 0 ? connectedSystemsCount : "None"}
+              </dd>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-background/30 p-3">
+              <dt className="data-mono text-muted-foreground">Latest analysis</dt>
+              <dd className="mt-1 text-foreground">
+                {latestScanAt ? formatRelativeTimestamp(latestScanAt) : "Not run yet"}
+              </dd>
+            </div>
+          </dl>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {connectedSystems.map((system) => (
+              <span
+                key={system.label}
+                className={cn(
+                  "inline-flex items-center rounded-md border px-2 py-1 text-[11px] uppercase",
+                  system.status === "not_connected"
+                    ? "border-border/70 text-muted-foreground/70"
+                    : "border-primary/30 text-foreground"
+                )}
+              >
+                {system.label} | {formatSourceStatus(system.status)}
+              </span>
+            ))}
+          </div>
+        </article>
       </section>
 
       <section className="vault-source-grid">
@@ -377,8 +482,44 @@ export default async function SourcesPage({
             </div>
             <p className="mt-2 text-sm text-muted-foreground">{storesData.stagingSource.message}</p>
           </article>
-        ) : storesData.stores.length ? (
+        ) : storesData.stores.length || primarySourceSaved ? (
           <div className="divide-y divide-border/60">
+            {primarySourceSaved ? (
+              <article className="grid gap-3 py-4 sm:gap-4 sm:py-5 sm:grid-cols-[1.3fr_1fr_auto] sm:items-center">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-base font-semibold tracking-tight sm:text-lg">
+                      {normalizedLiveSource?.hostname ?? "Primary URL source"}
+                    </h2>
+                    <span className="rounded-md border border-border/70 px-2 py-0.5 text-[11px] uppercase text-muted-foreground">
+                      website
+                    </span>
+                    <span className={`text-xs ${sourceScanStateTone}`}>{sourceScanStateLabel}</span>
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {normalizedLiveSource?.normalizedUrl ?? "No URL saved"} | canonical source context
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {sourceScanStateDetail}
+                  </p>
+                </div>
+
+                <div className="grid gap-1 text-sm">
+                  <p className="text-muted-foreground">
+                    Latest analysis: {latestScanAt ? formatRelativeTimestamp(latestScanAt) : "Not run yet"}
+                  </p>
+                  <p className="font-semibold text-primary">
+                    {connectedSystemsCount} connected system{connectedSystemsCount !== 1 ? "s" : ""}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                  <Link href="#source-setup" className="vault-link inline-flex items-center gap-1 text-sm">
+                    Edit source <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              </article>
+            ) : null}
             {storesData.stores.map((store) => (
               <article
                 key={store.id}
@@ -454,7 +595,9 @@ export default async function SourcesPage({
         <div className="mt-4 grid gap-3 sm:grid-cols-3 sm:gap-4">
           <div className="rounded-xl border border-border/70 bg-background/35 p-3.5 sm:p-4">
             <p className="text-sm text-muted-foreground">Connected sources</p>
-            <p className="mt-1 text-2xl font-semibold tracking-tight">{storesData.stores.length}</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight">
+              {storesData.stores.length + (primarySourceSaved ? 1 : 0)}
+            </p>
           </div>
           <div className="rounded-xl border border-border/70 bg-background/35 p-3.5 sm:p-4">
             <p className="text-sm text-muted-foreground">Total active issues</p>
