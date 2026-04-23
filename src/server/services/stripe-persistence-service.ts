@@ -82,6 +82,8 @@ async function ensureStripeStore(input: {
 export async function persistStripeIntegration(input: {
   organizationId: string
   stripeAccountId: string
+  primaryLiveSourceUrl?: string | null
+  primaryLiveSourceDomain?: string | null
   sourceName: string
   scope: string
   livemode: boolean
@@ -109,6 +111,12 @@ export async function persistStripeIntegration(input: {
       source_entity_type: "billing_account",
       live_source_url: null,
       live_source_domain: null,
+      primary_live_source_url: input.primaryLiveSourceUrl ?? null,
+      primary_live_source_domain: input.primaryLiveSourceDomain ?? null,
+      primary_live_source_updated_at:
+        input.primaryLiveSourceUrl && input.primaryLiveSourceDomain
+          ? new Date().toISOString()
+          : null,
       live_source_identifier: input.stripeAccountId,
       connected_systems: ["stripe"],
       scope: input.scope,

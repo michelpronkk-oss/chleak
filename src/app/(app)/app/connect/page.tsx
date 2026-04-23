@@ -12,11 +12,13 @@ import {
   inferShopifyDomainFromLiveSource,
   normalizeLiveSourceUrl,
 } from "@/lib/live-source"
+import { SubmitButton } from "@/components/ui/submit-button"
 import { getConnectJourneyData } from "@/server/services/app-service"
 import { DisconnectButton } from "./disconnect-button"
 import { PostOauthHandoff } from "./post-oauth-handoff"
 import { ShopifyConnectSubmitButton } from "./shopify-connect-submit-button"
 import { StripeConnectSubmitButton } from "./stripe-connect-submit-button"
+import { setLiveSourceContext } from "./actions"
 
 const statusMessage: Record<string, string> = {
   setup_required: "Stripe connect setup is incomplete in this environment.",
@@ -32,6 +34,8 @@ const statusMessage: Record<string, string> = {
   disconnected: "Shopify has been disconnected. Reconnect when ready.",
   disconnect_failed: "Shopify disconnect failed. Retry in a moment.",
   invalid_source_url: "Use a valid URL or domain for the live revenue surface.",
+  context_saved: "Live source context saved.",
+  context_save_failed: "Could not save live source context. Retry in a moment.",
 }
 
 const errorStatuses = new Set([
@@ -44,6 +48,8 @@ const errorStatuses = new Set([
   "state_mismatch",
   "webhook_registration_failed",
   "disconnect_failed",
+  "invalid_source_url",
+  "context_save_failed",
 ])
 
 function formatSourceStatus(status: string) {
@@ -126,10 +132,14 @@ export default async function ConnectPage({
   const shopFromParams = Array.isArray(params.shop) ? params.shop[0] : params.shop
   const sourceUrlParam =
     Array.isArray(params.source_url) ? params.source_url[0] : params.source_url
+  const persistedLiveSource =
+    data.liveSourceContext?.url && normalizeLiveSourceUrl(data.liveSourceContext.url)
+      ? normalizeLiveSourceUrl(data.liveSourceContext.url)
+      : null
   const normalizedLiveSource = sourceUrlParam
     ? normalizeLiveSourceUrl(sourceUrlParam)
-    : null
-  const sourceUrlInvalid = Boolean(sourceUrlParam && !normalizedLiveSource)
+    : persistedLiveSource
+  const sourceUrlInvalid = Boolean(sourceUrlParam && !normalizeLiveSourceUrl(sourceUrlParam))
   const inferredShopDomain = inferShopifyDomainFromLiveSource(
     normalizedLiveSource?.normalizedUrl ?? sourceUrlParam ?? null
   )
@@ -221,8 +231,7 @@ export default async function ConnectPage({
         <p className="mt-2 text-sm text-muted-foreground">
           Set the URL or domain that represents your live revenue surface. This becomes the primary source context for upcoming URL-first analysis.
         </p>
-        <form method="GET" action="/app/connect" className="mt-4 space-y-3">
-          <input type="hidden" name="provider" value="source_url" />
+        <form action={setLiveSourceContext} className="mt-4 space-y-3">
           <div className="space-y-2">
             <label
               htmlFor="source_url"
@@ -242,13 +251,17 @@ export default async function ConnectPage({
               inputMode="url"
             />
           </div>
-          <button
-            type="submit"
+          <SubmitButton
+            label="Set live source context"
+            pendingLabel="Saving source..."
             className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Set live source context
-          </button>
+          />
         </form>
+        {data.liveSourceContext?.url ? (
+          <p className="mt-3 text-xs text-emerald-300">
+            Saved context: {data.liveSourceContext.url}
+          </p>
+        ) : null}
         {normalizedLiveSource ? (
           <p className="mt-3 text-xs text-muted-foreground">
             Source domain: {normalizedLiveSource.hostname}
@@ -262,6 +275,15 @@ export default async function ConnectPage({
 
       {/* Connected systems */}
       <section className="vault-source-grid">
+        {normalizedLiveSource ? (
+          <div className="vault-panel-shell p-4 sm:p-5 lg:col-span-2">
+            <p className="data-mono text-muted-foreground">Source context in use</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Primary live source: {normalizedLiveSource.normalizedUrl}. Connected systems below enrich findings with checkout and billing depth.
+            </p>
+          </div>
+        ) : null}
+
         {/* Shopify */}
         <article className="vault-source-cell">
           <div className="flex items-start justify-between gap-3">

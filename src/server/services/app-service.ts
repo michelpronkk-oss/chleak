@@ -1,4 +1,5 @@
 import { formatDistanceToNowStrict } from "date-fns"
+import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
 import {
@@ -34,6 +35,8 @@ import {
 import {
   getShopifySourceState,
   getStripeSourceState,
+  LIVE_SOURCE_CONTEXT_COOKIE,
+  parseLiveSourceContext,
 } from "./source-connection-state-service"
 import { getShopifySetupState } from "./shopify-service"
 import { getStripeSetupState } from "./stripe-service"
@@ -417,6 +420,30 @@ function readStringFromRecord(source: unknown, key: string): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null
 }
 
+function readLiveSourceContextFromMetadata(source: unknown) {
+  const primaryUrl = readStringFromRecord(source, "primary_live_source_url")
+  const primaryDomain = readStringFromRecord(source, "primary_live_source_domain")
+  if (primaryUrl && primaryDomain) {
+    return {
+      url: primaryUrl,
+      domain: primaryDomain,
+      source: "integration_metadata.primary" as const,
+    }
+  }
+
+  const legacyUrl = readStringFromRecord(source, "live_source_url")
+  const legacyDomain = readStringFromRecord(source, "live_source_domain")
+  if (legacyUrl && legacyDomain) {
+    return {
+      url: legacyUrl,
+      domain: legacyDomain,
+      source: "integration_metadata.legacy" as const,
+    }
+  }
+
+  return null
+}
+
 function readBooleanFromRecord(source: unknown, key: string): boolean | null {
   if (!source || typeof source !== "object" || Array.isArray(source)) {
     return null
@@ -491,9 +518,16 @@ function readLiveSourceSurfaceView(input: {
     input.metadata && typeof input.metadata === "object" && !Array.isArray(input.metadata)
       ? (input.metadata as Record<string, unknown>)
       : null
-  const liveSourceUrl = readStringFromRecord(metadata, "live_source_url")
-  const liveSourceDomain = readStringFromRecord(metadata, "live_source_domain")
+  const liveSourceUrl =
+    readStringFromRecord(metadata, "primary_live_source_url") ??
+    readStringFromRecord(metadata, "live_source_url")
+  const liveSourceDomain =
+    readStringFromRecord(metadata, "primary_live_source_domain") ??
+    readStringFromRecord(metadata, "live_source_domain")
   const sourceEntityType = readStringFromRecord(metadata, "source_entity_type")
+  const hasPrimaryLiveSource =
+    Boolean(readStringFromRecord(metadata, "primary_live_source_url")) &&
+    Boolean(readStringFromRecord(metadata, "primary_live_source_domain"))
   const connectedSystems = readStringArrayFromRecord(metadata, "connected_systems")
   const fallbackShopifyUrl =
     input.platform === "shopify" && (input.shopDomain ?? input.storeDomain)
@@ -504,7 +538,7 @@ function readLiveSourceSurfaceView(input: {
     primaryUrl: liveSourceUrl ?? fallbackShopifyUrl,
     domain: liveSourceDomain ?? input.shopDomain ?? input.storeDomain,
     identifier: input.accountIdentifier,
-    sourceEntityType,
+    sourceEntityType: hasPrimaryLiveSource ? "website_domain" : sourceEntityType,
     connectedSystems,
   }
 }
@@ -637,6 +671,31 @@ async function loadShopifyDomainViews(organizationId: string) {
   }
 
   return viewByStoreId
+}
+
+async function loadLiveSourceContextFromIntegrations(organizationId: string) {
+  const admin = createSupabaseAdminClient()
+  const result = await admin
+    .from("store_integrations")
+    .select("metadata, installed_at, created_at")
+    .eq("organization_id", organizationId)
+    .in("provider", ["shopify", "stripe"])
+    .neq("status", "disconnected")
+    .order("installed_at", { ascending: false })
+    .order("created_at", { ascending: false })
+
+  if (result.error) {
+    return null
+  }
+
+  for (const row of result.data ?? []) {
+    const found = readLiveSourceContextFromMetadata(row.metadata)
+    if (found) {
+      return found
+    }
+  }
+
+  return null
 }
 
 function toStateForProvider(input: {
@@ -1495,6 +1554,14 @@ export async function getConnectJourneyData() {
   const stripeSetup = getStripeSetupState()
   const shopifyDomainViews = await loadShopifyDomainViews(journey.organizationId)
   const primaryShopifyView = Array.from(shopifyDomainViews.values())[0]
+  const integrationLiveSourceContext = await loadLiveSourceContextFromIntegrations(
+    journey.organizationId
+  )
+  const cookieStore = await cookies()
+  const cookieLiveSourceContext = parseLiveSourceContext(
+    cookieStore.get(LIVE_SOURCE_CONTEXT_COOKIE)?.value
+  )
+  const liveSourceContext = integrationLiveSourceContext ?? cookieLiveSourceContext
 
   return {
     onboardingState: journey.state,
@@ -1513,6 +1580,7 @@ export async function getConnectJourneyData() {
       (primaryShopifyView?.syncStatus === "errored"
         ? "Shopify connected, but webhook registration needs attention."
         : null),
+    liveSourceContext,
     organization: journey.baseSnapshot.organization,
   }
 }

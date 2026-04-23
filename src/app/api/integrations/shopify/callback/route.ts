@@ -20,6 +20,8 @@ import {
   verifyShopifyCallbackHmac,
 } from "@/server/services/shopify-service"
 import {
+  LIVE_SOURCE_CONTEXT_COOKIE,
+  parseLiveSourceContext,
   SHOPIFY_SOURCE_STATE_COOKIE,
   serializeShopifySourceState,
 } from "@/server/services/source-connection-state-service"
@@ -33,6 +35,9 @@ export async function GET(request: Request) {
   const cookieStore = await cookies()
   const storedState = parseShopifyOauthState(
     cookieStore.get(SHOPIFY_OAUTH_STATE_COOKIE)?.value
+  )
+  const liveSourceContext = parseLiveSourceContext(
+    cookieStore.get(LIVE_SOURCE_CONTEXT_COOKIE)?.value
   )
 
   console.info(
@@ -138,6 +143,8 @@ export async function GET(request: Request) {
       shopDomain: shopMeta.myshopifyDomain,
       preferredShopDomain: storedState.shopDomain,
       canonicalShopDomain: shopMeta.myshopifyDomain,
+      primaryLiveSourceUrl: liveSourceContext?.url ?? null,
+      primaryLiveSourceDomain: liveSourceContext?.domain ?? null,
       shopName: shopMeta.name,
       scopes: token.scopes,
       accessToken: token.accessToken,

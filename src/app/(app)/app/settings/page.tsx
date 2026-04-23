@@ -163,10 +163,10 @@ export default async function SettingsPage() {
               )}
             </div>
             <Link
-              href="/app/connect"
+              href={data.connectedStores.length ? "/app/stores" : "/app/connect"}
               className="rounded-md border border-border/70 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
-              Manage
+              {data.connectedStores.length ? "Open sources" : "Open setup"}
             </Link>
           </div>
         </div>

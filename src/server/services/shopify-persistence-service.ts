@@ -30,6 +30,8 @@ export async function persistShopifyIntegration(input: {
   shopDomain: string
   preferredShopDomain?: string
   canonicalShopDomain?: string
+  primaryLiveSourceUrl?: string | null
+  primaryLiveSourceDomain?: string | null
   shopName: string
   scopes: string[]
   accessToken: string
@@ -96,6 +98,12 @@ export async function persistShopifyIntegration(input: {
       source_entity_type: "website_domain",
       live_source_url: normalizedLiveSource?.normalizedUrl ?? null,
       live_source_domain: normalizedLiveSource?.hostname ?? null,
+      primary_live_source_url: input.primaryLiveSourceUrl ?? null,
+      primary_live_source_domain: input.primaryLiveSourceDomain ?? null,
+      primary_live_source_updated_at:
+        input.primaryLiveSourceUrl && input.primaryLiveSourceDomain
+          ? new Date().toISOString()
+          : null,
       connected_systems: ["shopify"],
       signal_snapshot: input.signalSnapshot
         ? {

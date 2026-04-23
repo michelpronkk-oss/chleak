@@ -14,6 +14,8 @@ import {
   parseStripeOauthState,
 } from "@/server/services/stripe-service"
 import {
+  LIVE_SOURCE_CONTEXT_COOKIE,
+  parseLiveSourceContext,
   STRIPE_SOURCE_STATE_COOKIE,
   serializeStripeSourceState,
 } from "@/server/services/source-connection-state-service"
@@ -27,6 +29,9 @@ export async function GET(request: Request) {
   const cookieStore = await cookies()
   const storedState = parseStripeOauthState(
     cookieStore.get(STRIPE_OAUTH_STATE_COOKIE)?.value
+  )
+  const liveSourceContext = parseLiveSourceContext(
+    cookieStore.get(LIVE_SOURCE_CONTEXT_COOKIE)?.value
   )
 
   const redirectError = (status: string) =>
@@ -101,6 +106,8 @@ export async function GET(request: Request) {
     const persistence = await persistStripeIntegration({
       organizationId: storedState.organizationId,
       stripeAccountId: token.stripeAccountId,
+      primaryLiveSourceUrl: liveSourceContext?.url ?? null,
+      primaryLiveSourceDomain: liveSourceContext?.domain ?? null,
       sourceName: account.displayName ?? `Stripe ${token.stripeAccountId}`,
       scope: token.scope,
       livemode: token.livemode,
