@@ -16,10 +16,18 @@ export type UrlSourceAnalysisRunStatusV1 = "completed" | "skipped" | "failed"
 // Business model classification derived from surface signals and vocabulary.
 // Distinct from surfaceClassification which describes page structure.
 export type UrlSourceBusinessTypeV1 =
+  | "agency"
   | "saas"
   | "service_business"
   | "ecommerce"
   | "mixed"
+  | "unknown"
+
+export type UrlSourceRevenueModelV1 =
+  | "lead_generation"
+  | "self_serve_signup"
+  | "checkout"
+  | "hybrid"
   | "unknown"
 
 export interface UrlSourceAnalysisSummaryV1 {
@@ -40,6 +48,7 @@ export interface UrlSourceAnalysisSummaryV1 {
   hasCheckoutSignal: boolean
   // Extended path evaluation fields
   businessType: UrlSourceBusinessTypeV1
+  revenueModel: UrlSourceRevenueModelV1
   hasMobileViewport: boolean
   hasContactOrBookingPath: boolean
   hasSubscriptionLanguage: boolean
@@ -238,11 +247,67 @@ function detectContactOrBookingPath(paths: string[], labels: string[]): boolean 
     "/demo", "/get-demo", "/hire-us", "/work-with-us", "/lets-talk",
     "/inquiry", "/enquiry",
   ]
-  const rx = /^(contact(\s+us)?|get\s+in\s+touch|book\s+a\s+(call|demo|meeting)|schedule(\s+a\s+(call|demo))?|request\s+a\s+(demo|quote|consultation)|get\s+a\s+quote|hire\s+us|work\s+with\s+us|talk\s+to\s+(us|sales)|let'?s\s+talk|get\s+a\s+demo|speak\s+to\s+(us|sales))$/i
+  const rx = /^(contact(\s+us)?|get\s+in\s+touch|book\s+a\s+(call|demo|meeting)|schedule(\s+a\s+(call|demo))?|request\s+a\s+(demo|quote|consultation)|get\s+a\s+quote|start\s+a\s+project|hire\s+us|work\s+with\s+us|talk\s+to\s+(us|sales)|let'?s\s+talk|get\s+a\s+demo|speak\s+to\s+(us|sales))$/i
   return (
     paths.some((p) => contactPaths.some((cp) => p === cp || p.startsWith(`${cp}/`))) ||
     labels.some((l) => rx.test(l.trim()))
   )
+}
+
+function detectAgencyLanguage(visibleText: string, labels: string[]): boolean {
+  const lower = visibleText.toLowerCase()
+  const textTokens = [
+    "agency",
+    "studio",
+    "client work",
+    "case studies",
+    "portfolio",
+    "our work",
+    "creative partner",
+    "growth partner",
+    "digital product studio",
+    "brand strategy",
+    "web design",
+    "development agency",
+  ]
+  const labelRx = /^(start\s+a\s+project|view\s+our\s+work|see\s+our\s+work|work\s+with\s+us|hire\s+us|book\s+a\s+call|schedule\s+a\s+call|request\s+a\s+quote|let'?s\s+talk)$/i
+  return textTokens.some((token) => lower.includes(token)) || labels.some((label) => labelRx.test(label.trim()))
+}
+
+function detectServiceLanguage(visibleText: string, labels: string[]): boolean {
+  const lower = visibleText.toLowerCase()
+  const textTokens = [
+    "services",
+    "consulting",
+    "consultation",
+    "client",
+    "clients",
+    "project",
+    "quote",
+    "proposal",
+    "book a call",
+    "schedule a call",
+    "contact us",
+    "get in touch",
+  ]
+  const labelRx = /^(contact(\s+us)?|get\s+in\s+touch|start\s+a\s+project|request\s+a\s+quote|book\s+a\s+call|schedule\s+a\s+call|work\s+with\s+us|hire\s+us|let'?s\s+talk)$/i
+  return textTokens.some((token) => lower.includes(token)) || labels.some((label) => labelRx.test(label.trim()))
+}
+
+function detectAppDashboardLanguage(visibleText: string): boolean {
+  return visibleTextIncludes(visibleText.toLowerCase(), [
+    "dashboard",
+    "workspace",
+    "your account",
+    "manage your",
+    "free trial",
+    "saas",
+    "platform",
+    "onboarding",
+    "workflow",
+    "integrations",
+    "app",
+  ])
 }
 
 function detectSubscriptionLanguage(visibleText: string): boolean {
@@ -264,33 +329,76 @@ function classifyBusinessType(input: {
   hasPricingPath: boolean
   hasContactOrBookingPath: boolean
   hasSubscriptionLanguage: boolean
+  hasAgencyLanguage: boolean
+  hasServiceLanguage: boolean
+  hasAppDashboardLanguage: boolean
+  primaryCtaLabel: string | null
 }): UrlSourceBusinessTypeV1 {
-  // Ecommerce: has real cart/product infrastructure
-  const looksEcommerce =
-    input.surfaceClassification === "ecommerce" || input.hasCheckoutSignal
+  const primaryCta = input.primaryCtaLabel?.toLowerCase().trim() ?? ""
+  const leadCta =
+    /^(start\s+a\s+project|book\s+a\s+call|schedule\s+a\s+call|request\s+a\s+quote|contact(\s+us)?|get\s+in\s+touch|work\s+with\s+us|hire\s+us|let'?s\s+talk)$/.test(primaryCta)
 
-  // SaaS: has app infrastructure or subscription-style language
-  const looksSaaS =
-    input.surfaceClassification === "app_first" ||
-    input.hasSubscriptionLanguage ||
-    (input.hasSignupPath && (input.hasLoginPath || input.hasPricingPath))
+  let ecommerceScore = 0
+  let saasScore = 0
+  let serviceScore = 0
+  let agencyScore = 0
 
-  // Service: contact/booking oriented, no transactional infrastructure
-  const looksService =
-    input.hasContactOrBookingPath &&
-    !input.hasCheckoutSignal &&
+  if (input.surfaceClassification === "ecommerce") ecommerceScore += 4
+  if (input.hasCheckoutSignal) ecommerceScore += 4
+
+  if (input.surfaceClassification === "app_first") saasScore += 3
+  if (input.hasSubscriptionLanguage) saasScore += 3
+  if (input.hasSignupPath) saasScore += 2
+  if (input.hasLoginPath) saasScore += 2
+  if (input.hasPricingPath && (input.hasSignupPath || input.hasLoginPath)) saasScore += 2
+  if (input.hasAppDashboardLanguage) saasScore += 1
+
+  if (input.hasContactOrBookingPath) serviceScore += 3
+  if (input.hasServiceLanguage) serviceScore += 3
+  if (leadCta) serviceScore += 4
+  if (input.hasAgencyLanguage) agencyScore += 4
+  if (leadCta) agencyScore += 2
+
+  const noSelfServeSaasSignals =
     !input.hasSignupPath &&
-    !input.hasSubscriptionLanguage
+    !input.hasLoginPath &&
+    !input.hasSubscriptionLanguage &&
+    !input.hasAppDashboardLanguage
+  if (noSelfServeSaasSignals && (serviceScore > 0 || agencyScore > 0)) {
+    saasScore -= 4
+  }
+  if (input.hasContactOrBookingPath && !input.hasCheckoutSignal) {
+    ecommerceScore -= 2
+  }
 
-  if (looksEcommerce && looksSaaS) return "mixed"
-  if (looksEcommerce) return "ecommerce"
-  if (looksSaaS) return "saas"
-  if (looksService) return "service_business"
+  const leadScore = Math.max(serviceScore, agencyScore)
+  const commercialScores = [ecommerceScore, saasScore, leadScore].filter((score) => score >= 4)
+  if (commercialScores.length >= 2) return "mixed"
 
-  // Marketing-only page: infer from contact signals as weakest classification
-  if (input.hasContactOrBookingPath) return "service_business"
-  if (input.hasPricingPath && !input.hasCheckoutSignal) return "saas"
+  if (ecommerceScore >= 4) return "ecommerce"
+  if (saasScore >= 4 && saasScore > leadScore) return "saas"
+  if (agencyScore >= 4) return "agency"
+  if (serviceScore >= 4) return "service_business"
 
+  return "unknown"
+}
+
+function deriveRevenueModel(input: {
+  businessType: UrlSourceBusinessTypeV1
+  hasCheckoutSignal: boolean
+  hasSignupPath: boolean
+  hasContactOrBookingPath: boolean
+}): UrlSourceRevenueModelV1 {
+  if (input.businessType === "mixed") return "hybrid"
+  if (input.businessType === "ecommerce" || input.hasCheckoutSignal) return "checkout"
+  if (input.businessType === "saas" && input.hasSignupPath) return "self_serve_signup"
+  if (
+    input.businessType === "agency" ||
+    input.businessType === "service_business" ||
+    input.hasContactOrBookingPath
+  ) {
+    return "lead_generation"
+  }
   return "unknown"
 }
 
@@ -398,15 +506,25 @@ function deriveRevenuePathClarity(input: {
   hasPricingPath: boolean
   hasSignupPath: boolean
   hasCheckoutSignal: boolean
+  hasContactOrBookingPath: boolean
   hasPrimaryCta: boolean
   surfaceClassification: UrlSourceSurfaceClassificationV1
+  businessType: UrlSourceBusinessTypeV1
 }): UrlSourceRevenuePathClarityV1 {
   // Clear: actual transaction infrastructure or full funnel visible
   if (input.hasCheckoutSignal) return "clear"
   if (input.hasPricingPath && (input.hasSignupPath || input.hasPrimaryCta)) return "clear"
+  if (
+    (input.businessType === "agency" || input.businessType === "service_business") &&
+    input.hasContactOrBookingPath &&
+    input.hasPrimaryCta
+  ) {
+    return "clear"
+  }
 
   // Partial: some signals but not a complete funnel
   if (input.hasPricingPath || input.hasSignupPath) return "partial"
+  if (input.hasContactOrBookingPath) return "partial"
   if (input.hasPrimaryCta && input.surfaceClassification !== "unknown") return "partial"
 
   return "none"
@@ -425,10 +543,16 @@ function buildEvidenceRows(input: {
   hasPrimaryCta: boolean
   primaryCtaLabel: string | null
   hasCheckoutSignal: boolean
+  businessType: UrlSourceBusinessTypeV1
+  revenueModel: UrlSourceRevenueModelV1
+  hasContactOrBookingPath: boolean
+  hasSubscriptionLanguage: boolean
   finalUrl: string | null
   httpStatus: number | null
 }): Array<{ label: string; value: string }> {
   return [
+    { label: "Business model", value: input.businessType },
+    { label: "Revenue model", value: input.revenueModel },
     { label: "Surface classification", value: input.classification },
     { label: "Revenue path clarity", value: input.revenuePathClarity },
     { label: "Pricing path detected", value: input.hasPricingPath ? "yes" : "no" },
@@ -437,6 +561,8 @@ function buildEvidenceRows(input: {
     { label: "Primary CTA detected", value: input.hasPrimaryCta ? "yes" : "no" },
     { label: "Primary CTA label", value: input.primaryCtaLabel ?? "none" },
     { label: "Checkout or cart signal", value: input.hasCheckoutSignal ? "yes" : "no" },
+    { label: "Contact or booking path", value: input.hasContactOrBookingPath ? "yes" : "no" },
+    { label: "Subscription language", value: input.hasSubscriptionLanguage ? "yes" : "no" },
     { label: "Final URL", value: input.finalUrl ?? "none" },
     { label: "HTTP status", value: input.httpStatus !== null ? String(input.httpStatus) : "unknown" },
   ]
@@ -473,6 +599,7 @@ function buildFailedResult(input: {
       primaryCtaLabel: null,
       hasCheckoutSignal: false,
       businessType: "unknown",
+      revenueModel: "unknown",
       hasMobileViewport: false,
       hasContactOrBookingPath: false,
       hasSubscriptionLanguage: false,
@@ -598,6 +725,9 @@ export async function runUrlSourceAnalysisV1(input: {
   const hasMobileViewport = detectMobileViewport(rawHtml)
   const hasContactOrBookingPath = detectContactOrBookingPath(navPaths, allLabels)
   const hasSubscriptionLanguage = detectSubscriptionLanguage(visibleBodyText)
+  const hasAgencyLanguage = detectAgencyLanguage(visibleBodyText, allLabels)
+  const hasServiceLanguage = detectServiceLanguage(visibleBodyText, allLabels)
+  const hasAppDashboardLanguage = detectAppDashboardLanguage(visibleBodyText)
 
   // --- Primary CTA ---
   const primaryCtaLabel = selectPrimaryCta(navLinks, buttonLabels)
@@ -615,14 +745,6 @@ export async function runUrlSourceAnalysisV1(input: {
     visibleBodyText,
   })
 
-  const revenuePathClarity = deriveRevenuePathClarity({
-    hasPricingPath,
-    hasSignupPath,
-    hasCheckoutSignal,
-    hasPrimaryCta,
-    surfaceClassification,
-  })
-
   const businessType = classifyBusinessType({
     surfaceClassification,
     hasCheckoutSignal,
@@ -631,6 +753,27 @@ export async function runUrlSourceAnalysisV1(input: {
     hasPricingPath,
     hasContactOrBookingPath,
     hasSubscriptionLanguage,
+    hasAgencyLanguage,
+    hasServiceLanguage,
+    hasAppDashboardLanguage,
+    primaryCtaLabel,
+  })
+
+  const revenueModel = deriveRevenueModel({
+    businessType,
+    hasCheckoutSignal,
+    hasSignupPath,
+    hasContactOrBookingPath,
+  })
+
+  const revenuePathClarity = deriveRevenuePathClarity({
+    hasPricingPath,
+    hasSignupPath,
+    hasCheckoutSignal,
+    hasContactOrBookingPath,
+    hasPrimaryCta,
+    surfaceClassification,
+    businessType,
   })
 
   const noClearRevenuePath = revenuePathClarity === "none"
@@ -644,6 +787,10 @@ export async function runUrlSourceAnalysisV1(input: {
     hasPrimaryCta,
     primaryCtaLabel,
     hasCheckoutSignal,
+    businessType,
+    revenueModel,
+    hasContactOrBookingPath,
+    hasSubscriptionLanguage,
     finalUrl,
     httpStatus,
   })
@@ -668,6 +815,7 @@ export async function runUrlSourceAnalysisV1(input: {
       primaryCtaLabel,
       hasCheckoutSignal,
       businessType,
+      revenueModel,
       hasMobileViewport,
       hasContactOrBookingPath,
       hasSubscriptionLanguage,

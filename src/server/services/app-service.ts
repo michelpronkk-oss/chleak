@@ -138,6 +138,7 @@ interface UrlSourceAnalysisLastRunView {
   finalUrl: string | null
   completedAt: string | null
   businessType: string | null
+  revenueModel: string | null
   surfaceClassification: string | null
   revenuePathClarity: string | null
   noClearRevenuePath: boolean | null
@@ -147,6 +148,23 @@ interface UrlSourceAnalysisLastRunView {
   hasPrimaryCta: boolean | null
   primaryCtaLabel: string | null
   hasCheckoutSignal: boolean | null
+  hasContactOrBookingPath: boolean | null
+  hasSubscriptionLanguage: boolean | null
+  responseTimeMs: number | null
+  browserFinalUrl: string | null
+  browserPageTitle: string | null
+  browserLoadTimeMs: number | null
+  mobileHasAboveFoldCta: boolean | null
+  mobileAboveFoldCtaLabels: string[]
+  mobileViewportOverflow: boolean | null
+  mobileScreenshotRef: string | null
+  mobileScreenshotSha256: string | null
+  mobileScreenshotBytes: number | null
+  desktopHasAboveFoldCta: boolean | null
+  desktopAboveFoldCtaLabels: string[]
+  desktopScreenshotRef: string | null
+  desktopScreenshotSha256: string | null
+  desktopScreenshotBytes: number | null
   httpStatus: number | null
   evidenceRows: Array<{ label: string; value: string }>
   errorMessage: string | null
@@ -159,6 +177,8 @@ interface UrlSourceTopIssueView {
   summary: string
   severity: string
   estimatedMonthlyRevenueImpact: number
+  recommendedAction: string
+  whyItMatters: string
   href: string | null
 }
 
@@ -810,6 +830,12 @@ function readUrlSourceAnalysisLastRunView(input: {
   if (!runRecord && !summary) {
     return null
   }
+  const browserRecord =
+    metadata.url_source_browser_inspection_last_run &&
+    typeof metadata.url_source_browser_inspection_last_run === "object" &&
+    !Array.isArray(metadata.url_source_browser_inspection_last_run)
+      ? (metadata.url_source_browser_inspection_last_run as Record<string, unknown>)
+      : null
 
   return {
     detectorVersion:
@@ -825,6 +851,9 @@ function readUrlSourceAnalysisLastRunView(input: {
     businessType:
       readStringFromRecord(summary, "businessType") ??
       readStringFromRecord(metadata, "url_source_business_type"),
+    revenueModel:
+      readStringFromRecord(summary, "revenueModel") ??
+      readStringFromRecord(metadata, "url_source_revenue_model"),
     surfaceClassification:
       readStringFromRecord(summary, "surfaceClassification") ??
       readStringFromRecord(metadata, "url_source_surface_classification"),
@@ -840,6 +869,23 @@ function readUrlSourceAnalysisLastRunView(input: {
     hasPrimaryCta: readBooleanFromRecord(summary, "hasPrimaryCta"),
     primaryCtaLabel: readStringFromRecord(summary, "primaryCtaLabel"),
     hasCheckoutSignal: readBooleanFromRecord(summary, "hasCheckoutSignal"),
+    hasContactOrBookingPath: readBooleanFromRecord(summary, "hasContactOrBookingPath"),
+    hasSubscriptionLanguage: readBooleanFromRecord(summary, "hasSubscriptionLanguage"),
+    responseTimeMs: readNumberFromRecord(summary, "responseTimeMs"),
+    browserFinalUrl: readStringFromRecord(browserRecord, "final_url"),
+    browserPageTitle: readStringFromRecord(browserRecord, "page_title"),
+    browserLoadTimeMs: readNumberFromRecord(browserRecord, "load_time_ms"),
+    mobileHasAboveFoldCta: readBooleanFromRecord(browserRecord, "mobile_has_atf_cta"),
+    mobileAboveFoldCtaLabels: readStringArrayFromRecord(browserRecord, "mobile_atf_cta_labels"),
+    mobileViewportOverflow: readBooleanFromRecord(browserRecord, "mobile_viewport_overflow"),
+    mobileScreenshotRef: readStringFromRecord(browserRecord, "mobile_screenshot_ref"),
+    mobileScreenshotSha256: readStringFromRecord(browserRecord, "mobile_screenshot_sha256"),
+    mobileScreenshotBytes: readNumberFromRecord(browserRecord, "mobile_screenshot_bytes"),
+    desktopHasAboveFoldCta: readBooleanFromRecord(browserRecord, "desktop_has_atf_cta"),
+    desktopAboveFoldCtaLabels: readStringArrayFromRecord(browserRecord, "desktop_atf_cta_labels"),
+    desktopScreenshotRef: readStringFromRecord(browserRecord, "desktop_screenshot_ref"),
+    desktopScreenshotSha256: readStringFromRecord(browserRecord, "desktop_screenshot_sha256"),
+    desktopScreenshotBytes: readNumberFromRecord(browserRecord, "desktop_screenshot_bytes"),
     httpStatus: readNumberFromRecord(summary, "httpStatus"),
     evidenceRows,
     errorMessage: readStringFromRecord(runRecord, "error_message"),
@@ -1873,7 +1919,7 @@ export async function getConnectJourneyData() {
   const urlSourceTopIssueResult = urlSourceStoreId
     ? await createSupabaseAdminClient()
         .from("issues")
-        .select("id, title, summary, severity, estimated_monthly_revenue_impact")
+        .select("id, title, summary, severity, estimated_monthly_revenue_impact, recommended_action, why_it_matters")
         .eq("organization_id", journey.organizationId)
         .eq("store_id", urlSourceStoreId)
         .neq("status", "resolved")
@@ -1891,6 +1937,8 @@ export async function getConnectJourneyData() {
           severity: urlSourceTopIssueResult.data.severity,
           estimatedMonthlyRevenueImpact:
             urlSourceTopIssueResult.data.estimated_monthly_revenue_impact,
+          recommendedAction: urlSourceTopIssueResult.data.recommended_action,
+          whyItMatters: urlSourceTopIssueResult.data.why_it_matters,
           href: getFixPlanHrefForIssue(urlSourceTopIssueResult.data.id),
         }
       : null

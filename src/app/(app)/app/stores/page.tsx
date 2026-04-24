@@ -18,10 +18,12 @@ export const metadata: Metadata = {
 }
 
 import { SubmitButton } from "@/components/ui/submit-button"
+import { EvidenceScreenshots } from "@/components/evidence/evidence-screenshots"
 import { ScanStatePill, SeverityPill } from "@/components/dashboard/vault-primitives"
 import { normalizeLiveSourceUrl } from "@/lib/live-source"
 import { cn } from "@/lib/utils"
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
+import { getDirectionalOpportunityEstimate } from "@/lib/opportunity-estimate"
 import { getConnectJourneyData, getStoresIndexData } from "@/server/services/app-service"
 import type { IssueSeverity } from "@/types/domain"
 import {
@@ -92,9 +94,10 @@ const errorStatuses = new Set([
 
 const progressSteps = ["Plan active", "Set source", "Analyze", "Enrich"]
 
-type SystemRelevance = "recommended" | "useful" | "optional"
+type SystemRelevance = "recommended" | "useful" | "optional" | "not_needed"
 
 function getBusinessTypeLabel(value: string | null | undefined) {
+  if (value === "agency") return "Agency"
   if (value === "saas") return "SaaS"
   if (value === "service_business") return "Service business"
   if (value === "ecommerce") return "Ecommerce"
@@ -102,9 +105,18 @@ function getBusinessTypeLabel(value: string | null | undefined) {
   return "Source type pending"
 }
 
+function getRevenueModelLabel(value: string | null | undefined) {
+  if (value === "lead_generation") return "Lead generation"
+  if (value === "self_serve_signup") return "Self-serve signup"
+  if (value === "checkout") return "Checkout"
+  if (value === "hybrid") return "Hybrid revenue path"
+  return "Revenue model pending"
+}
+
 function getSystemRelevanceLabel(relevance: SystemRelevance) {
   if (relevance === "recommended") return "Recommended"
-  if (relevance === "useful") return "Useful"
+  if (relevance === "useful") return "Relevant"
+  if (relevance === "not_needed") return "Not needed yet"
   return "Optional"
 }
 
@@ -114,6 +126,9 @@ function getSystemRelevanceClass(relevance: SystemRelevance) {
   }
   if (relevance === "useful") {
     return "border-emerald-400/30 bg-emerald-400/[0.08] text-emerald-300"
+  }
+  if (relevance === "not_needed") {
+    return "border-border/50 bg-background/20 text-muted-foreground/60"
   }
   return "border-border/60 bg-background/30 text-muted-foreground"
 }
@@ -139,8 +154,8 @@ function getSurfaceSummary(input: {
   if (input.businessType === "ecommerce") {
     return `${typeLabel} surface detected. ${revenueLabel}.`
   }
-  if (input.businessType === "service_business") {
-    return `${typeLabel} surface detected. ${revenueLabel}.`
+  if (input.businessType === "agency" || input.businessType === "service_business") {
+    return `${typeLabel} surface detected. Lead capture path ${input.revenuePathClarity === "clear" ? "is visible" : "needs attention"}.`
   }
   if (input.businessType === "mixed") {
     return `Mixed revenue surface detected. ${revenueLabel}.`
@@ -159,12 +174,15 @@ function formatSignal(value: boolean | null | undefined) {
 
 function getBusinessSignalRows(input: {
   businessType: string | null
+  revenueModel: string | null | undefined
   hasPricingPath: boolean | null | undefined
   hasSignupPath: boolean | null | undefined
   hasLoginPath: boolean | null | undefined
   hasPrimaryCta: boolean | null | undefined
   primaryCtaLabel: string | null | undefined
   hasCheckoutSignal: boolean | null | undefined
+  hasContactOrBookingPath: boolean | null | undefined
+  hasSubscriptionLanguage: boolean | null | undefined
 }) {
   const primaryAction = input.primaryCtaLabel ?? formatSignal(input.hasPrimaryCta)
 
@@ -177,11 +195,11 @@ function getBusinessSignalRows(input: {
     ]
   }
 
-  if (input.businessType === "service_business") {
+  if (input.businessType === "agency" || input.businessType === "service_business") {
     return [
-      { label: "Contact path", value: primaryAction },
-      { label: "Booking or demo path", value: formatSignal(input.hasSignupPath || input.hasPrimaryCta) },
-      { label: "Trust path", value: formatSignal(input.hasPrimaryCta) },
+      { label: "Contact path", value: formatSignal(input.hasContactOrBookingPath) },
+      { label: "Booking or quote path", value: formatSignal(input.hasContactOrBookingPath) },
+      { label: "Revenue path", value: getRevenueModelLabel(input.revenueModel) },
       { label: "Primary action", value: primaryAction },
     ]
   }
@@ -189,7 +207,7 @@ function getBusinessSignalRows(input: {
   return [
     { label: "Pricing path", value: formatSignal(input.hasPricingPath) },
     { label: "Signup path", value: formatSignal(input.hasSignupPath) },
-    { label: "Login or app path", value: formatSignal(input.hasLoginPath) },
+    { label: "Login or app path", value: formatSignal(input.hasLoginPath || input.hasSubscriptionLanguage) },
     { label: "Primary action", value: primaryAction },
   ]
 }
@@ -374,12 +392,15 @@ export default async function SourcesPage({
   const businessSignalRows = urlSourceAnalysis
     ? getBusinessSignalRows({
         businessType,
+        revenueModel: urlSourceAnalysis.revenueModel,
         hasPricingPath: urlSourceAnalysis.hasPricingPath,
         hasSignupPath: urlSourceAnalysis.hasSignupPath,
         hasLoginPath: urlSourceAnalysis.hasLoginPath,
         hasPrimaryCta: urlSourceAnalysis.hasPrimaryCta,
         primaryCtaLabel: urlSourceAnalysis.primaryCtaLabel,
         hasCheckoutSignal: urlSourceAnalysis.hasCheckoutSignal,
+        hasContactOrBookingPath: urlSourceAnalysis.hasContactOrBookingPath,
+        hasSubscriptionLanguage: urlSourceAnalysis.hasSubscriptionLanguage,
       })
     : []
   const hasEcommerceSignal =
@@ -391,17 +412,63 @@ export default async function SourcesPage({
   const hasSaasSignal =
     businessType === "saas" ||
     businessType === "mixed" ||
+    urlSourceAnalysis?.hasSignupPath === true ||
+    urlSourceAnalysis?.hasLoginPath === true ||
+    urlSourceAnalysis?.hasSubscriptionLanguage === true
+  const hasBillingSignal =
+    hasSaasSignal ||
     urlSourceAnalysis?.hasPricingPath === true ||
-    urlSourceAnalysis?.hasSignupPath === true
-  const isServiceBusiness = businessType === "service_business"
+    urlSourceAnalysis?.revenueModel === "checkout"
+  const isLeadBusiness = businessType === "agency" || businessType === "service_business"
   const shopifyRelevance: SystemRelevance =
-    hasEcommerceSignal ? "recommended" : isServiceBusiness || hasSaasSignal ? "optional" : "useful"
+    hasEcommerceSignal ? "recommended" : isLeadBusiness || hasSaasSignal ? "not_needed" : "optional"
   const stripeRelevance: SystemRelevance =
-    hasSaasSignal ? "recommended" : hasEcommerceSignal ? "useful" : "optional"
+    hasSaasSignal ? "recommended" : hasEcommerceSignal || hasBillingSignal ? "useful" : isLeadBusiness ? "optional" : "optional"
+  const urlSourceScreenshots = urlSourceAnalysis
+    ? [
+        {
+          label: "Mobile evidence",
+          src: urlSourceAnalysis.mobileScreenshotRef,
+          viewport: "375px mobile",
+          capturedUrl: urlSourceAnalysis.browserFinalUrl ?? urlSourceAnalysis.finalUrl,
+          capturedAt: urlSourceAnalysis.completedAt,
+          sha256: urlSourceAnalysis.mobileScreenshotSha256,
+          bytes: urlSourceAnalysis.mobileScreenshotBytes,
+        },
+        {
+          label: "Desktop evidence",
+          src: urlSourceAnalysis.desktopScreenshotRef,
+          viewport: "1280px desktop",
+          capturedUrl: urlSourceAnalysis.browserFinalUrl ?? urlSourceAnalysis.finalUrl,
+          capturedAt: urlSourceAnalysis.completedAt,
+          sha256: urlSourceAnalysis.desktopScreenshotSha256,
+          bytes: urlSourceAnalysis.desktopScreenshotBytes,
+        },
+      ]
+    : []
+  const opportunitySignal = getDirectionalOpportunityEstimate({
+    businessType,
+    revenueModel: urlSourceAnalysis?.revenueModel,
+    revenuePathClarity: urlSourceAnalysis?.revenuePathClarity,
+    issueImpact: urlSourceTopIssue?.estimatedMonthlyRevenueImpact,
+    issueCount: latestUrlSourceScan?.detectedIssuesCount ?? (urlSourceTopIssue ? 1 : 0),
+    hasScreenshotEvidence: urlSourceScreenshots.some((shot) => Boolean(shot.src)),
+  })
   const showShopifyInlineSetup =
     connectData.shopifySourceState.status !== "not_connected" ||
     shopifyRelevance === "recommended" ||
     Boolean(inferredShopDomain)
+  const showStripeCard =
+    connectData.stripeSourceState.status !== "not_connected" ||
+    hasBillingSignal ||
+    !isLeadBusiness
+  const systemLaneCopy = isLeadBusiness
+    ? "CRM, booking, form, and lifecycle systems are the next useful evidence lanes for this source type. Commerce and billing systems stay optional unless the URL shows those signals."
+    : businessType === "saas"
+      ? "Billing, lifecycle, CRM, and product analytics systems can deepen signup and revenue evidence after the URL surface is monitored."
+      : businessType === "ecommerce"
+        ? "Commerce, payments, lifecycle, and support systems can deepen checkout and buyer evidence after the URL surface is monitored."
+        : "Booking, CRM, lifecycle, ecommerce, and payment systems can fit here later. The primary URL remains the source of truth."
   const currentProgressStep =
     isReady || Boolean(urlSourceAnalysis)
       ? 4
@@ -618,6 +685,14 @@ export default async function SourcesPage({
               </dd>
             </div>
             <div className="rounded-lg border border-border/60 bg-background/30 p-3">
+              <dt className="data-mono text-muted-foreground">Revenue path</dt>
+              <dd className="mt-1 text-foreground">
+                {urlSourceAnalysis
+                  ? getRevenueModelLabel(urlSourceAnalysis.revenueModel)
+                  : "Analyze source"}
+              </dd>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-background/30 p-3">
               <dt className="data-mono text-muted-foreground">Latest analysis</dt>
               <dd className="mt-1 text-foreground">
                 {latestUrlSourceScanIsActive
@@ -625,6 +700,16 @@ export default async function SourcesPage({
                   : latestAnalysisAt
                     ? formatRelativeTimestamp(latestAnalysisAt)
                     : "Not run yet"}
+              </dd>
+            </div>
+            <div className="rounded-lg border border-[color:var(--signal-line)] bg-[color:var(--signal-dim)] p-3">
+              <dt className="data-mono text-[color:var(--signal)]">{opportunitySignal.label}</dt>
+              <dd className="mt-1 text-foreground">{opportunitySignal.detail}</dd>
+              <dd className="mt-1 text-xs text-muted-foreground">
+                Directional, confidence {opportunitySignal.confidence}
+              </dd>
+              <dd className="mt-1 text-xs text-muted-foreground">
+                {opportunitySignal.reason}
               </dd>
             </div>
           </dl>
@@ -655,6 +740,12 @@ export default async function SourcesPage({
             </div>
           ) : null}
 
+          {urlSourceAnalysis ? (
+            <div className="mt-4">
+              <EvidenceScreenshots screenshots={urlSourceScreenshots} />
+            </div>
+          ) : null}
+
           {urlSourceTopIssue ? (
             <div className="mt-4 rounded-lg border border-[color:var(--signal-line)] bg-[color:var(--signal-dim)] p-3">
               <div className="flex flex-wrap items-start justify-between gap-2">
@@ -669,9 +760,12 @@ export default async function SourcesPage({
               <p className="mt-2 text-xs leading-5 text-muted-foreground">
                 {urlSourceTopIssue.summary}
               </p>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                {urlSourceTopIssue.whyItMatters}
+              </p>
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <span className="font-mono text-xs text-[color:var(--signal)]">
-                  {formatCompactCurrency(urlSourceTopIssue.estimatedMonthlyRevenueImpact)} / month
+                  {opportunitySignal.label}: {opportunitySignal.detail}
                 </span>
                 <Link
                   href={urlSourceTopIssue.href ?? `/app/stores/${urlSourceStoreId}`}
@@ -680,6 +774,9 @@ export default async function SourcesPage({
                   Open action path <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>
+              <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                Next action: {urlSourceTopIssue.recommendedAction}
+              </p>
             </div>
           ) : null}
 
@@ -721,7 +818,7 @@ export default async function SourcesPage({
         </article>
       </section>
 
-      <section className="surface-card p-4 sm:p-5 lg:p-6">
+      <section className="surface-card p-5 sm:p-6 lg:p-7">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="data-mono text-muted-foreground">Optional signal systems</p>
@@ -733,12 +830,12 @@ export default async function SourcesPage({
             {urlSourceAnalysis ? sourceTypeLabel : "Analyze source first"}
           </span>
         </div>
-        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
           Systems add operational evidence to the primary source. Relevance updates after surface analysis, and unsupported systems can stay unconnected.
         </p>
 
-        <div className="mt-4 grid gap-3 lg:grid-cols-2">
-          <article className="rounded-xl border border-border/70 bg-background/35 p-4 sm:p-5">
+        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          <article className="rounded-xl border border-border/70 bg-background/35 p-5 sm:p-6">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="font-mono text-[0.68rem] tracking-[0.1em] uppercase text-muted-foreground/60">
@@ -761,15 +858,17 @@ export default async function SourcesPage({
                 <SourceStatusBadge status={connectData.shopifySourceState.status} />
               </div>
             </div>
-              <p className="mt-2.5 text-sm leading-[1.72] text-muted-foreground">
-              Adds checkout and catalog evidence when the primary source is a webshop or routes buyers into Shopify.
+            <p className="mt-4 max-w-[34rem] text-sm leading-6 text-muted-foreground">
+              Adds checkout, product, and catalog evidence when the primary source is a webshop or routes buyers into Shopify.
             </p>
-            <p className="mt-2 text-xs text-muted-foreground">
+            <p className="mt-3 max-w-[34rem] text-xs leading-5 text-muted-foreground">
               {hasEcommerceSignal
-                ? "Ecommerce or checkout signals were detected on the primary source."
-                : "No strong ecommerce signal yet. Keep this optional unless Shopify is part of the revenue path."}
+                ? "Commerce signals were detected, so Shopify evidence can improve checkout confidence."
+                : isLeadBusiness
+                  ? "This source looks lead-driven. Shopify is not needed unless the business also sells through a shop."
+                  : "No strong commerce signal yet. Keep this optional unless Shopify is part of the revenue path."}
             </p>
-            <div className="my-4 h-px bg-border/40" />
+            <div className="my-5 h-px bg-border/40" />
             {showShopifyInlineSetup ? (
               <form method="GET" action="/api/integrations/shopify/install" className="space-y-3">
                 <input type="hidden" name="orgId" value={connectData.organization.id} />
@@ -806,7 +905,7 @@ export default async function SourcesPage({
                 />
               </form>
             ) : (
-              <details className="rounded-lg border border-border/60 bg-background/30 p-3">
+              <details className="rounded-lg border border-border/60 bg-background/30 p-4">
                 <summary className="cursor-pointer text-sm text-muted-foreground">
                   Connect Shopify only if this source uses a Shopify shop
                 </summary>
@@ -847,7 +946,8 @@ export default async function SourcesPage({
             ) : null}
           </article>
 
-          <article className="rounded-xl border border-border/70 bg-background/35 p-4 sm:p-5">
+          {showStripeCard ? (
+          <article className="rounded-xl border border-border/70 bg-background/35 p-5 sm:p-6">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="font-mono text-[0.68rem] tracking-[0.1em] uppercase text-muted-foreground/60">
@@ -870,17 +970,19 @@ export default async function SourcesPage({
                 <SourceStatusBadge status={connectData.stripeSourceState.status} />
               </div>
             </div>
-            <p className="mt-2.5 text-sm leading-[1.72] text-muted-foreground">
-              Adds billing recovery and payment failure evidence when the source sells plans, subscriptions, services, or checkout flows.
+            <p className="mt-4 max-w-[34rem] text-sm leading-6 text-muted-foreground">
+              Adds billing recovery and payment failure evidence when the source sells plans, subscriptions, paid services, or checkout flows.
             </p>
-            <p className="mt-2 text-xs text-muted-foreground">
+            <p className="mt-3 max-w-[34rem] text-xs leading-5 text-muted-foreground">
               {hasSaasSignal
                 ? "Pricing or signup signals make billing depth a strong next enrichment."
                 : hasEcommerceSignal
                   ? "Useful when payment and recovery signals live in Stripe."
-                  : "Optional until the revenue path shows billing or payment recovery risk."}
+                  : isLeadBusiness
+                    ? "Optional for lead-driven businesses unless payment collection or retainers run through Stripe."
+                    : "Optional until the revenue path shows billing or payment recovery risk."}
             </p>
-            <div className="my-4 h-px bg-border/40" />
+            <div className="my-5 h-px bg-border/40" />
             {isPendingStripe ? (
               <div className="inline-flex items-center gap-2 rounded-lg border border-border/60 bg-card/50 px-4 py-3 text-sm text-foreground">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-foreground/50" />
@@ -907,14 +1009,15 @@ export default async function SourcesPage({
               </p>
             ) : null}
           </article>
+          ) : null}
         </div>
 
-        <div className="mt-4 rounded-xl border border-dashed border-border/60 bg-background/20 p-4">
+        <div className="mt-5 rounded-xl border border-dashed border-border/60 bg-background/20 p-5">
           <p className="font-mono text-[0.68rem] uppercase tracking-[0.08em] text-muted-foreground/60">
             Future system lanes
           </p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Booking, CRM, lifecycle, ecommerce, and payment systems can fit here later. The primary URL remains the source of truth.
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+            {systemLaneCopy}
           </p>
         </div>
       </section>
@@ -992,6 +1095,9 @@ export default async function SourcesPage({
                         : "Not run yet"}
                   </p>
                   <p className="font-semibold text-primary">
+                    {opportunitySignal.detail}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
                     {connectedSystemsCount > 0
                       ? `${connectedSystemsCount} evidence enrichment${connectedSystemsCount !== 1 ? "s" : ""}`
                       : urlSourceAnalysis

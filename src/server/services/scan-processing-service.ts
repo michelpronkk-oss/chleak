@@ -18,7 +18,6 @@ import {
   type UrlSourceAnalysisResultV1,
 } from "@/server/services/url-source-analysis-runner"
 import {
-  URL_SOURCE_BROWSER_INSPECTOR_DETECTOR_VERSION,
   runUrlSourceBrowserInspectionV1,
   type UrlSourceBrowserInspectionResultV1,
 } from "@/server/services/url-source-browser-inspector"
@@ -201,6 +200,35 @@ function estimateActivationImpact(input: { customers: number; orders30d: number 
   const rawImpact = missingOrders * 42
   const bounded = clamp(rawImpact, 1500, 18000)
   return Math.round(bounded / 100) * 100
+}
+
+function estimateUrlSourceOpportunityImpact(input: {
+  businessType: string | null
+  severity: FindingDraft["severity"]
+  responseTimeMs?: number | null
+}) {
+  const severityBase =
+    input.severity === "critical"
+      ? 1.4
+      : input.severity === "high"
+        ? 1.15
+        : input.severity === "medium"
+          ? 0.8
+          : 0.45
+  const speedMultiplier =
+    input.responseTimeMs !== null && input.responseTimeMs !== undefined && input.responseTimeMs > 3500
+      ? 1.15
+      : 1
+  const base =
+    input.businessType === "ecommerce"
+      ? 2600
+      : input.businessType === "saas"
+        ? 2200
+        : input.businessType === "agency" || input.businessType === "service_business"
+          ? 3200
+          : 1200
+
+  return Math.round((base * severityBase * speedMultiplier) / 100) * 100
 }
 
 function toRoundedRate(value: number) {
@@ -1052,6 +1080,7 @@ function buildUrlSourcePathFindings(input: {
     detector_version: input.run.detectorVersion,
     browser_inspector_version: bi?.detectorVersion ?? null,
     business_type: s.businessType,
+    revenue_model: s.revenueModel,
     surface_classification: s.surfaceClassification,
     revenue_path_clarity: s.revenuePathClarity,
     has_pricing_path: s.hasPricingPath,
@@ -1068,6 +1097,7 @@ function buildUrlSourcePathFindings(input: {
     http_status: s.httpStatus,
     // Browser inspection signals
     browser_load_time_ms: bi?.loadTimeMs ?? null,
+    browser_final_url: bi?.finalUrl ?? null,
     browser_page_title: bi?.pageTitle ?? null,
     browser_has_h1: bi?.hasH1 ?? null,
     browser_h1_text: bi?.h1Text ?? null,
@@ -1076,7 +1106,11 @@ function buildUrlSourcePathFindings(input: {
     browser_mobile_atf_cta_labels: bi?.mobileAboveFoldCtaLabels?.join(", ") ?? null,
     browser_mobile_overflow: bi?.mobileViewportOverflow ?? null,
     browser_mobile_screenshot_ref: bi?.mobileScreenshotRef ?? null,
+    browser_mobile_screenshot_sha256: bi?.mobileScreenshotSha256 ?? null,
+    browser_mobile_screenshot_bytes: bi?.mobileScreenshotBytes ?? null,
     browser_desktop_screenshot_ref: bi?.desktopScreenshotRef ?? null,
+    browser_desktop_screenshot_sha256: bi?.desktopScreenshotSha256 ?? null,
+    browser_desktop_screenshot_bytes: bi?.desktopScreenshotBytes ?? null,
   }
 
   // -------------------------------------------------------------------------
@@ -1097,7 +1131,10 @@ function buildUrlSourcePathFindings(input: {
           "For a SaaS product, the signup path is the first commercial conversion step. A missing or invisible signup path means acquisition spend does not convert.",
         recommendedAction:
           "Confirm the primary URL reflects the commercial entry surface. Verify a visible signup or account creation CTA is present above the fold on the main page.",
-        estimatedMonthlyRevenueImpact: 0,
+        estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
+          businessType: s.businessType,
+          severity: "high",
+        }),
         evidence: { ...baseEvidence, path_evaluated: "activation_signup" },
       })
     }
@@ -1115,7 +1152,10 @@ function buildUrlSourcePathFindings(input: {
           "Pricing page visitors are high-intent. A broken or absent handoff from pricing to the next conversion step is a direct revenue leak.",
         recommendedAction:
           "Confirm each pricing tier has a clear CTA linking directly to signup, checkout, or a sales demo flow. The conversion path should be unambiguous from the pricing page.",
-        estimatedMonthlyRevenueImpact: 0,
+        estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
+          businessType: s.businessType,
+          severity: "medium",
+        }),
         evidence: { ...baseEvidence, path_evaluated: "pricing_handoff" },
       })
     }
@@ -1133,7 +1173,10 @@ function buildUrlSourcePathFindings(input: {
           "Without a visible signup path, new visitor conversion is blocked at the first step. The product may be growing only through channels that bypass the primary surface.",
         recommendedAction:
           "Ensure the primary surface includes a visible signup or trial start CTA alongside the login path. Both returning and new visitors should have a clear next step.",
-        estimatedMonthlyRevenueImpact: 0,
+        estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
+          businessType: s.businessType,
+          severity: "medium",
+        }),
         evidence: { ...baseEvidence, path_evaluated: "activation_signup" },
       })
     }
@@ -1142,23 +1185,47 @@ function buildUrlSourcePathFindings(input: {
   // -------------------------------------------------------------------------
   // Service business lane
   // -------------------------------------------------------------------------
-  if (s.businessType === "service_business" || s.businessType === "mixed") {
+  if (s.businessType === "agency" || s.businessType === "service_business" || s.businessType === "mixed") {
 
     // No contact or booking path — the primary revenue conversion is unavailable.
     if (!s.hasContactOrBookingPath) {
+      const businessLabel = s.businessType === "agency" ? "agency" : "service business"
       findings.push({
-        key: "url_source_service_no_contact_path_v1",
+        key: "url_source_service_no_inquiry_path_v1",
         type: "setup_gap",
         severity: "high",
-        title: "No contact, booking, or inquiry path detected",
+        title: "No clear inquiry or booking path detected",
         summary:
-          "Surface analysis found no contact form, booking link, demo request, or quote inquiry path on the primary URL. For a service business, this is the primary conversion mechanism.",
+          `Surface analysis found no contact form, booking link, quote request, or inquiry path on the primary URL. For a ${businessLabel}, this is the primary conversion mechanism.`,
         whyItMatters:
-          "For service businesses, the contact or booking path is the equivalent of a checkout. A missing or unclear path means prospective clients cannot engage, and inbound intent is wasted.",
+          "Lead capture is the revenue handoff for service businesses and agencies. A missing or unclear inquiry path wastes high-intent visitors before a sales conversation can start.",
         recommendedAction:
-          "Confirm the primary URL has a clearly visible contact, booking, or inquiry CTA. For service businesses this should be present in the main navigation and above the fold.",
-        estimatedMonthlyRevenueImpact: 0,
+          "Add a clearly visible contact, booking, or quote CTA in the main navigation and above the fold. Route it to a short inquiry flow or scheduling surface.",
+        estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
+          businessType: s.businessType,
+          severity: "high",
+        }),
         evidence: { ...baseEvidence, path_evaluated: "contact_booking" },
+      })
+    }
+
+    if (s.hasContactOrBookingPath && !s.hasPrimaryCta) {
+      findings.push({
+        key: "url_source_service_weak_lead_capture_v1",
+        type: "setup_gap",
+        severity: "medium",
+        title: "Service conversion path is incomplete",
+        summary:
+          "A contact or booking route exists, but the primary surface does not expose a clear lead action. Visitors may need to search before they can start an inquiry.",
+        whyItMatters:
+          "Service revenue depends on reducing friction between visitor intent and the first conversation. Hidden or weak lead actions lower qualified inquiry volume.",
+        recommendedAction:
+          "Promote the main lead action with concise language such as Start a project, Book a call, or Request a quote, and keep it visible in the hero and navigation.",
+        estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
+          businessType: s.businessType,
+          severity: "medium",
+        }),
+        evidence: { ...baseEvidence, path_evaluated: "lead_capture" },
       })
     }
   }
@@ -1181,7 +1248,10 @@ function buildUrlSourcePathFindings(input: {
           "A missing or invisible checkout path means customers who arrive at the primary surface cannot easily find a way to purchase. This is a direct transaction barrier.",
         recommendedAction:
           "Confirm the primary URL provides a clear path to the product catalog and cart or checkout. Cart access and purchase CTAs should be visible without requiring navigation to a secondary page.",
-        estimatedMonthlyRevenueImpact: 0,
+        estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
+          businessType: s.businessType,
+          severity: "high",
+        }),
         evidence: { ...baseEvidence, path_evaluated: "checkout" },
       })
     }
@@ -1202,7 +1272,10 @@ function buildUrlSourcePathFindings(input: {
         "Without a detectable revenue path, CheckoutLeak cannot evaluate activation, conversion, or recovery gaps for this source. The primary URL may not be the right entry surface.",
       recommendedAction:
         "Verify that the primary URL reflects the live commercial entry point for this business. The URL should be the page where prospective customers or users first encounter the offer.",
-      estimatedMonthlyRevenueImpact: 0,
+      estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
+        businessType: s.businessType,
+        severity: "medium",
+      }),
       evidence: { ...baseEvidence, path_evaluated: "surface_fallback" },
     })
   }
@@ -1224,7 +1297,10 @@ function buildUrlSourcePathFindings(input: {
         "Mobile sessions represent the majority of web traffic for most businesses. A broken mobile layout directly reduces conversion rates from mobile acquisition.",
       recommendedAction:
         "Confirm the primary URL returns a valid viewport meta tag. This is usually configured in the site's base HTML template or CMS settings.",
-      estimatedMonthlyRevenueImpact: 0,
+      estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
+        businessType: s.businessType,
+        severity: "low",
+      }),
       evidence: { ...baseEvidence, path_evaluated: "mobile_quality" },
     })
   }
@@ -1236,36 +1312,52 @@ function buildUrlSourcePathFindings(input: {
   if (bi) {
     // Mobile layout overflow — content exceeds viewport width on mobile.
     if (bi.mobileViewportOverflow) {
+      const isLeadBusiness = s.businessType === "agency" || s.businessType === "service_business"
       findings.push({
         key: "url_source_mobile_layout_overflow_v1",
         type: "setup_gap",
         severity: "medium",
-        title: "Mobile layout overflows the viewport on primary surface",
+        title: isLeadBusiness
+          ? "Mobile layout quality issue affects lead capture"
+          : "Mobile layout overflows the viewport on primary surface",
         summary:
-          "Browser inspection detected that page content exceeds the visible viewport width on a 375px mobile screen. This creates horizontal scrolling and clips elements, degrading the mobile experience.",
+          "Browser inspection detected that page content exceeds the visible viewport width on a 375px mobile screen. This creates horizontal scrolling and can clip primary conversion elements.",
         whyItMatters:
-          "Horizontal overflow on mobile forces users to scroll sideways or hides key conversion elements. This directly reduces mobile conversion quality regardless of traffic volume.",
+          isLeadBusiness
+            ? "Mobile visitors may miss the inquiry or booking action when layout overflow hides or crowds key elements, reducing qualified lead capture."
+            : "Horizontal overflow on mobile forces users to scroll sideways or hides key conversion elements. This directly reduces mobile conversion quality regardless of traffic volume.",
         recommendedAction:
           "Inspect the primary URL on a 375px mobile viewport and fix any elements, images, or containers that exceed the viewport width. Common causes are fixed-width containers, unresponsive images, and overflow-hidden bugs.",
-        estimatedMonthlyRevenueImpact: 0,
+        estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
+          businessType: s.businessType,
+          severity: "medium",
+        }),
         evidence: { ...baseEvidence, path_evaluated: "mobile_layout" },
       })
     }
 
     // No above-the-fold CTA on mobile — users must scroll to find a next step.
     if (!bi.mobileHasAboveFoldCta && s.revenuePathClarity !== "none") {
+      const isLeadBusiness = s.businessType === "agency" || s.businessType === "service_business"
       findings.push({
         key: "url_source_no_atf_cta_mobile_v1",
         type: "setup_gap",
         severity: "medium",
-        title: "No conversion CTA visible above the fold on mobile",
+        title: isLeadBusiness
+          ? "No above-the-fold lead action on mobile"
+          : "No conversion CTA visible above the fold on mobile",
         summary:
           "Browser inspection found no interactive call-to-action element visible within the mobile viewport on first load. Users arriving on mobile must scroll before encountering a primary action.",
         whyItMatters:
-          "Most conversion happens from above-the-fold CTAs. Users who do not see an action within the first screenful have a significantly higher abandonment rate, especially on mobile where attention windows are shorter.",
+          isLeadBusiness
+            ? "For service businesses and agencies, a visible lead action is the bridge from interest to inquiry. If mobile visitors do not see it immediately, demand can stall before contact."
+            : "Most conversion happens from above-the-fold CTAs. Users who do not see an action within the first screenful have a significantly higher abandonment rate, especially on mobile where attention windows are shorter.",
         recommendedAction:
-          "Ensure the primary conversion action (signup, contact, buy, demo request) is visible without scrolling on a 375px mobile screen. Review the page hierarchy and ensure the CTA is not pushed below the fold by large headers or hero images.",
-        estimatedMonthlyRevenueImpact: 0,
+          "Ensure the primary conversion action is visible without scrolling on a 375px mobile screen. Review the page hierarchy and keep the lead, signup, or purchase action above the fold.",
+        estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
+          businessType: s.businessType,
+          severity: "medium",
+        }),
         evidence: { ...baseEvidence, path_evaluated: "mobile_atf" },
       })
     }
@@ -1273,17 +1365,26 @@ function buildUrlSourcePathFindings(input: {
     // Slow page load — DOM content loaded time exceeds threshold.
     const SLOW_LOAD_THRESHOLD_MS = 3_500
     if (bi.loadTimeMs !== null && bi.loadTimeMs > SLOW_LOAD_THRESHOLD_MS) {
+      const isLeadBusiness = s.businessType === "agency" || s.businessType === "service_business"
       findings.push({
         key: "url_source_slow_page_load_v1",
         type: "setup_gap",
         severity: "low",
-        title: "Primary surface DOM load time is above threshold",
+        title: isLeadBusiness
+          ? "Slow page load on primary lead surface"
+          : "Primary surface DOM load time is above threshold",
         summary: `Browser inspection measured a DOM content loaded time of ${bi.loadTimeMs}ms. Pages that take more than ${SLOW_LOAD_THRESHOLD_MS}ms to become interactive show measurably higher bounce rates.`,
         whyItMatters:
-          "Page load speed directly affects conversion rates. High load times increase bounce rate, reduce ad quality scores, and create a poor first impression that compounds across all acquisition channels.",
+          isLeadBusiness
+            ? "Slow lead pages reduce inquiry completion before visitors reach the contact, quote, or booking action."
+            : "Page load speed directly affects conversion rates. High load times increase bounce rate, reduce ad quality scores, and create a poor first impression that compounds across all acquisition channels.",
         recommendedAction:
           "Profile the primary URL using browser DevTools or PageSpeed Insights. Common fixes are image optimization, reducing third-party script weight, enabling caching, and moving to a faster hosting configuration.",
-        estimatedMonthlyRevenueImpact: 0,
+        estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
+          businessType: s.businessType,
+          severity: "low",
+          responseTimeMs: bi.loadTimeMs,
+        }),
         evidence: { ...baseEvidence, path_evaluated: "load_performance", measured_load_ms: bi.loadTimeMs },
       })
     }
@@ -1811,6 +1912,8 @@ export async function processQueuedScanV1(input?: {
             urlSourceAnalysisRun?.summary.noClearRevenuePath ?? null,
           url_source_business_type:
             urlSourceAnalysisRun?.summary.businessType ?? null,
+          url_source_revenue_model:
+            urlSourceAnalysisRun?.summary.revenueModel ?? null,
           url_source_browser_inspection_last_run: urlSourceBrowserInspection
             ? {
                 detector_version: urlSourceBrowserInspection.detectorVersion,

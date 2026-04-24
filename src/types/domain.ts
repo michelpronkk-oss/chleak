@@ -191,6 +191,16 @@ export interface FixPlanEvidenceRow {
   value: string
 }
 
+export interface FixPlanEvidenceScreenshot {
+  label: string
+  src: string | null
+  viewport: string
+  capturedUrl: string | null
+  capturedAt: string | null
+  sha256?: string | null
+  bytes?: number | null
+}
+
 export interface FixPlanEvidence {
   detectionSummary: string
   whyTriggered: string
@@ -198,6 +208,7 @@ export interface FixPlanEvidence {
   scanTimestamp: string | null
   signalStrength: FixPlanSignalStrength | null
   rows: FixPlanEvidenceRow[]
+  screenshots?: FixPlanEvidenceScreenshot[]
   recommendedNextAction: string
   successSignal: string | null
 }

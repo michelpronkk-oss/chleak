@@ -7,6 +7,7 @@ import { FixPlanControls } from "@/components/fix-plans/fix-plan-controls"
 import { FixPlanEvidenceSection } from "@/components/fix-plans/fix-plan-evidence-section"
 import { Badge } from "@/components/ui/badge"
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
+import { getDirectionalOpportunityEstimate } from "@/lib/opportunity-estimate"
 import { formatIssueTypeLabel } from "@/lib/revenue-flow-taxonomy"
 import { getFixPlanById } from "@/server/services/fix-plan-service"
 import { getBillingData } from "@/server/services/app-service"
@@ -65,6 +66,15 @@ export default async function FixPlanPage({
   if (!fixPlan) {
     notFound()
   }
+  const evidenceModel = fixPlan.evidence?.rows.find((row) => row.label === "Detected model")?.value.replaceAll(" ", "_")
+  const evidenceRevenueModel = fixPlan.evidence?.rows.find((row) => row.label === "Revenue model")?.value.replaceAll(" ", "_")
+  const opportunitySignal = getDirectionalOpportunityEstimate({
+    businessType: evidenceModel,
+    revenueModel: evidenceRevenueModel,
+    issueImpact: fixPlan.estimatedMonthlyImpact,
+    issueCount: 1,
+    hasScreenshotEvidence: Boolean(fixPlan.evidence?.screenshots?.some((shot) => shot.src)),
+  })
 
   return (
     <div className="space-y-5 pb-24 lg:pb-4">
@@ -123,10 +133,12 @@ export default async function FixPlanPage({
           <div className="rounded-xl border border-border/70 bg-background/35 p-4 sm:p-5">
             <p className="data-mono text-muted-foreground">Estimated monthly impact</p>
             <p className="mt-2 text-3xl font-semibold tracking-tight text-primary">
-              {formatCompactCurrency(fixPlan.estimatedMonthlyImpact)}
+              {fixPlan.estimatedMonthlyImpact > 0
+                ? opportunitySignal.detail
+                : "More signal needed"}
             </p>
             <p className="mt-3 text-sm text-muted-foreground">
-              Confidence: {confidenceLabel[fixPlan.confidence]}
+              Confidence: {opportunitySignal.confidence}. {opportunitySignal.reason}
             </p>
             <Link
               href="/app"

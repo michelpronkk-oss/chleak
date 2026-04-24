@@ -8,7 +8,9 @@ export const metadata: Metadata = {
 }
 
 import { MetaPill, RankedQueueRow, ScanStatePill, SeverityPill, VaultPanel } from "@/components/dashboard/vault-primitives"
+import { EvidenceScreenshots } from "@/components/evidence/evidence-screenshots"
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
+import { getDirectionalOpportunityEstimate } from "@/lib/opportunity-estimate"
 import { SubmitButton } from "@/components/ui/submit-button"
 import { getStoreDetailData, getStoresIndexData } from "@/server/services/app-service"
 import { saveActivationFlowHints, triggerActivationTestRun, triggerUrlSourceAnalysisForStore } from "./actions"
@@ -44,6 +46,84 @@ function formatOperatorValue(value: string | null) {
     return "None"
   }
   return value.replaceAll("_", " ")
+}
+
+function getBusinessTypeLabel(value: string | null | undefined) {
+  if (value === "agency") return "Agency"
+  if (value === "saas") return "SaaS"
+  if (value === "service_business") return "Service business"
+  if (value === "ecommerce") return "Ecommerce"
+  if (value === "mixed") return "Mixed revenue model"
+  return "Source type pending"
+}
+
+function getRevenueModelLabel(value: string | null | undefined) {
+  if (value === "lead_generation") return "Lead generation"
+  if (value === "self_serve_signup") return "Self-serve signup"
+  if (value === "checkout") return "Checkout"
+  if (value === "hybrid") return "Hybrid revenue path"
+  return "Revenue model pending"
+}
+
+function formatRevenuePath(value: string | null | undefined) {
+  if (value === "clear") return "Revenue path visible"
+  if (value === "partial") return "Revenue path incomplete"
+  if (value === "none") return "No clear revenue path"
+  return "Revenue path pending"
+}
+
+function formatSignal(value: boolean | null | undefined) {
+  if (value === true) return "Detected"
+  if (value === false) return "Not detected"
+  return "Not evaluated"
+}
+
+function getSurfaceSummary(input: {
+  businessType: string | null | undefined
+  revenuePathClarity: string | null | undefined
+}) {
+  const model = getBusinessTypeLabel(input.businessType)
+  if (input.businessType === "agency" || input.businessType === "service_business") {
+    return `${model} surface detected. Lead capture path ${input.revenuePathClarity === "clear" ? "is visible" : "needs attention"}.`
+  }
+  return `${model} surface detected. ${formatRevenuePath(input.revenuePathClarity)}.`
+}
+
+function getBusinessSignalRows(input: {
+  businessType: string | null | undefined
+  revenueModel: string | null | undefined
+  hasPricingPath: boolean | null | undefined
+  hasSignupPath: boolean | null | undefined
+  hasLoginPath: boolean | null | undefined
+  hasPrimaryCta: boolean | null | undefined
+  primaryCtaLabel: string | null | undefined
+  hasCheckoutSignal: boolean | null | undefined
+  hasContactOrBookingPath: boolean | null | undefined
+  hasSubscriptionLanguage: boolean | null | undefined
+}) {
+  const primaryAction = input.primaryCtaLabel ?? formatSignal(input.hasPrimaryCta)
+  if (input.businessType === "agency" || input.businessType === "service_business") {
+    return [
+      { label: "Contact path", value: formatSignal(input.hasContactOrBookingPath) },
+      { label: "Booking or quote path", value: formatSignal(input.hasContactOrBookingPath) },
+      { label: "Revenue path", value: getRevenueModelLabel(input.revenueModel) },
+      { label: "Primary action", value: primaryAction },
+    ]
+  }
+  if (input.businessType === "ecommerce") {
+    return [
+      { label: "Product path", value: formatSignal(input.hasPricingPath || input.hasPrimaryCta) },
+      { label: "Cart path", value: formatSignal(input.hasCheckoutSignal) },
+      { label: "Checkout path", value: formatSignal(input.hasCheckoutSignal) },
+      { label: "Payment handoff", value: formatSignal(input.hasCheckoutSignal) },
+    ]
+  }
+  return [
+    { label: "Pricing path", value: formatSignal(input.hasPricingPath) },
+    { label: "Signup path", value: formatSignal(input.hasSignupPath) },
+    { label: "Login or app path", value: formatSignal(input.hasLoginPath || input.hasSubscriptionLanguage) },
+    { label: "Primary action", value: primaryAction },
+  ]
 }
 
 function formatSelectorMatch(value: boolean | null) {
@@ -118,6 +198,51 @@ export default async function StoreDetailPage({
   const showLiveShopifyActivationControls = isShopifySource && !isDemoMode
   const showUrlSourceControls = isWebsiteSource && !isDemoMode
   const urlSourceAnalysis = data.urlSourceAnalysis ?? null
+  const sourceTypeLabel = getBusinessTypeLabel(urlSourceAnalysis?.businessType)
+  const urlSourceScreenshots = urlSourceAnalysis
+    ? [
+        {
+          label: "Mobile evidence",
+          src: urlSourceAnalysis.mobileScreenshotRef,
+          viewport: "375px mobile",
+          capturedUrl: urlSourceAnalysis.browserFinalUrl ?? urlSourceAnalysis.finalUrl,
+          capturedAt: urlSourceAnalysis.completedAt,
+          sha256: urlSourceAnalysis.mobileScreenshotSha256,
+          bytes: urlSourceAnalysis.mobileScreenshotBytes,
+        },
+        {
+          label: "Desktop evidence",
+          src: urlSourceAnalysis.desktopScreenshotRef,
+          viewport: "1280px desktop",
+          capturedUrl: urlSourceAnalysis.browserFinalUrl ?? urlSourceAnalysis.finalUrl,
+          capturedAt: urlSourceAnalysis.completedAt,
+          sha256: urlSourceAnalysis.desktopScreenshotSha256,
+          bytes: urlSourceAnalysis.desktopScreenshotBytes,
+        },
+      ]
+    : []
+  const opportunitySignal = getDirectionalOpportunityEstimate({
+    businessType: urlSourceAnalysis?.businessType,
+    revenueModel: urlSourceAnalysis?.revenueModel,
+    revenuePathClarity: urlSourceAnalysis?.revenuePathClarity,
+    issueImpact: data.estimatedLeakage,
+    issueCount: data.issues.length,
+    hasScreenshotEvidence: urlSourceScreenshots.some((shot) => Boolean(shot.src)),
+  })
+  const businessSignalRows = urlSourceAnalysis
+    ? getBusinessSignalRows({
+        businessType: urlSourceAnalysis.businessType,
+        revenueModel: urlSourceAnalysis.revenueModel,
+        hasPricingPath: urlSourceAnalysis.hasPricingPath,
+        hasSignupPath: urlSourceAnalysis.hasSignupPath,
+        hasLoginPath: urlSourceAnalysis.hasLoginPath,
+        hasPrimaryCta: urlSourceAnalysis.hasPrimaryCta,
+        primaryCtaLabel: urlSourceAnalysis.primaryCtaLabel,
+        hasCheckoutSignal: urlSourceAnalysis.hasCheckoutSignal,
+        hasContactOrBookingPath: urlSourceAnalysis.hasContactOrBookingPath,
+        hasSubscriptionLanguage: urlSourceAnalysis.hasSubscriptionLanguage,
+      })
+    : []
   const latestScanIsActive =
     data.latestScan?.status === "queued" || data.latestScan?.status === "running"
   const liveSourceSurface = data.integration?.liveSourceSurface ?? null
@@ -159,12 +284,16 @@ export default async function StoreDetailPage({
       <section className="vault-metric-grid">
         <article className="vault-metric-cell vault-metric-cell-primary">
           <p className="vault-metric-key">
-            {isDemoMode ? "Simulated leakage" : "Estimated leakage"}
+            {isWebsiteSource ? opportunitySignal.label : isDemoMode ? "Simulated leakage" : "Estimated leakage"}
           </p>
           <p className="vault-metric-value vault-metric-value-primary">
-            {formatCompactCurrency(data.estimatedLeakage)}
+            {isWebsiteSource ? opportunitySignal.detail : formatCompactCurrency(data.estimatedLeakage)}
           </p>
-          <p className="vault-metric-delta">Per month from this source</p>
+          <p className="vault-metric-delta">
+            {isWebsiteSource
+              ? `${opportunitySignal.confidence} confidence | ${opportunitySignal.reason}`
+              : "Per month from this source"}
+          </p>
         </article>
         <article className="vault-metric-cell">
           <p className="vault-metric-key">Open issues</p>
@@ -497,44 +626,42 @@ export default async function StoreDetailPage({
 
           {showUrlSourceControls ? (
             <div id="surface-analysis">
-            <VaultPanel title="Surface analysis" meta="Latest revenue path and surface evidence">
-              {urlSourceAnalysis ? (
-                <div className="space-y-3 px-4 py-4 text-sm sm:px-5">
-                  <dl className="grid gap-2 text-muted-foreground">
-                    <div>
-                      <dt className="data-mono text-[0.68rem]">Analyzed</dt>
+          <VaultPanel title="Surface analysis" meta="Latest revenue path and surface evidence">
+            {urlSourceAnalysis ? (
+              <div className="space-y-3 px-4 py-4 text-sm sm:px-5">
+                <p className="text-sm leading-6 text-foreground">
+                  {getSurfaceSummary({
+                    businessType: urlSourceAnalysis.businessType,
+                    revenuePathClarity: urlSourceAnalysis.revenuePathClarity,
+                  })}
+                </p>
+                <dl className="grid gap-2 text-muted-foreground">
+                  <div>
+                    <dt className="data-mono text-[0.68rem]">Analyzed</dt>
                       <dd className="mt-1 text-foreground">
                         {urlSourceAnalysis.completedAt
                           ? formatRelativeTimestamp(urlSourceAnalysis.completedAt)
                           : "Unknown"}
                       </dd>
+                  </div>
+                  <div>
+                    <dt className="data-mono text-[0.68rem]">Detected model</dt>
+                    <dd className="mt-1 text-foreground">
+                        {sourceTypeLabel}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="data-mono text-[0.68rem]">Revenue path</dt>
+                    <dd className="mt-1 text-foreground">
+                        {getRevenueModelLabel(urlSourceAnalysis.revenueModel)}
+                    </dd>
+                  </div>
+                  {businessSignalRows.map((row) => (
+                    <div key={row.label}>
+                      <dt className="data-mono text-[0.68rem]">{row.label}</dt>
+                      <dd className="mt-1 text-foreground">{row.value}</dd>
                     </div>
-                    <div>
-                      <dt className="data-mono text-[0.68rem]">Surface</dt>
-                      <dd className="mt-1 text-foreground">
-                        {urlSourceAnalysis.surfaceClassification ?? "unknown"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="data-mono text-[0.68rem]">Revenue path</dt>
-                      <dd className="mt-1 text-foreground">
-                        {urlSourceAnalysis.revenuePathClarity ?? "unknown"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="data-mono text-[0.68rem]">Signals</dt>
-                      <dd className="mt-1">
-                        Pricing: {urlSourceAnalysis.hasPricingPath ? "yes" : "no"} | Signup:{" "}
-                        {urlSourceAnalysis.hasSignupPath ? "yes" : "no"} | Checkout:{" "}
-                        {urlSourceAnalysis.hasCheckoutSignal ? "yes" : "no"}
-                      </dd>
-                    </div>
-                    {urlSourceAnalysis.primaryCtaLabel ? (
-                      <div>
-                        <dt className="data-mono text-[0.68rem]">Primary action</dt>
-                        <dd className="mt-1">{urlSourceAnalysis.primaryCtaLabel}</dd>
-                      </div>
-                    ) : null}
+                  ))}
                     <div>
                       <dt className="data-mono text-[0.68rem]">Entry URL</dt>
                       <dd className="mt-1 break-all">{urlSourceAnalysis.entryUrl ?? "Unknown"}</dd>
@@ -551,8 +678,9 @@ export default async function StoreDetailPage({
                         <dd className="mt-1 text-amber-300">{urlSourceAnalysis.errorMessage}</dd>
                       </div>
                     ) : null}
-                  </dl>
-                </div>
+                </dl>
+                <EvidenceScreenshots screenshots={urlSourceScreenshots} />
+              </div>
               ) : (
                 <p className="px-5 py-6 text-sm text-muted-foreground">
                   No surface analysis has been run for this source yet.

@@ -14,6 +14,7 @@ import type { Database } from "@/types/database"
 import type {
   FixPlan,
   FixPlanEvidence,
+  FixPlanEvidenceScreenshot,
   FixPlanSignalStrength,
   FixPlanStep,
   IssueSeverity,
@@ -185,6 +186,8 @@ function readFindingEvidenceForIssueType(input: {
       "simulated_signal_confidence_limited",
       "url_source_no_clear_revenue_path_v1",
       "url_source_service_no_contact_path_v1",
+      "url_source_service_no_inquiry_path_v1",
+      "url_source_service_weak_lead_capture_v1",
       "url_source_no_mobile_viewport_v1",
       "url_source_mobile_layout_overflow_v1",
       "url_source_no_atf_cta_mobile_v1",
@@ -215,6 +218,118 @@ function readFindingEvidenceForIssueType(input: {
 
   const firstStructured = Object.values(findingEvidence).find((value) => asRecord(value))
   return firstStructured ? asRecord(firstStructured) : null
+}
+
+function buildUrlSourceScreenshots(input: {
+  evidence: Record<string, unknown>
+  issueDetectedAt: string
+}): FixPlanEvidenceScreenshot[] {
+  const capturedUrl =
+    asString(input.evidence.browser_final_url) ??
+    asString(input.evidence.final_url)
+  const mobileRef = asString(input.evidence.browser_mobile_screenshot_ref)
+  const desktopRef = asString(input.evidence.browser_desktop_screenshot_ref)
+  const screenshots: FixPlanEvidenceScreenshot[] = []
+
+  if (mobileRef) {
+    screenshots.push({
+      label: "Mobile evidence",
+      src: mobileRef,
+      viewport: "375px mobile",
+      capturedUrl,
+      capturedAt: input.issueDetectedAt,
+      sha256: asString(input.evidence.browser_mobile_screenshot_sha256),
+      bytes: asNumber(input.evidence.browser_mobile_screenshot_bytes),
+    })
+  }
+
+  if (desktopRef) {
+    screenshots.push({
+      label: "Desktop evidence",
+      src: desktopRef,
+      viewport: "1280px desktop",
+      capturedUrl,
+      capturedAt: input.issueDetectedAt,
+      sha256: asString(input.evidence.browser_desktop_screenshot_sha256),
+      bytes: asNumber(input.evidence.browser_desktop_screenshot_bytes),
+    })
+  }
+
+  return screenshots
+}
+
+function buildUrlSourceEvidenceRows(input: {
+  evidence: Record<string, unknown>
+  issue: IssueRow
+}) {
+  const rows: FixPlanEvidence["rows"] = []
+  const businessType = asString(input.evidence.business_type)
+  const revenueModel = asString(input.evidence.revenue_model)
+  const pathEvaluated = asString(input.evidence.path_evaluated)
+  const finalUrl = asString(input.evidence.final_url)
+  const browserLoadTimeMs = asNumber(input.evidence.browser_load_time_ms)
+  const browserTitle = asString(input.evidence.browser_page_title)
+  const mobileAtfCta = asBoolean(input.evidence.browser_mobile_atf_cta)
+  const mobileCtaLabels = asString(input.evidence.browser_mobile_atf_cta_labels)
+  const mobileOverflow = asBoolean(input.evidence.browser_mobile_overflow)
+  const primaryCta = asString(input.evidence.primary_cta_label)
+  const hasContactOrBookingPath = asBoolean(input.evidence.has_contact_or_booking_path)
+  const hasSignupPath = asBoolean(input.evidence.has_signup_path)
+  const hasCheckoutSignal = asBoolean(input.evidence.has_checkout_signal)
+
+  if (businessType) rows.push({ label: "Detected model", value: businessType.replaceAll("_", " ") })
+  if (revenueModel) rows.push({ label: "Revenue model", value: revenueModel.replaceAll("_", " ") })
+  if (pathEvaluated) rows.push({ label: "Path evaluated", value: pathEvaluated.replaceAll("_", " ") })
+  if (finalUrl) rows.push({ label: "Captured URL", value: finalUrl })
+  if (browserTitle) rows.push({ label: "Page title", value: browserTitle })
+  if (primaryCta) rows.push({ label: "Primary action", value: primaryCta })
+  if (hasContactOrBookingPath !== null) {
+    rows.push({ label: "Contact or booking path", value: hasContactOrBookingPath ? "Detected" : "Not detected" })
+  }
+  if (hasSignupPath !== null) {
+    rows.push({ label: "Signup path", value: hasSignupPath ? "Detected" : "Not detected" })
+  }
+  if (hasCheckoutSignal !== null) {
+    rows.push({ label: "Checkout signal", value: hasCheckoutSignal ? "Detected" : "Not detected" })
+  }
+  if (mobileAtfCta !== null) {
+    rows.push({ label: "Mobile above-fold CTA", value: mobileAtfCta ? "Detected" : "Not detected" })
+  }
+  if (mobileCtaLabels) rows.push({ label: "Mobile CTA labels", value: mobileCtaLabels })
+  if (mobileOverflow !== null) {
+    rows.push({ label: "Mobile layout overflow", value: mobileOverflow ? "Detected" : "Not detected" })
+  }
+  if (browserLoadTimeMs !== null) {
+    rows.push({ label: "Browser load time", value: `${formatInteger(browserLoadTimeMs)}ms` })
+  }
+  rows.push({ label: "Scan timestamp", value: formatTimestamp(input.issue.detected_at) })
+
+  const triggerLine =
+    mobileAtfCta === false
+      ? "Triggered because browser inspection found no primary action above the fold on mobile."
+      : mobileOverflow === true
+        ? "Triggered because browser inspection found mobile layout overflow that can hide or crowd conversion actions."
+        : browserLoadTimeMs !== null
+          ? `Triggered because browser inspection measured ${formatInteger(browserLoadTimeMs)}ms load time on the primary surface.`
+          : `Triggered because URL-source analysis found a ${pathEvaluated?.replaceAll("_", " ") ?? "conversion"} path issue on the primary source.`
+  const summaryLine =
+    businessType === "agency" || businessType === "service_business"
+      ? `Lead-generation surface issue detected: ${input.issue.title}.`
+      : businessType === "saas"
+        ? `SaaS conversion surface issue detected: ${input.issue.title}.`
+        : businessType === "ecommerce"
+          ? `Ecommerce conversion surface issue detected: ${input.issue.title}.`
+          : `URL-source surface issue detected: ${input.issue.title}.`
+
+  return {
+    rows,
+    screenshots: buildUrlSourceScreenshots({
+      evidence: input.evidence,
+      issueDetectedAt: input.issue.detected_at,
+    }),
+    triggerLine,
+    summaryLine,
+  }
 }
 
 function formatActivationDeadEndReason(reason: string) {
@@ -785,10 +900,20 @@ function buildFixPlanEvidence(input: {
   const signalStrength = toSignalStrength(input.confidence)
 
   let evidenceRows: FixPlanEvidence["rows"] = []
+  let screenshots: FixPlanEvidenceScreenshot[] = []
   let triggerLine = "Triggered because monitored leakage indicators crossed configured thresholds."
   let summaryLine = `${formatIssueTypeLabel(input.issueType)} detected in the ${leakFamilyLabel.toLowerCase()} family.`
 
-  if (findingEvidence && input.issueType === "activation_funnel_dropout") {
+  if (findingEvidence && input.issue.source === "url_source_analysis_v1") {
+    const shaped = buildUrlSourceEvidenceRows({
+      evidence: findingEvidence,
+      issue: input.issue,
+    })
+    evidenceRows = shaped.rows
+    screenshots = shaped.screenshots
+    triggerLine = shaped.triggerLine
+    summaryLine = shaped.summaryLine
+  } else if (findingEvidence && input.issueType === "activation_funnel_dropout") {
     const shaped = buildActivationEvidenceRows({
       evidence: findingEvidence,
       issueDetectedAt: input.issue.detected_at,
@@ -822,6 +947,7 @@ function buildFixPlanEvidence(input: {
     scanTimestamp: input.issue.detected_at,
     signalStrength,
     rows: evidenceRows,
+    screenshots,
     recommendedNextAction: input.issue.recommended_action,
     successSignal: input.successSignal,
   } satisfies FixPlanEvidence
@@ -984,6 +1110,33 @@ function buildFixPlanFromIssue(input: {
     successSignal: template.successSignal,
     integration: input.integration,
   })
+  const isUrlSourceIssue = input.issue.source === "url_source_analysis_v1"
+  const fixSteps = isUrlSourceIssue
+    ? [
+        {
+          id: "url_source_step_01",
+          title: "Confirm the affected conversion path",
+          detail:
+            evidence.whyTriggered,
+        },
+        {
+          id: "url_source_step_02",
+          title: "Ship the specific surface correction",
+          detail:
+            input.issue.recommended_action,
+        },
+        {
+          id: "url_source_step_03",
+          title: "Validate with a fresh surface scan",
+          detail:
+            "Re-run surface analysis and confirm the evidence rows and screenshots show the expected conversion action, layout, or performance improvement.",
+        },
+      ]
+    : template.steps
+  const successSignal = isUrlSourceIssue
+    ? "Next URL-source scan shows the affected path resolved, with the primary conversion action visible and no repeat finding for this issue."
+    : template.successSignal
+  const finalEvidence = isUrlSourceIssue ? { ...evidence, successSignal } : evidence
 
   return {
     id: toGeneratedFixPlanId(input.issue.id),
@@ -995,20 +1148,22 @@ function buildFixPlanFromIssue(input: {
     estimatedMonthlyImpact: input.issue.estimated_monthly_revenue_impact,
     summary: input.issue.summary,
     whyItMatters: input.issue.why_it_matters,
-    recommendedFix: template.recommendedFix,
-    steps: template.steps,
+    recommendedFix: isUrlSourceIssue ? input.issue.recommended_action : template.recommendedFix,
+    steps: fixSteps,
     platformContext: [evidenceLine, ...template.platformContext],
     source: formatSourceLabel(input.issue.source),
     detectedAt: input.issue.detected_at,
-    successSignal: template.successSignal,
-    expectedOutcome: template.expectedOutcome,
+    successSignal,
+    expectedOutcome: isUrlSourceIssue
+      ? "The primary source presents a clearer revenue path with stronger evidence for the next operator action."
+      : template.expectedOutcome,
     status: toFixPlanStatus(input.issue.status),
     relatedIssues: input.relatedIssues.map((issue) => ({
       issueId: issue.id,
       title: issue.title,
       estimatedMonthlyRevenueImpact: issue.estimated_monthly_revenue_impact,
     })),
-    evidence,
+    evidence: finalEvidence,
   }
 }
 

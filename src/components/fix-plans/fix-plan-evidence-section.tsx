@@ -1,5 +1,6 @@
 import { formatRelativeTimestamp } from "@/lib/format"
 import type { FixPlan, FixPlanSignalStrength } from "@/types/domain"
+import { EvidenceScreenshots } from "@/components/evidence/evidence-screenshots"
 
 const signalStrengthLabel: Record<FixPlanSignalStrength, string> = {
   strong: "Strong signal",
@@ -75,6 +76,8 @@ export function FixPlanEvidenceSection({ fixPlan }: { fixPlan: FixPlan }) {
             </p>
           )}
         </div>
+
+        <EvidenceScreenshots screenshots={evidence?.screenshots ?? []} />
 
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-xl border border-border/70 bg-background/35 p-4">
