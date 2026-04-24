@@ -18,11 +18,12 @@ export const metadata: Metadata = {
 }
 
 import { SubmitButton } from "@/components/ui/submit-button"
-import { ScanStatePill } from "@/components/dashboard/vault-primitives"
+import { ScanStatePill, SeverityPill } from "@/components/dashboard/vault-primitives"
 import { normalizeLiveSourceUrl } from "@/lib/live-source"
 import { cn } from "@/lib/utils"
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
 import { getConnectJourneyData, getStoresIndexData } from "@/server/services/app-service"
+import type { IssueSeverity } from "@/types/domain"
 import {
   setLiveSourceContext,
   triggerPrimaryUrlSourceAnalysis,
@@ -115,6 +116,82 @@ function getSystemRelevanceClass(relevance: SystemRelevance) {
     return "border-emerald-400/30 bg-emerald-400/[0.08] text-emerald-300"
   }
   return "border-border/60 bg-background/30 text-muted-foreground"
+}
+
+function formatRevenuePath(value: string | null | undefined) {
+  if (value === "clear") return "Revenue path visible"
+  if (value === "partial") return "Revenue path incomplete"
+  if (value === "none") return "No clear revenue path"
+  return "Revenue path pending"
+}
+
+function getSurfaceSummary(input: {
+  businessType: string | null
+  surfaceClassification: string | null | undefined
+  revenuePathClarity: string | null | undefined
+}) {
+  const typeLabel = getBusinessTypeLabel(input.businessType)
+  const revenueLabel = formatRevenuePath(input.revenuePathClarity)
+
+  if (input.businessType === "saas") {
+    return `${typeLabel} surface detected. ${revenueLabel}.`
+  }
+  if (input.businessType === "ecommerce") {
+    return `${typeLabel} surface detected. ${revenueLabel}.`
+  }
+  if (input.businessType === "service_business") {
+    return `${typeLabel} surface detected. ${revenueLabel}.`
+  }
+  if (input.businessType === "mixed") {
+    return `Mixed revenue surface detected. ${revenueLabel}.`
+  }
+  if (input.surfaceClassification === "marketing_only") {
+    return `Marketing surface detected. ${revenueLabel}.`
+  }
+  return `Surface analysis complete. ${revenueLabel}.`
+}
+
+function formatSignal(value: boolean | null | undefined) {
+  if (value === true) return "Detected"
+  if (value === false) return "Not detected"
+  return "Not evaluated"
+}
+
+function getBusinessSignalRows(input: {
+  businessType: string | null
+  hasPricingPath: boolean | null | undefined
+  hasSignupPath: boolean | null | undefined
+  hasLoginPath: boolean | null | undefined
+  hasPrimaryCta: boolean | null | undefined
+  primaryCtaLabel: string | null | undefined
+  hasCheckoutSignal: boolean | null | undefined
+}) {
+  const primaryAction = input.primaryCtaLabel ?? formatSignal(input.hasPrimaryCta)
+
+  if (input.businessType === "ecommerce") {
+    return [
+      { label: "Product path", value: formatSignal(input.hasPricingPath || input.hasPrimaryCta) },
+      { label: "Cart path", value: formatSignal(input.hasCheckoutSignal) },
+      { label: "Checkout path", value: formatSignal(input.hasCheckoutSignal) },
+      { label: "Payment handoff", value: formatSignal(input.hasCheckoutSignal) },
+    ]
+  }
+
+  if (input.businessType === "service_business") {
+    return [
+      { label: "Contact path", value: primaryAction },
+      { label: "Booking or demo path", value: formatSignal(input.hasSignupPath || input.hasPrimaryCta) },
+      { label: "Trust path", value: formatSignal(input.hasPrimaryCta) },
+      { label: "Primary action", value: primaryAction },
+    ]
+  }
+
+  return [
+    { label: "Pricing path", value: formatSignal(input.hasPricingPath) },
+    { label: "Signup path", value: formatSignal(input.hasSignupPath) },
+    { label: "Login or app path", value: formatSignal(input.hasLoginPath) },
+    { label: "Primary action", value: primaryAction },
+  ]
 }
 
 function formatSourceStatus(status: string) {
@@ -274,14 +351,37 @@ export default async function SourcesPage({
     .map((store) => store.latestScanAt)
     .filter((value): value is string => Boolean(value))
     .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0] ?? null
+  const liveSourceUpdatedAt =
+    connectData.liveSourceContext && "updatedAt" in connectData.liveSourceContext
+      ? connectData.liveSourceContext.updatedAt
+      : null
   const urlSourceAnalysis = connectData.urlSourceAnalysis
   const urlSourceStoreId = connectData.urlSourceStoreId ?? urlSourceAnalysis?.storeId ?? null
   const latestUrlSourceScan = connectData.latestUrlSourceScan
+  const urlSourceTopIssue = connectData.urlSourceTopIssue
   const latestUrlSourceScanIsActive =
     latestUrlSourceScan?.status === "queued" || latestUrlSourceScan?.status === "running"
   const latestAnalysisAt = urlSourceAnalysis?.completedAt ?? latestStoreScanAt
   const businessType = urlSourceAnalysis?.businessType ?? null
   const sourceTypeLabel = getBusinessTypeLabel(businessType)
+  const sourceFreshnessAt =
+    liveSourceUpdatedAt ?? urlSourceAnalysis?.completedAt ?? latestUrlSourceScan?.scannedAt ?? null
+  const sourceFreshnessLabel = urlSourceAnalysis
+    ? "Analysis updated"
+    : liveSourceUpdatedAt
+      ? "Source saved"
+      : "Source state"
+  const businessSignalRows = urlSourceAnalysis
+    ? getBusinessSignalRows({
+        businessType,
+        hasPricingPath: urlSourceAnalysis.hasPricingPath,
+        hasSignupPath: urlSourceAnalysis.hasSignupPath,
+        hasLoginPath: urlSourceAnalysis.hasLoginPath,
+        hasPrimaryCta: urlSourceAnalysis.hasPrimaryCta,
+        primaryCtaLabel: urlSourceAnalysis.primaryCtaLabel,
+        hasCheckoutSignal: urlSourceAnalysis.hasCheckoutSignal,
+      })
+    : []
   const hasEcommerceSignal =
     businessType === "ecommerce" ||
     businessType === "mixed" ||
@@ -355,10 +455,6 @@ export default async function SourcesPage({
     : isPendingShopify || isPendingStripe
       ? "Connected systems are running first analysis. Primary source is attached as context."
       : "Connected systems exist. First analysis has not completed yet."
-  const liveSourceUpdatedAt =
-    connectData.liveSourceContext && "updatedAt" in connectData.liveSourceContext
-      ? connectData.liveSourceContext.updatedAt
-      : null
   const liveSourceVerification = connectData.liveSourceVerification
   const verificationBadgeTone =
     liveSourceVerification?.state === "verified"
@@ -396,8 +492,11 @@ export default async function SourcesPage({
           {provider === "source_url_analysis" && status === "completed" && urlSourceAnalysis ? (
             <div className="mt-3 flex flex-wrap items-center gap-4">
               <p className="text-sm text-foreground">
-                {urlSourceAnalysis.surfaceClassification ?? "unknown"} | Revenue path:{" "}
-                {urlSourceAnalysis.revenuePathClarity ?? "unknown"}
+                {getSurfaceSummary({
+                  businessType,
+                  surfaceClassification: urlSourceAnalysis.surfaceClassification,
+                  revenuePathClarity: urlSourceAnalysis.revenuePathClarity,
+                })}
               </p>
               {urlSourceStoreId ? (
                 <Link
@@ -413,9 +512,13 @@ export default async function SourcesPage({
       ) : null}
 
       <section className="vault-panel-shell p-4 sm:p-5">
-        <p className="data-mono text-muted-foreground">Primary live source</p>
+        <p className="data-mono text-muted-foreground">
+          {primarySourceSaved ? "Edit primary source" : "Primary live source"}
+        </p>
         <p className="mt-2 text-sm text-muted-foreground">
-          This URL or domain is the canonical revenue surface. Connected systems enrich it, but they do not replace it.
+          {primarySourceSaved
+            ? "Update the canonical revenue surface when the monitored URL changes."
+            : "This URL or domain is the canonical revenue surface. Connected systems enrich it, but they do not replace it."}
         </p>
         <form action={setLiveSourceContext} className="mt-4 space-y-3">
           <div className="space-y-2">
@@ -445,12 +548,7 @@ export default async function SourcesPage({
         </form>
         {connectData.liveSourceContext?.url ? (
           <p className="mt-3 text-xs text-emerald-300">
-            Primary source: {connectData.liveSourceContext.url}
-          </p>
-        ) : null}
-        {normalizedLiveSource ? (
-          <p className="mt-3 text-xs text-muted-foreground">
-            Source domain: {normalizedLiveSource.hostname}
+            Current URL: {connectData.liveSourceContext.url}
           </p>
         ) : null}
       </section>
@@ -504,9 +602,13 @@ export default async function SourcesPage({
               </dd>
             </div>
             <div className="rounded-lg border border-border/60 bg-background/30 p-3">
-              <dt className="data-mono text-muted-foreground">Last updated</dt>
+              <dt className="data-mono text-muted-foreground">{sourceFreshnessLabel}</dt>
               <dd className="mt-1 text-foreground">
-                {liveSourceUpdatedAt ? formatRelativeTimestamp(liveSourceUpdatedAt) : "Not set"}
+                {sourceFreshnessAt
+                  ? formatRelativeTimestamp(sourceFreshnessAt)
+                  : primarySourceSaved
+                    ? "Saved"
+                    : "Not set"}
               </dd>
             </div>
             <div className="rounded-lg border border-border/60 bg-background/30 p-3">
@@ -531,24 +633,53 @@ export default async function SourcesPage({
             <div className="mt-4 rounded-lg border border-border/60 bg-background/30 p-3">
               <p className="data-mono text-muted-foreground">Surface analysis</p>
               <p className="mt-2 text-sm text-foreground">
-                {sourceTypeLabel} | {urlSourceAnalysis.surfaceClassification ?? "unknown"} | Revenue path:{" "}
-                {urlSourceAnalysis.revenuePathClarity ?? "unknown"}
+                {getSurfaceSummary({
+                  businessType,
+                  surfaceClassification: urlSourceAnalysis.surfaceClassification,
+                  revenuePathClarity: urlSourceAnalysis.revenuePathClarity,
+                })}
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Pricing path: {urlSourceAnalysis.hasPricingPath ? "yes" : "no"} | Signup path:{" "}
-                {urlSourceAnalysis.hasSignupPath ? "yes" : "no"} | Checkout signal:{" "}
-                {urlSourceAnalysis.hasCheckoutSignal ? "yes" : "no"}
-              </p>
-              {urlSourceAnalysis.primaryCtaLabel ? (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Primary action: {urlSourceAnalysis.primaryCtaLabel}
-                </p>
-              ) : null}
+              <dl className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+                {businessSignalRows.map((row) => (
+                  <div key={row.label}>
+                    <dt className="data-mono text-[0.65rem]">{row.label}</dt>
+                    <dd className="mt-1 text-foreground">{row.value}</dd>
+                  </div>
+                ))}
+              </dl>
               {urlSourceAnalysis.errorMessage ? (
                 <p className="mt-1 text-xs text-amber-300">
                   {urlSourceAnalysis.errorMessage}
                 </p>
               ) : null}
+            </div>
+          ) : null}
+
+          {urlSourceTopIssue ? (
+            <div className="mt-4 rounded-lg border border-[color:var(--signal-line)] bg-[color:var(--signal-dim)] p-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <p className="data-mono text-[color:var(--signal)]">Top finding</p>
+                  <h3 className="mt-1 text-sm font-semibold text-foreground">
+                    {urlSourceTopIssue.title}
+                  </h3>
+                </div>
+                <SeverityPill severity={urlSourceTopIssue.severity as IssueSeverity} />
+              </div>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                {urlSourceTopIssue.summary}
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <span className="font-mono text-xs text-[color:var(--signal)]">
+                  {formatCompactCurrency(urlSourceTopIssue.estimatedMonthlyRevenueImpact)} / month
+                </span>
+                <Link
+                  href={urlSourceTopIssue.href ?? `/app/stores/${urlSourceStoreId}`}
+                  className="vault-link inline-flex items-center gap-1 text-xs"
+                >
+                  Open action path <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
             </div>
           ) : null}
 
@@ -611,11 +742,11 @@ export default async function SourcesPage({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="font-mono text-[0.68rem] tracking-[0.1em] uppercase text-muted-foreground/60">
-                  Ecommerce platform
+                  Commerce evidence
                 </p>
                 <h3 className="mt-1.5 flex items-center gap-2 text-base font-semibold tracking-tight">
                   <ShoppingBag className="h-4 w-4 text-muted-foreground/70" />
-                  Shopify
+                  Shopify connection
                 </h3>
               </div>
               <div className="flex flex-col items-end gap-2">
@@ -630,8 +761,8 @@ export default async function SourcesPage({
                 <SourceStatusBadge status={connectData.shopifySourceState.status} />
               </div>
             </div>
-            <p className="mt-2.5 text-sm leading-[1.72] text-muted-foreground">
-              Adds checkout and catalog depth when the primary source is a webshop or routes buyers into Shopify.
+              <p className="mt-2.5 text-sm leading-[1.72] text-muted-foreground">
+              Adds checkout and catalog evidence when the primary source is a webshop or routes buyers into Shopify.
             </p>
             <p className="mt-2 text-xs text-muted-foreground">
               {hasEcommerceSignal
@@ -720,11 +851,11 @@ export default async function SourcesPage({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="font-mono text-[0.68rem] tracking-[0.1em] uppercase text-muted-foreground/60">
-                  Billing and payments
+                  Billing evidence
                 </p>
                 <h3 className="mt-1.5 flex items-center gap-2 text-base font-semibold tracking-tight">
                   <CreditCard className="h-4 w-4 text-muted-foreground/70" />
-                  Stripe
+                  Stripe connection
                 </h3>
               </div>
               <div className="flex flex-col items-end gap-2">
@@ -808,7 +939,7 @@ export default async function SourcesPage({
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-base font-semibold tracking-tight sm:text-lg">
-                      {normalizedLiveSource?.hostname ?? "Primary URL source"}
+                      URL surface summary
                     </h2>
                     <span className="rounded-md border border-border/70 px-2 py-0.5 text-[11px] uppercase text-muted-foreground">
                       website
@@ -828,10 +959,18 @@ export default async function SourcesPage({
                     ) : null}
                   </div>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    {normalizedLiveSource?.normalizedUrl ?? "No URL saved"} | canonical source context
+                    {normalizedLiveSource?.hostname ?? "No URL saved"} | canonical source context
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {sourceScanStateDetail}
+                    {urlSourceTopIssue
+                      ? `Top finding: ${urlSourceTopIssue.title}`
+                      : urlSourceAnalysis
+                        ? getSurfaceSummary({
+                            businessType,
+                            surfaceClassification: urlSourceAnalysis.surfaceClassification,
+                            revenuePathClarity: urlSourceAnalysis.revenuePathClarity,
+                          })
+                        : sourceScanStateDetail}
                   </p>
                   {liveSourceVerification ? (
                     <p className="mt-1 text-xs text-muted-foreground">
@@ -854,8 +993,10 @@ export default async function SourcesPage({
                   </p>
                   <p className="font-semibold text-primary">
                     {connectedSystemsCount > 0
-                      ? `${connectedSystemsCount} connected system${connectedSystemsCount !== 1 ? "s" : ""}`
-                      : "No systems connected"}
+                      ? `${connectedSystemsCount} evidence enrichment${connectedSystemsCount !== 1 ? "s" : ""}`
+                      : urlSourceAnalysis
+                        ? "URL-only analysis"
+                        : "No enrichments connected"}
                   </p>
                 </div>
 

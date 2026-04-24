@@ -153,6 +153,15 @@ interface UrlSourceAnalysisLastRunView {
   storeId: string | null
 }
 
+interface UrlSourceTopIssueView {
+  id: string
+  title: string
+  summary: string
+  severity: string
+  estimatedMonthlyRevenueImpact: number
+  href: string | null
+}
+
 interface LiveSourceSurfaceView {
   primaryUrl: string | null
   domain: string | null
@@ -1861,6 +1870,30 @@ export async function getConnectJourneyData() {
     latestUrlSourceScanResult && !latestUrlSourceScanResult.error && latestUrlSourceScanResult.data
       ? mapScanView(latestUrlSourceScanResult.data)
       : null
+  const urlSourceTopIssueResult = urlSourceStoreId
+    ? await createSupabaseAdminClient()
+        .from("issues")
+        .select("id, title, summary, severity, estimated_monthly_revenue_impact")
+        .eq("organization_id", journey.organizationId)
+        .eq("store_id", urlSourceStoreId)
+        .neq("status", "resolved")
+        .order("estimated_monthly_revenue_impact", { ascending: false })
+        .order("detected_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : null
+  const urlSourceTopIssue: UrlSourceTopIssueView | null =
+    urlSourceTopIssueResult && !urlSourceTopIssueResult.error && urlSourceTopIssueResult.data
+      ? {
+          id: urlSourceTopIssueResult.data.id,
+          title: urlSourceTopIssueResult.data.title,
+          summary: urlSourceTopIssueResult.data.summary,
+          severity: urlSourceTopIssueResult.data.severity,
+          estimatedMonthlyRevenueImpact:
+            urlSourceTopIssueResult.data.estimated_monthly_revenue_impact,
+          href: getFixPlanHrefForIssue(urlSourceTopIssueResult.data.id),
+        }
+      : null
 
   return {
     onboardingState: journey.state,
@@ -1884,6 +1917,7 @@ export async function getConnectJourneyData() {
     urlSourceAnalysis,
     urlSourceStoreId,
     latestUrlSourceScan,
+    urlSourceTopIssue,
     organization: journey.baseSnapshot.organization,
   }
 }
