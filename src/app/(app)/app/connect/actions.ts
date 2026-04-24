@@ -211,6 +211,7 @@ export async function triggerPrimaryUrlSourceAnalysis() {
     redirect("/app/stores?provider=source_url_analysis&status=source_not_set")
   }
 
+  const storeId = integrationResult.data.store_id
   const metadata = asRecord(integrationResult.data.metadata)
   const entryUrl =
     (typeof metadata.primary_live_source_url === "string"
@@ -226,7 +227,7 @@ export async function triggerPrimaryUrlSourceAnalysis() {
     .from("scans")
     .insert({
       organization_id: membershipResult.data.organization_id,
-      store_id: integrationResult.data.store_id,
+      store_id: storeId,
       status: "queued",
       scanned_at: new Date().toISOString(),
       detected_issues_count: 0,
@@ -236,7 +237,7 @@ export async function triggerPrimaryUrlSourceAnalysis() {
     .single()
 
   if (scanInsert.error || !scanInsert.data) {
-    redirect("/app/stores?provider=source_url_analysis&status=queue_failed")
+    redirect(`/app/stores/${storeId}?scan_status=queue_failed`)
   }
 
   const { processQueuedScanV1 } = await import(
@@ -245,18 +246,13 @@ export async function triggerPrimaryUrlSourceAnalysis() {
   const processed = await processQueuedScanV1({ scanId: scanInsert.data.id })
 
   revalidatePath("/app/stores")
+  revalidatePath(`/app/stores/${storeId}`)
 
   if (processed.processed) {
-    redirect(
-      `/app/stores?provider=source_url_analysis&status=completed&scan_id=${encodeURIComponent(
-        scanInsert.data.id
-      )}#primary-source`
-    )
+    redirect(`/app/stores/${storeId}?scan_status=completed#surface-analysis`)
   }
 
   redirect(
-    `/app/stores?provider=source_url_analysis&status=${encodeURIComponent(
-      processed.reason
-    )}&scan_id=${encodeURIComponent(scanInsert.data.id)}`
+    `/app/stores/${storeId}?scan_status=${encodeURIComponent(processed.reason)}`
   )
 }
