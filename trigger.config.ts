@@ -29,7 +29,7 @@ export default defineConfig({
       "@sparticuz/chromium",
     ],
     extensions: [
-      playwright({ browsers: ["chromium"] }),
+      playwright({ browsers: ["chromium"], version: "1.59.1" }),
     ],
   },
 })
