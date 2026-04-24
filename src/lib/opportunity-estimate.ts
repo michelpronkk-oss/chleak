@@ -5,6 +5,7 @@ export type OpportunityConfidence = "low" | "moderate" | "high"
 export interface OpportunityEstimate {
   label: string
   detail: string
+  leadsMeta: string | null  // concise leads/unit context, e.g. "1-3 missed leads/month"
   confidence: OpportunityConfidence
   reason: string
   estimatedLow: number | null
@@ -55,15 +56,16 @@ export function getDirectionalOpportunityEstimate(input: {
       revenuePathClarity: input.revenuePathClarity,
       hasEvidenceBackedFinding,
     })
-    const missedLeadLow = range.confidence === "moderate" ? 1 : 1
+    const missedLeadLow = 1
     const missedLeadHigh = range.high >= 6000 ? 4 : 3
     return {
-      label: "Estimated pipeline opportunity",
-      detail: `${missedLeadLow} to ${missedLeadHigh} missed leads/month, ${formatCompactCurrency(range.low)} to ${formatCompactCurrency(range.high)} pipeline`,
+      label: "Pipeline opportunity",
+      detail: `${missedLeadLow}-${missedLeadHigh} missed leads/month`,
+      leadsMeta: `${missedLeadLow}-${missedLeadHigh} missed leads/month`,
       confidence: range.confidence,
       reason: hasEvidenceBackedFinding
-        ? "Based on the detected lead path issue and captured surface evidence."
-        : "Based on detected lead-generation model and visible revenue path signals.",
+        ? "Directional. Based on lead path evidence and surface analysis."
+        : "Directional. Based on lead-generation model and visible revenue path signals.",
       estimatedLow: range.low,
       estimatedHigh: range.high,
     }
@@ -77,12 +79,13 @@ export function getDirectionalOpportunityEstimate(input: {
       hasEvidenceBackedFinding,
     })
     return {
-      label: "Estimated signup upside",
-      detail: `3 to 12 missed signups/month, ${formatCompactCurrency(range.low)} to ${formatCompactCurrency(range.high)} MRR`,
+      label: "Signup opportunity",
+      detail: "3-12 missed signups/month",
+      leadsMeta: "3-12 missed signups/month",
       confidence: range.confidence,
       reason: hasEvidenceBackedFinding
-        ? "Based on the detected signup, pricing, or activation path issue."
-        : "Based on SaaS surface signals without enough conversion evidence for higher confidence.",
+        ? "Directional. Based on signup, pricing, or activation path signals."
+        : "Directional. SaaS surface detected without full conversion evidence.",
       estimatedLow: range.low,
       estimatedHigh: range.high,
     }
@@ -96,12 +99,13 @@ export function getDirectionalOpportunityEstimate(input: {
       hasEvidenceBackedFinding,
     })
     return {
-      label: "Estimated checkout leakage",
-      detail: `${formatCompactCurrency(range.low)} to ${formatCompactCurrency(range.high)} / month potential checkout leakage`,
+      label: "Checkout opportunity",
+      detail: "Potential checkout conversion upside",
+      leadsMeta: null,
       confidence: range.confidence,
       reason: hasEvidenceBackedFinding
-        ? "Based on checkout, cart, payment, or mobile conversion evidence."
-        : "Based on ecommerce surface signals without enough transaction evidence for higher confidence.",
+        ? "Directional. Based on checkout, cart, or mobile conversion evidence."
+        : "Directional. Ecommerce surface detected without transaction evidence.",
       estimatedLow: range.low,
       estimatedHigh: range.high,
     }
@@ -116,7 +120,8 @@ export function getDirectionalOpportunityEstimate(input: {
     })
     return {
       label: "Directional opportunity",
-      detail: `${formatCompactCurrency(range.low)} to ${formatCompactCurrency(range.high)} / month potential upside`,
+      detail: "Mixed revenue-path signals detected",
+      leadsMeta: null,
       confidence: range.confidence,
       reason: "Based on mixed revenue-path signals from the primary source.",
       estimatedLow: range.low,
@@ -125,10 +130,11 @@ export function getDirectionalOpportunityEstimate(input: {
   }
 
   return {
-    label: "Opportunity not estimated yet",
-    detail: "More signal needed",
+    label: "More signal needed",
+    detail: "Run analysis to estimate opportunity",
+    leadsMeta: null,
     confidence: "low",
-    reason: "Run analysis or connect relevant evidence systems before estimating opportunity.",
+    reason: "Run analysis or connect relevant evidence systems before estimating.",
     estimatedLow: null,
     estimatedHigh: null,
   }

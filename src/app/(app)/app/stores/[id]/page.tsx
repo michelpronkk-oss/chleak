@@ -292,14 +292,27 @@ export default async function StoreDetailPage({
       <section className="vault-metric-grid">
         <article className="vault-metric-cell vault-metric-cell-primary">
           <p className="vault-metric-key">
-            {isWebsiteSource ? opportunitySignal.label : isDemoMode ? "Simulated leakage" : "Estimated leakage"}
+            {isWebsiteSource
+              ? opportunitySignal.label
+              : isDemoMode
+                ? "Simulated leakage"
+                : "Estimated leakage"}
           </p>
           <p className="vault-metric-value vault-metric-value-primary">
-            {isWebsiteSource ? opportunitySignal.detail : formatCompactCurrency(data.estimatedLeakage)}
+            {isWebsiteSource
+              ? data.estimatedLeakage > 0
+                ? formatCompactCurrency(data.estimatedLeakage)
+                : opportunitySignal.estimatedLow !== null
+                  ? formatCompactCurrency(opportunitySignal.estimatedLow)
+                  : "Pending"
+              : formatCompactCurrency(data.estimatedLeakage)}
           </p>
+          {isWebsiteSource && opportunitySignal.leadsMeta ? (
+            <p className="vault-metric-delta">{opportunitySignal.leadsMeta}</p>
+          ) : null}
           <p className="vault-metric-delta">
             {isWebsiteSource
-              ? `${opportunitySignal.confidence} confidence | ${opportunitySignal.reason}`
+              ? `${opportunitySignal.confidence} confidence`
               : "Per month from this source"}
           </p>
         </article>
