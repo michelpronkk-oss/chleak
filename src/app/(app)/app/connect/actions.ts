@@ -27,65 +27,114 @@ async function upsertPrimaryUrlSourceLane(input: {
   normalizedDomain: string
   connectedSystemProviders: string[]
 }) {
-  const sourceStoreInsert = {
-    organization_id: input.organizationId,
-    name: `${input.normalizedDomain} Source`,
-    platform: "website",
-    domain: input.normalizedDomain,
-    timezone: "UTC",
-    currency: "USD",
-    active: true,
+  const integrationMetadata = {
+    source_entity_type: "website_domain",
+    live_source_url: input.normalizedUrl,
+    live_source_domain: input.normalizedDomain,
+    primary_live_source_url: input.normalizedUrl,
+    primary_live_source_domain: input.normalizedDomain,
+    primary_live_source_updated_at: new Date().toISOString(),
+    connected_systems: [
+      "checkoutleak_connector",
+      ...input.connectedSystemProviders.filter(
+        (provider) => provider === "shopify" || provider === "stripe"
+      ),
+    ],
   }
 
-  const storeResult = await input.admin
+  // Find or create the website store for this org and domain
+  const existingStore = await input.admin
     .from("stores")
-    .upsert([sourceStoreInsert], { onConflict: "organization_id,platform,domain" })
     .select("id")
-    .single()
+    .eq("organization_id", input.organizationId)
+    .eq("platform", "website")
+    .eq("domain", input.normalizedDomain)
+    .maybeSingle()
 
-  if (storeResult.error || !storeResult.data) {
+  if (existingStore.error) {
     return { ok: false as const }
   }
 
-  const integrationInsert = {
-    organization_id: input.organizationId,
-    store_id: storeResult.data.id,
-    provider: "checkoutleak_connector",
-    status: "connected",
-    installed_at: new Date().toISOString(),
-    sync_status: "synced",
-    connection_health: "healthy",
-    metadata: {
-      source_entity_type: "website_domain",
-      live_source_url: input.normalizedUrl,
-      live_source_domain: input.normalizedDomain,
-      primary_live_source_url: input.normalizedUrl,
-      primary_live_source_domain: input.normalizedDomain,
-      primary_live_source_updated_at: new Date().toISOString(),
-      connected_systems: [
-        "checkoutleak_connector",
-        ...input.connectedSystemProviders.filter(
-          (provider) => provider === "shopify" || provider === "stripe"
-        ),
-      ],
-    } as Json,
-    last_synced_at: new Date().toISOString(),
+  let storeId: string
+  if (existingStore.data) {
+    storeId = existingStore.data.id
+  } else {
+    const insertStore = await input.admin
+      .from("stores")
+      .insert({
+        organization_id: input.organizationId,
+        name: `${input.normalizedDomain} Source`,
+        platform: "website",
+        domain: input.normalizedDomain,
+        timezone: "UTC",
+        currency: "USD",
+        active: true,
+      })
+      .select("id")
+      .single()
+    if (insertStore.error || !insertStore.data) {
+      return { ok: false as const }
+    }
+    storeId = insertStore.data.id
   }
 
-  const integrationResult = await input.admin
+  // Find or create the checkoutleak_connector integration for this store
+  const existingIntegration = await input.admin
     .from("store_integrations")
-    .upsert([integrationInsert], { onConflict: "organization_id,store_id,provider" })
     .select("id")
-    .single()
+    .eq("organization_id", input.organizationId)
+    .eq("store_id", storeId)
+    .eq("provider", "checkoutleak_connector")
+    .maybeSingle()
 
-  if (integrationResult.error || !integrationResult.data) {
+  if (existingIntegration.error) {
     return { ok: false as const }
+  }
+
+  let integrationId: string
+  if (existingIntegration.data) {
+    const updateIntegration = await input.admin
+      .from("store_integrations")
+      .update({
+        status: "connected",
+        sync_status: "synced",
+        connection_health: "healthy",
+        metadata: integrationMetadata as Json,
+        last_synced_at: new Date().toISOString(),
+      })
+      .eq("id", existingIntegration.data.id)
+      .select("id")
+      .single()
+    if (updateIntegration.error || !updateIntegration.data) {
+      return { ok: false as const }
+    }
+    integrationId = updateIntegration.data.id
+  } else {
+    const insertIntegration = await input.admin
+      .from("store_integrations")
+      .insert({
+        organization_id: input.organizationId,
+        store_id: storeId,
+        provider: "checkoutleak_connector",
+        status: "connected",
+        installed_at: new Date().toISOString(),
+        sync_status: "synced",
+        connection_health: "healthy",
+        metadata: integrationMetadata as Json,
+        last_synced_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single()
+    if (insertIntegration.error || !insertIntegration.data) {
+      return { ok: false as const }
+    }
+    integrationId = insertIntegration.data.id
   }
 
   return {
     ok: true as const,
-    storeId: storeResult.data.id,
-    integrationId: integrationResult.data.id,
+    storeId,
+    integrationId,
   }
 }
 
