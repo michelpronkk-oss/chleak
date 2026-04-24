@@ -4,7 +4,9 @@ import { stat } from "node:fs/promises"
 import { writeFile } from "node:fs/promises"
 import path from "node:path"
 
-import { chromium, type Page } from "playwright"
+import { type Page } from "playwright-core"
+
+import { launchChromiumBrowser } from "./browser-launch"
 
 export const ACTIVATION_FLOW_RUNNER_DETECTOR_VERSION =
   "shopify_activation_flow_runner_v1"
@@ -943,7 +945,7 @@ export async function runActivationFlowV1(
 
   const startedAt = new Date().toISOString()
 
-  let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null
+  let browser: Awaited<ReturnType<typeof launchChromiumBrowser>> | null = null
   let status: ActivationFlowRunStatusV1 = "completed"
   let errorMessage: string | null = null
   const steps: ActivationFlowStepResultV1[] = []
@@ -962,7 +964,7 @@ export async function runActivationFlowV1(
 
   try {
     try {
-      browser = await chromium.launch({ headless: true })
+      browser = await launchChromiumBrowser()
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       return buildSkippedResult({

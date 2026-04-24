@@ -4,7 +4,15 @@
       "Read(//c/c/Users/miche/Desktop/Checkoutleak/**)",
       "Bash(npx tsc *)",
       "Bash(node -e \"require\\('motion/react'\\)\")",
-      "Bash(python3 -c \" import sys, json lines = sys.stdin.read\\(\\).strip\\(\\).split\\('\\\\n'\\) for line in lines[-20:]: try: obj = json.loads\\(line\\) if obj.get\\('type'\\) in ['human', 'assistant']: role = obj.get\\('type', ''\\) content = obj.get\\('content', ''\\) if isinstance\\(content, list\\): for c in content: if isinstance\\(c, dict\\) and c.get\\('type'\\) == 'text': print\\(f'[{role}]: {c[\\\\\"text\\\\\"][:300]}'\\) elif isinstance\\(content, str\\): print\\(f'[{role}]: {content[:300]}'\\) except: pass \")"
+      "Bash(python3 -c \" import sys, json lines = sys.stdin.read\\(\\).strip\\(\\).split\\('\\\\n'\\) for line in lines[-20:]: try: obj = json.loads\\(line\\) if obj.get\\('type'\\) in ['human', 'assistant']: role = obj.get\\('type', ''\\) content = obj.get\\('content', ''\\) if isinstance\\(content, list\\): for c in content: if isinstance\\(c, dict\\) and c.get\\('type'\\) == 'text': print\\(f'[{role}]: {c[\\\\\"text\\\\\"][:300]}'\\) elif isinstance\\(content, str\\): print\\(f'[{role}]: {content[:300]}'\\) except: pass \")",
+      "Bash(ls -la .env*)",
+      "Bash(grep -r \"trigger\\\\|TRIGGER\\\\|resend\\\\|RESEND\\\\|@sparticuz\\\\|playwright-core\" src/ --include=\"*.ts\" -l)",
+      "Bash(grep -r \"from \\\\\"playwright\\\\\"\" src/ --include=\"*.ts\" -l)",
+      "Bash(grep -v \"^$\")",
+      "Bash(npx playwright-core *)",
+      "Bash(node -e \"const { chromium } = require\\('playwright-core'\\); chromium.launch\\({ headless: true }\\).then\\(b => { console.log\\('Playwright OK'\\); b.close\\(\\); }\\).catch\\(e => console.log\\('Playwright fail:', e.message\\)\\)\")",
+      "Bash(node -e \"require\\('@trigger.dev/build/extensions/playwright'\\)\")",
+      "Bash(node -e \"const b = require\\('@trigger.dev/build'\\); console.log\\(Object.keys\\(b\\)\\)\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\miche\\Desktop\\Checkoutleak\\src\\app\\api\\internal\\access-requests\\[id]"

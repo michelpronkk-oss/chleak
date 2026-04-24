@@ -1,5 +1,5 @@
 export const URL_SOURCE_ANALYSIS_RUNNER_DETECTOR_VERSION =
-  "url_source_surface_runner_v1"
+  "url_source_surface_runner_v2"
 
 export type UrlSourceSurfaceClassificationV1 =
   | "marketing_only"
@@ -12,6 +12,15 @@ export type UrlSourceSurfaceClassificationV1 =
 export type UrlSourceRevenuePathClarityV1 = "clear" | "partial" | "none"
 
 export type UrlSourceAnalysisRunStatusV1 = "completed" | "skipped" | "failed"
+
+// Business model classification derived from surface signals and vocabulary.
+// Distinct from surfaceClassification which describes page structure.
+export type UrlSourceBusinessTypeV1 =
+  | "saas"
+  | "service_business"
+  | "ecommerce"
+  | "mixed"
+  | "unknown"
 
 export interface UrlSourceAnalysisSummaryV1 {
   runId: string
@@ -29,6 +38,12 @@ export interface UrlSourceAnalysisSummaryV1 {
   hasPrimaryCta: boolean
   primaryCtaLabel: string | null
   hasCheckoutSignal: boolean
+  // Extended path evaluation fields
+  businessType: UrlSourceBusinessTypeV1
+  hasMobileViewport: boolean
+  hasContactOrBookingPath: boolean
+  hasSubscriptionLanguage: boolean
+  responseTimeMs: number | null
 }
 
 export interface UrlSourceAnalysisResultV1 {
@@ -39,30 +54,37 @@ export interface UrlSourceAnalysisResultV1 {
   errorMessage: string | null
 }
 
-function stripHtmlTags(value: string) {
+// ---------------------------------------------------------------------------
+// HTML utilities
+// ---------------------------------------------------------------------------
+
+function stripInertContent(html: string): string {
+  return html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+}
+
+function stripHtmlTags(value: string): string {
   return value.replace(/<[^>]+>/g, " ")
 }
 
-function cleanWhitespace(value: string) {
+function cleanWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim()
 }
 
-function normalizeHttpUrl(input: string) {
+function normalizeHttpUrl(input: string): string | null {
   const trimmed = input.trim()
-  if (!trimmed) {
-    return null
-  }
-
+  if (!trimmed) return null
   const withProtocol =
     trimmed.startsWith("http://") || trimmed.startsWith("https://")
       ? trimmed
       : `https://${trimmed}`
-
   try {
     const parsed = new URL(withProtocol)
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-      return null
-    }
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null
     parsed.hash = ""
     return parsed.toString()
   } catch {
@@ -70,100 +92,306 @@ function normalizeHttpUrl(input: string) {
   }
 }
 
-function includesAnyToken(haystack: string, tokens: readonly string[]) {
-  return tokens.some((token) => haystack.includes(token))
+// Extract the pathname from a potentially relative or absolute href.
+function extractPathname(href: string, baseOrigin: string): string | null {
+  try {
+    const url = new URL(href, baseOrigin)
+    if (url.origin !== baseOrigin && !href.startsWith("/")) {
+      return null // external link
+    }
+    return url.pathname.toLowerCase()
+  } catch {
+    if (href.startsWith("/")) {
+      return href.split("?")[0]!.split("#")[0]!.toLowerCase()
+    }
+    return null
+  }
 }
 
-function extractHrefTargets(html: string) {
+// True only for hrefs that represent real user-navigable pages on this site.
+function isNavigableHref(href: string): boolean {
+  const h = href.trim().toLowerCase()
+  if (!h) return false
+  if (h.startsWith("javascript:") || h.startsWith("mailto:") || h.startsWith("tel:") || h.startsWith("data:")) return false
+  if (h.startsWith("#")) return false
+  if (/\.(js|css|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf|eot|pdf|xml|json|map|gz|zip)(\?|$)/i.test(h)) return false
+  if (/\/_next\/|\/static\/|\/assets\/|\/cdn-cgi\/|\/wp-content\//i.test(h)) return false
+  return true
+}
+
+// ---------------------------------------------------------------------------
+// Link and button extraction — operate on inert-stripped HTML only
+// ---------------------------------------------------------------------------
+
+function extractNavLinks(html: string): Array<{ href: string; label: string }> {
   const matches = html.matchAll(
-    /<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi
+    /<a\b[^>]*\bhref\s*=\s*["']([^"'#][^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi
   )
   const links: Array<{ href: string; label: string }> = []
   for (const match of matches) {
-    const href = cleanWhitespace(match[1] ?? "")
+    const href = (match[1] ?? "").trim()
     const label = cleanWhitespace(stripHtmlTags(match[2] ?? ""))
-    if (!href) {
-      continue
-    }
+    if (!href || !isNavigableHref(href)) continue
     links.push({ href, label })
-    if (links.length >= 160) {
-      break
-    }
+    if (links.length >= 200) break
   }
   return links
 }
 
-function extractButtonLabels(html: string) {
-  const matches = html.matchAll(/<button\b[^>]*>([\s\S]*?)<\/button>/gi)
+function extractButtonLabels(html: string): string[] {
   const labels: string[] = []
-  for (const match of matches) {
+  const btnMatches = html.matchAll(/<button\b[^>]*>([\s\S]*?)<\/button>/gi)
+  for (const match of btnMatches) {
     const label = cleanWhitespace(stripHtmlTags(match[1] ?? ""))
-    if (!label) {
-      continue
-    }
-    labels.push(label)
-    if (labels.length >= 80) {
-      break
-    }
+    if (label && label.length <= 80) labels.push(label)
+    if (labels.length >= 80) break
+  }
+  // Also capture <input type="submit"> values
+  const inputMatches = html.matchAll(/<input\b[^>]*\btype\s*=\s*["']submit["'][^>]*\bvalue\s*=\s*["']([^"']+)["'][^>]*>/gi)
+  for (const match of inputMatches) {
+    const label = cleanWhitespace(match[1] ?? "")
+    if (label) labels.push(label)
   }
   return labels
 }
 
-function scorePrimaryCtaLabel(label: string) {
-  const lower = label.toLowerCase()
+// ---------------------------------------------------------------------------
+// Signal detection — precision over recall
+// ---------------------------------------------------------------------------
+
+// Matches pathname exactly as a leading segment: /pricing, /pricing/, /pricing/annual
+function pathStartsWith(path: string, segments: string[]): boolean {
+  return segments.some((seg) => path === seg || path.startsWith(`${seg}/`))
+}
+
+function detectPricingPath(paths: string[]): boolean {
+  const pricingPaths = ["/pricing", "/plans", "/plan", "/packages", "/package", "/rates", "/subscription-plans", "/pricing-plans"]
+  return paths.some((p) => pathStartsWith(p, pricingPaths))
+}
+
+function detectPricingLabel(labels: string[]): boolean {
+  const rx = /^(pricing|plans?|packages?|subscription\s+plans?|see\s+pricing|view\s+pricing|our\s+pricing|compare\s+plans?)$/i
+  return labels.some((l) => rx.test(l.trim()))
+}
+
+function detectSignupPath(paths: string[]): boolean {
+  const signupPaths = ["/signup", "/sign-up", "/register", "/join", "/trial", "/free-trial", "/start", "/get-started", "/onboarding", "/create-account"]
+  return paths.some((p) => pathStartsWith(p, signupPaths))
+}
+
+function detectSignupLabel(labels: string[]): boolean {
+  const rx = /^(sign\s*up|create\s+(an?\s+)?account|get\s+started(\s+free)?|start\s+(your\s+)?(free\s+)?(trial|today)?|free\s+trial|try\s+(for\s+)?free|try\s+it\s+free|start\s+free|register(\s+now)?|join(\s+now|\s+free)?|open\s+an?\s+account)$/i
+  return labels.some((l) => rx.test(l.trim()))
+}
+
+function detectLoginPath(paths: string[]): boolean {
+  const loginPaths = ["/login", "/log-in", "/signin", "/sign-in", "/auth/login", "/auth/signin", "/account/login", "/user/login"]
+  return paths.some((p) => pathStartsWith(p, loginPaths))
+}
+
+function detectLoginLabel(labels: string[]): boolean {
+  const rx = /^(log\s*in|sign\s+in|log\s+in\s+to\s+your\s+account|my\s+account|account\s+login)$/i
+  return labels.some((l) => rx.test(l.trim()))
+}
+
+// Checkout = real cart infrastructure, not just a portfolio mention of the word
+function detectCheckoutPath(paths: string[]): boolean {
+  const cartPaths = ["/cart", "/bag", "/basket", "/checkout"]
+  return paths.some((p) => pathStartsWith(p, cartPaths))
+}
+
+function detectProductCatalogPath(paths: string[]): boolean {
+  const catalogPaths = ["/products", "/product", "/collections", "/collection", "/shop", "/store", "/catalogue", "/catalog"]
+  // Require at least two distinct catalog-style paths OR one with a slug-like structure
+  const matches = paths.filter((p) => pathStartsWith(p, catalogPaths))
+  // A single /shop link is weak (could be a portfolio link). Require either a deep path or multiple catalog paths.
+  return (
+    matches.some((p) => p.split("/").filter(Boolean).length >= 2) ||
+    matches.length >= 2
+  )
+}
+
+function detectCheckoutButton(labels: string[]): boolean {
+  const rx = /^(add\s+to\s+(cart|bag|basket)|buy\s+now|buy|checkout|view\s+(cart|bag|basket)|go\s+to\s+(cart|checkout)|order\s+now|purchase|shop\s+now|add\s+to\s+order)$/i
+  return labels.some((l) => rx.test(l.trim()))
+}
+
+// Visible text checks — applied only to inert-stripped content
+function visibleTextIncludes(visibleText: string, tokens: string[]): boolean {
+  return tokens.some((token) => visibleText.includes(token))
+}
+
+// ---------------------------------------------------------------------------
+// Extended quality and business-type signals
+// ---------------------------------------------------------------------------
+
+function detectMobileViewport(rawHtml: string): boolean {
+  return /<meta\b[^>]*\bname\s*=\s*["']viewport["'][^>]*/i.test(rawHtml)
+}
+
+function detectContactOrBookingPath(paths: string[], labels: string[]): boolean {
+  const contactPaths = [
+    "/contact", "/contact-us", "/get-in-touch", "/reach-us",
+    "/book", "/book-a-call", "/book-a-demo", "/book-a-meeting",
+    "/schedule", "/schedule-a-call", "/schedule-a-demo",
+    "/get-a-quote", "/request-quote", "/request-a-demo", "/request-a-consultation",
+    "/demo", "/get-demo", "/hire-us", "/work-with-us", "/lets-talk",
+    "/inquiry", "/enquiry",
+  ]
+  const rx = /^(contact(\s+us)?|get\s+in\s+touch|book\s+a\s+(call|demo|meeting)|schedule(\s+a\s+(call|demo))?|request\s+a\s+(demo|quote|consultation)|get\s+a\s+quote|hire\s+us|work\s+with\s+us|talk\s+to\s+(us|sales)|let'?s\s+talk|get\s+a\s+demo|speak\s+to\s+(us|sales))$/i
+  return (
+    paths.some((p) => contactPaths.some((cp) => p === cp || p.startsWith(`${cp}/`))) ||
+    labels.some((l) => rx.test(l.trim()))
+  )
+}
+
+function detectSubscriptionLanguage(visibleText: string): boolean {
+  const lower = visibleText.toLowerCase()
+  const tokens = [
+    "per month", "/month", "per year", "/year", "/mo",
+    "monthly plan", "annual plan", "billed monthly", "billed annually",
+    "subscription", "cancel anytime", "upgrade your plan", "free tier",
+    "saas", "recurring", "mrr", "arr",
+  ]
+  return tokens.some((t) => lower.includes(t))
+}
+
+function classifyBusinessType(input: {
+  surfaceClassification: UrlSourceSurfaceClassificationV1
+  hasCheckoutSignal: boolean
+  hasSignupPath: boolean
+  hasLoginPath: boolean
+  hasPricingPath: boolean
+  hasContactOrBookingPath: boolean
+  hasSubscriptionLanguage: boolean
+}): UrlSourceBusinessTypeV1 {
+  // Ecommerce: has real cart/product infrastructure
+  const looksEcommerce =
+    input.surfaceClassification === "ecommerce" || input.hasCheckoutSignal
+
+  // SaaS: has app infrastructure or subscription-style language
+  const looksSaaS =
+    input.surfaceClassification === "app_first" ||
+    input.hasSubscriptionLanguage ||
+    (input.hasSignupPath && (input.hasLoginPath || input.hasPricingPath))
+
+  // Service: contact/booking oriented, no transactional infrastructure
+  const looksService =
+    input.hasContactOrBookingPath &&
+    !input.hasCheckoutSignal &&
+    !input.hasSignupPath &&
+    !input.hasSubscriptionLanguage
+
+  if (looksEcommerce && looksSaaS) return "mixed"
+  if (looksEcommerce) return "ecommerce"
+  if (looksSaaS) return "saas"
+  if (looksService) return "service_business"
+
+  // Marketing-only page: infer from contact signals as weakest classification
+  if (input.hasContactOrBookingPath) return "service_business"
+  if (input.hasPricingPath && !input.hasCheckoutSignal) return "saas"
+
+  return "unknown"
+}
+
+// ---------------------------------------------------------------------------
+// Primary CTA scoring — position-weighted, intent-calibrated
+// ---------------------------------------------------------------------------
+
+interface CtaCandidate {
+  label: string
+  score: number
+  position: number
+}
+
+function scorePrimaryCtaLabel(label: string): number {
+  const lower = label.toLowerCase().trim()
+  if (!lower || lower.length > 60) return 0
+
   let score = 0
-  if (
-    includesAnyToken(lower, [
-      "get started",
-      "start free",
-      "start",
-      "try",
-      "book demo",
-      "subscribe",
-    ])
-  ) {
-    score += 4
-  }
-  if (includesAnyToken(lower, ["sign up", "create account", "join"])) {
-    score += 3
-  }
-  if (includesAnyToken(lower, ["pricing", "plans", "buy", "checkout"])) {
-    score += 2
-  }
-  if (lower.length <= 3) {
-    score -= 1
-  }
+
+  // Highest intent: product-led growth and direct purchase
+  if (/^(get started|get started free|start for free|start free trial|try for free|try it free|start your free trial|start my free trial|claim your free trial|begin free trial)$/.test(lower)) score += 6
+  if (/^(sign up|sign up free|sign up for free|create (an? )?account|create (a )?free account|create your account|register now|join free|join today)$/.test(lower)) score += 5
+  if (/^(buy now|buy|shop now|add to cart|add to bag|checkout|order now|purchase|get (it )?now)$/.test(lower)) score += 5
+  if (/^(book a demo|book demo|request a demo|request demo|schedule a demo|see a demo|watch a demo|get a demo)$/.test(lower)) score += 4
+  if (/^(start|try|subscribe|get access|get (early )?access|join the waitlist|join waitlist|request access)$/.test(lower)) score += 3
+  if (/^(contact us|get in touch|talk to (us|sales)|speak to (us|sales)|start a project|hire us|work with us|let's talk|let's work together)$/.test(lower)) score += 2
+
+  // Low intent navigation CTAs — penalize these
+  if (/^(learn more|read more|see more|view more|find out more|discover more|explore|see (all|how)|know more)$/.test(lower)) score -= 2
+  if (/^(back|next|continue|close|cancel|skip|dismiss|ok|okay|yes|no)$/.test(lower)) score -= 2
+
+  // Length penalty for very short (likely icon buttons) and very long labels
+  if (lower.length <= 2) score -= 2
+  if (lower.length >= 50) score -= 1
+
   return score
 }
 
+function selectPrimaryCta(
+  links: Array<{ href: string; label: string }>,
+  buttonLabels: string[]
+): string | null {
+  const candidates: CtaCandidate[] = []
+
+  links.forEach((link, index) => {
+    if (!link.label) return
+    const score = scorePrimaryCtaLabel(link.label)
+    if (score > 0) candidates.push({ label: link.label, score, position: index })
+  })
+
+  buttonLabels.forEach((label, index) => {
+    const score = scorePrimaryCtaLabel(label)
+    if (score > 0) candidates.push({ label, score, position: links.length + index })
+  })
+
+  if (!candidates.length) return null
+
+  // Sort by score descending, then by position ascending (earlier = more prominent)
+  candidates.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score
+    return a.position - b.position
+  })
+
+  return candidates[0]?.label ?? null
+}
+
+// ---------------------------------------------------------------------------
+// Surface classification
+// ---------------------------------------------------------------------------
+
 function classifySurface(input: {
-  hasPricingPath: boolean
+  hasCheckoutPath: boolean
+  hasProductCatalog: boolean
+  hasCheckoutButton: boolean
   hasSignupPath: boolean
   hasLoginPath: boolean
-  hasCheckoutSignal: boolean
+  hasPricingPath: boolean
   hasPrimaryCta: boolean
-  bodyLower: string
-}) {
-  const ecommerceSignals =
-    Number(input.hasCheckoutSignal) +
-    Number(includesAnyToken(input.bodyLower, ["cart", "product", "collection", "shop"]))
-  const appSignals =
-    Number(input.hasSignupPath || input.hasLoginPath) +
-    Number(includesAnyToken(input.bodyLower, ["dashboard", "workspace", "trial", "onboarding"]))
+  visibleBodyText: string
+}): UrlSourceSurfaceClassificationV1 {
+  // Ecommerce requires real cart/product infrastructure, not just mentions
+  const ecommerceStrong = input.hasCheckoutPath
+  const ecommerceModerate =
+    input.hasProductCatalog && (input.hasCheckoutButton || input.hasCheckoutPath)
 
-  if (ecommerceSignals >= 2 && appSignals >= 2) {
-    return "mixed" as const
-  }
-  if (ecommerceSignals >= 2) {
-    return "ecommerce" as const
-  }
-  if (appSignals >= 2) {
-    return "app_first" as const
-  }
-  if (input.hasPrimaryCta || input.hasPricingPath) {
-    return "marketing_only" as const
-  }
-  return "unknown" as const
+  // App-first: signup or login + product/SaaS vocabulary in visible text
+  const appVocab = visibleTextIncludes(input.visibleBodyText.toLowerCase(), [
+    "dashboard", "workspace", "your account", "manage your", "free trial",
+    "saas", "platform", "onboarding", "workflow", "integrations",
+  ])
+  const appStrong = (input.hasSignupPath || input.hasLoginPath) && appVocab
+  const appModerate = input.hasSignupPath && input.hasLoginPath
+
+  const isEcommerce = ecommerceStrong || ecommerceModerate
+  const isApp = appStrong || appModerate
+
+  if (isEcommerce && isApp) return "mixed"
+  if (isEcommerce) return "ecommerce"
+  if (isApp) return "app_first"
+  if (input.hasPrimaryCta || input.hasPricingPath || input.hasSignupPath) return "marketing_only"
+  return "unknown"
 }
 
 function deriveRevenuePathClarity(input: {
@@ -171,26 +399,22 @@ function deriveRevenuePathClarity(input: {
   hasSignupPath: boolean
   hasCheckoutSignal: boolean
   hasPrimaryCta: boolean
-}) {
-  const clear =
-    input.hasCheckoutSignal ||
-    (input.hasPricingPath && (input.hasSignupPath || input.hasPrimaryCta))
+  surfaceClassification: UrlSourceSurfaceClassificationV1
+}): UrlSourceRevenuePathClarityV1 {
+  // Clear: actual transaction infrastructure or full funnel visible
+  if (input.hasCheckoutSignal) return "clear"
+  if (input.hasPricingPath && (input.hasSignupPath || input.hasPrimaryCta)) return "clear"
 
-  if (clear) {
-    return "clear" as const
-  }
+  // Partial: some signals but not a complete funnel
+  if (input.hasPricingPath || input.hasSignupPath) return "partial"
+  if (input.hasPrimaryCta && input.surfaceClassification !== "unknown") return "partial"
 
-  if (
-    input.hasPricingPath ||
-    input.hasSignupPath ||
-    input.hasPrimaryCta ||
-    input.hasCheckoutSignal
-  ) {
-    return "partial" as const
-  }
-
-  return "none" as const
+  return "none"
 }
+
+// ---------------------------------------------------------------------------
+// Evidence rows
+// ---------------------------------------------------------------------------
 
 function buildEvidenceRows(input: {
   classification: UrlSourceSurfaceClassificationV1
@@ -203,7 +427,7 @@ function buildEvidenceRows(input: {
   hasCheckoutSignal: boolean
   finalUrl: string | null
   httpStatus: number | null
-}) {
+}): Array<{ label: string; value: string }> {
   return [
     { label: "Surface classification", value: input.classification },
     { label: "Revenue path clarity", value: input.revenuePathClarity },
@@ -211,24 +435,16 @@ function buildEvidenceRows(input: {
     { label: "Signup path detected", value: input.hasSignupPath ? "yes" : "no" },
     { label: "Login path detected", value: input.hasLoginPath ? "yes" : "no" },
     { label: "Primary CTA detected", value: input.hasPrimaryCta ? "yes" : "no" },
-    {
-      label: "Primary CTA label",
-      value: input.primaryCtaLabel ?? "none",
-    },
-    {
-      label: "Checkout or handoff signal",
-      value: input.hasCheckoutSignal ? "yes" : "no",
-    },
-    {
-      label: "Final URL",
-      value: input.finalUrl ?? "none",
-    },
-    {
-      label: "HTTP status",
-      value: input.httpStatus !== null ? String(input.httpStatus) : "unknown",
-    },
+    { label: "Primary CTA label", value: input.primaryCtaLabel ?? "none" },
+    { label: "Checkout or cart signal", value: input.hasCheckoutSignal ? "yes" : "no" },
+    { label: "Final URL", value: input.finalUrl ?? "none" },
+    { label: "HTTP status", value: input.httpStatus !== null ? String(input.httpStatus) : "unknown" },
   ]
 }
+
+// ---------------------------------------------------------------------------
+// Failed result
+// ---------------------------------------------------------------------------
 
 function buildFailedResult(input: {
   runId: string
@@ -256,6 +472,11 @@ function buildFailedResult(input: {
       hasPrimaryCta: false,
       primaryCtaLabel: null,
       hasCheckoutSignal: false,
+      businessType: "unknown",
+      hasMobileViewport: false,
+      hasContactOrBookingPath: false,
+      hasSubscriptionLanguage: false,
+      responseTimeMs: null,
     },
     evidenceRows: [
       { label: "Runner status", value: "failed" },
@@ -264,6 +485,10 @@ function buildFailedResult(input: {
     errorMessage: input.message,
   }
 }
+
+// ---------------------------------------------------------------------------
+// Main entry point
+// ---------------------------------------------------------------------------
 
 export async function runUrlSourceAnalysisV1(input: {
   runId: string
@@ -281,16 +506,29 @@ export async function runUrlSourceAnalysisV1(input: {
   }
 
   let response: Response
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 15_000)
+  const fetchStart = Date.now()
   try {
     response = await fetch(normalizedEntryUrl, {
       method: "GET",
       redirect: "follow",
+      signal: controller.signal,
       headers: {
-        "user-agent": "CheckoutLeakUrlSourceRunner/1.0 (+https://checkoutleak.com)",
+        "user-agent":
+          "CheckoutLeakUrlSourceRunner/2.0 (+https://checkoutleak.com)",
+        "accept": "text/html,application/xhtml+xml",
+        "accept-language": "en-US,en;q=0.9",
       },
     })
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
+    clearTimeout(timeoutId)
+    const message =
+      error instanceof Error
+        ? error.name === "AbortError"
+          ? "Request timed out after 15 seconds."
+          : error.message
+        : String(error)
     return buildFailedResult({
       runId: input.runId,
       entryUrl: normalizedEntryUrl,
@@ -298,57 +536,103 @@ export async function runUrlSourceAnalysisV1(input: {
       message,
     })
   }
+  clearTimeout(timeoutId)
+  const responseTimeMs = Date.now() - fetchStart
 
   const finalUrl = response.url || normalizedEntryUrl
   const httpStatus = response.status
-  const html = await response.text().catch(() => "")
-  const bodyLower = html.toLowerCase()
-  const links = extractHrefTargets(html)
-  const buttonLabels = extractButtonLabels(html)
-  const linkHrefJoined = links.map((item) => item.href.toLowerCase()).join(" ")
-  const linkLabelJoined = links.map((item) => item.label.toLowerCase()).join(" ")
+  const rawHtml = await response.text().catch(() => "")
 
-  const hasPricingPath =
-    includesAnyToken(linkHrefJoined, ["/pricing", "/plans", "pricing", "plan"]) ||
-    includesAnyToken(linkLabelJoined, ["pricing", "plans"]) ||
-    includesAnyToken(bodyLower, [" pricing ", "plans"])
-  const hasSignupPath =
-    includesAnyToken(linkHrefJoined, ["/signup", "/register", "/join", "/trial"]) ||
-    includesAnyToken(linkLabelJoined, ["sign up", "create account", "start free", "free trial"]) ||
-    includesAnyToken(bodyLower, ["sign up", "create account"])
-  const hasLoginPath =
-    includesAnyToken(linkHrefJoined, ["/login", "/signin", "/auth", "/account"]) ||
-    includesAnyToken(linkLabelJoined, ["log in", "login", "sign in", "account"]) ||
-    includesAnyToken(bodyLower, ["log in", "login", "sign in"])
-  const hasCheckoutSignal =
-    includesAnyToken(linkHrefJoined, ["/checkout", "/cart", "/buy", "/shop"]) ||
-    includesAnyToken(linkLabelJoined, ["checkout", "cart", "buy now", "shop now"]) ||
-    includesAnyToken(bodyLower, [" checkout", "cart", "buy now"])
+  // Derive the base origin for resolving relative hrefs
+  let baseOrigin: string
+  try {
+    baseOrigin = new URL(finalUrl).origin
+  } catch {
+    baseOrigin = new URL(normalizedEntryUrl).origin ?? ""
+  }
 
-  const ctaCandidates = [
-    ...links.map((item) => item.label).filter((value) => value.length > 0),
+  // Strip inert content (scripts, styles, SVGs, comments) before any text analysis.
+  // This is the single most important step — JS code contains e-commerce variable
+  // names, API route strings, and template literals that poison naive text scanning.
+  const visibleHtml = stripInertContent(rawHtml)
+  const visibleBodyText = cleanWhitespace(stripHtmlTags(visibleHtml))
+
+  // Extract navigable links from visible HTML only
+  const navLinks = extractNavLinks(visibleHtml)
+  const buttonLabels = extractButtonLabels(visibleHtml)
+  const allLabels = [
+    ...navLinks.map((l) => l.label).filter(Boolean),
     ...buttonLabels,
   ]
-  const sortedCtas = [...ctaCandidates]
-    .map((label) => ({ label, score: scorePrimaryCtaLabel(label) }))
-    .sort((left, right) => right.score - left.score)
-  const primaryCta = sortedCtas.find((item) => item.score > 0)?.label ?? null
-  const hasPrimaryCta = primaryCta !== null
 
+  // Build pathname list for structural signal detection
+  const navPaths = navLinks
+    .map((l) => extractPathname(l.href, baseOrigin))
+    .filter((p): p is string => p !== null)
+
+  // --- Pricing ---
+  // Requires a dedicated pricing page URL or an explicit navigation label.
+  // Body text is NOT used — agencies and service sites say "pricing" constantly.
+  const hasPricingPath =
+    detectPricingPath(navPaths) || detectPricingLabel(allLabels)
+
+  // --- Signup ---
+  // Requires either a signup URL path or a specific call-to-action label.
+  const hasSignupPath =
+    detectSignupPath(navPaths) || detectSignupLabel(allLabels)
+
+  // --- Login ---
+  const hasLoginPath =
+    detectLoginPath(navPaths) || detectLoginLabel(allLabels)
+
+  // --- Checkout / Cart ---
+  // Requires actual cart infrastructure. /shop alone is not sufficient because
+  // agency and portfolio sites frequently link to their clients' shops.
+  const hasCheckoutPath = detectCheckoutPath(navPaths)
+  const hasProductCatalog = detectProductCatalogPath(navPaths)
+  const hasCheckoutButton = detectCheckoutButton(allLabels)
+  const hasCheckoutSignal =
+    hasCheckoutPath || (hasProductCatalog && hasCheckoutButton) || hasCheckoutButton
+
+  // --- Extended quality and business-type signals ---
+  const hasMobileViewport = detectMobileViewport(rawHtml)
+  const hasContactOrBookingPath = detectContactOrBookingPath(navPaths, allLabels)
+  const hasSubscriptionLanguage = detectSubscriptionLanguage(visibleBodyText)
+
+  // --- Primary CTA ---
+  const primaryCtaLabel = selectPrimaryCta(navLinks, buttonLabels)
+  const hasPrimaryCta = primaryCtaLabel !== null
+
+  // --- Classification and clarity ---
   const surfaceClassification = classifySurface({
-    hasPricingPath,
+    hasCheckoutPath,
+    hasProductCatalog,
+    hasCheckoutButton,
     hasSignupPath,
     hasLoginPath,
-    hasCheckoutSignal,
+    hasPricingPath,
     hasPrimaryCta,
-    bodyLower,
+    visibleBodyText,
   })
+
   const revenuePathClarity = deriveRevenuePathClarity({
     hasPricingPath,
     hasSignupPath,
     hasCheckoutSignal,
     hasPrimaryCta,
+    surfaceClassification,
   })
+
+  const businessType = classifyBusinessType({
+    surfaceClassification,
+    hasCheckoutSignal,
+    hasSignupPath,
+    hasLoginPath,
+    hasPricingPath,
+    hasContactOrBookingPath,
+    hasSubscriptionLanguage,
+  })
+
   const noClearRevenuePath = revenuePathClarity === "none"
   const completedAt = new Date().toISOString()
   const evidenceRows = buildEvidenceRows({
@@ -358,7 +642,7 @@ export async function runUrlSourceAnalysisV1(input: {
     hasSignupPath,
     hasLoginPath,
     hasPrimaryCta,
-    primaryCtaLabel: primaryCta,
+    primaryCtaLabel,
     hasCheckoutSignal,
     finalUrl,
     httpStatus,
@@ -381,8 +665,13 @@ export async function runUrlSourceAnalysisV1(input: {
       hasSignupPath,
       hasLoginPath,
       hasPrimaryCta,
-      primaryCtaLabel: primaryCta,
+      primaryCtaLabel,
       hasCheckoutSignal,
+      businessType,
+      hasMobileViewport,
+      hasContactOrBookingPath,
+      hasSubscriptionLanguage,
+      responseTimeMs,
     },
     evidenceRows,
     errorMessage: null,

@@ -17,6 +17,11 @@ import {
   runUrlSourceAnalysisV1,
   type UrlSourceAnalysisResultV1,
 } from "@/server/services/url-source-analysis-runner"
+import {
+  URL_SOURCE_BROWSER_INSPECTOR_DETECTOR_VERSION,
+  runUrlSourceBrowserInspectionV1,
+  type UrlSourceBrowserInspectionResultV1,
+} from "@/server/services/url-source-browser-inspector"
 
 type IssueInsert = Database["public"]["Tables"]["issues"]["Insert"]
 
@@ -1029,47 +1034,265 @@ function buildSimulatedFindings(): FindingDraft[] {
   ]
 }
 
-function buildUrlSourceSurfaceFindings(input: {
+function buildUrlSourcePathFindings(input: {
   run: UrlSourceAnalysisResultV1 | null
-}) {
+  browserInspection: UrlSourceBrowserInspectionResultV1 | null
+}): FindingDraft[] {
   if (!input.run || input.run.status !== "completed") {
     return []
   }
 
-  if (!input.run.summary.noClearRevenuePath) {
-    return []
+  const s = input.run.summary
+  const bi = input.browserInspection?.status === "completed" ? input.browserInspection : null
+  const findings: FindingDraft[] = []
+
+  // Shared evidence base attached to every URL-source finding
+  const baseEvidence = {
+    detector_version: input.run.detectorVersion,
+    browser_inspector_version: bi?.detectorVersion ?? null,
+    business_type: s.businessType,
+    surface_classification: s.surfaceClassification,
+    revenue_path_clarity: s.revenuePathClarity,
+    has_pricing_path: s.hasPricingPath,
+    has_signup_path: s.hasSignupPath,
+    has_login_path: s.hasLoginPath,
+    has_primary_cta: s.hasPrimaryCta,
+    primary_cta_label: s.primaryCtaLabel,
+    has_checkout_signal: s.hasCheckoutSignal,
+    has_contact_or_booking_path: s.hasContactOrBookingPath,
+    has_subscription_language: s.hasSubscriptionLanguage,
+    has_mobile_viewport: s.hasMobileViewport,
+    response_time_ms: s.responseTimeMs,
+    final_url: s.finalUrl,
+    http_status: s.httpStatus,
+    // Browser inspection signals
+    browser_load_time_ms: bi?.loadTimeMs ?? null,
+    browser_page_title: bi?.pageTitle ?? null,
+    browser_has_h1: bi?.hasH1 ?? null,
+    browser_h1_text: bi?.h1Text ?? null,
+    browser_form_count: bi?.formCount ?? null,
+    browser_mobile_atf_cta: bi?.mobileHasAboveFoldCta ?? null,
+    browser_mobile_atf_cta_labels: bi?.mobileAboveFoldCtaLabels?.join(", ") ?? null,
+    browser_mobile_overflow: bi?.mobileViewportOverflow ?? null,
+    browser_mobile_screenshot_ref: bi?.mobileScreenshotRef ?? null,
+    browser_desktop_screenshot_ref: bi?.desktopScreenshotRef ?? null,
   }
 
-  return [
-    {
+  // -------------------------------------------------------------------------
+  // SaaS lane
+  // -------------------------------------------------------------------------
+  if (s.businessType === "saas" || s.businessType === "mixed") {
+
+    // Signup path is the growth entry point. If it is absent, the funnel is broken.
+    if (!s.hasSignupPath) {
+      findings.push({
+        key: "url_source_saas_signup_path_missing_v1",
+        type: "signup_form_abandonment",
+        severity: "high",
+        title: "Signup path not detected on primary surface",
+        summary:
+          "Surface analysis found no clear signup, registration, or account creation path on the primary URL. Prospective users who arrive at this surface have no visible entry point into the product.",
+        whyItMatters:
+          "For a SaaS product, the signup path is the first commercial conversion step. A missing or invisible signup path means acquisition spend does not convert.",
+        recommendedAction:
+          "Confirm the primary URL reflects the commercial entry surface. Verify a visible signup or account creation CTA is present above the fold on the main page.",
+        estimatedMonthlyRevenueImpact: 0,
+        evidence: { ...baseEvidence, path_evaluated: "activation_signup" },
+      })
+    }
+
+    // Pricing exists but leads nowhere — no signup or checkout to complete the funnel.
+    if (s.hasPricingPath && !s.hasSignupPath && !s.hasCheckoutSignal) {
+      findings.push({
+        key: "url_source_saas_pricing_no_conversion_v1",
+        type: "pricing_page_to_checkout_dropoff",
+        severity: "medium",
+        title: "Pricing path detected but conversion next step is missing",
+        summary:
+          "A pricing or plans page is detectable, but no clear path from pricing to signup or checkout was found. Visitors who reach pricing have no visible way to start.",
+        whyItMatters:
+          "Pricing page visitors are high-intent. A broken or absent handoff from pricing to the next conversion step is a direct revenue leak.",
+        recommendedAction:
+          "Confirm each pricing tier has a clear CTA linking directly to signup, checkout, or a sales demo flow. The conversion path should be unambiguous from the pricing page.",
+        estimatedMonthlyRevenueImpact: 0,
+        evidence: { ...baseEvidence, path_evaluated: "pricing_handoff" },
+      })
+    }
+
+    // Login exists but no signup — the site serves existing users but not new ones.
+    if (s.hasLoginPath && !s.hasSignupPath) {
+      findings.push({
+        key: "url_source_saas_no_growth_funnel_v1",
+        type: "activation_funnel_dropout",
+        severity: "medium",
+        title: "Login path found but no signup path detected",
+        summary:
+          "A login or sign-in path is present, but no signup or registration path was found. The surface appears to serve existing users without providing an acquisition funnel for new ones.",
+        whyItMatters:
+          "Without a visible signup path, new visitor conversion is blocked at the first step. The product may be growing only through channels that bypass the primary surface.",
+        recommendedAction:
+          "Ensure the primary surface includes a visible signup or trial start CTA alongside the login path. Both returning and new visitors should have a clear next step.",
+        estimatedMonthlyRevenueImpact: 0,
+        evidence: { ...baseEvidence, path_evaluated: "activation_signup" },
+      })
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Service business lane
+  // -------------------------------------------------------------------------
+  if (s.businessType === "service_business" || s.businessType === "mixed") {
+
+    // No contact or booking path — the primary revenue conversion is unavailable.
+    if (!s.hasContactOrBookingPath) {
+      findings.push({
+        key: "url_source_service_no_contact_path_v1",
+        type: "setup_gap",
+        severity: "high",
+        title: "No contact, booking, or inquiry path detected",
+        summary:
+          "Surface analysis found no contact form, booking link, demo request, or quote inquiry path on the primary URL. For a service business, this is the primary conversion mechanism.",
+        whyItMatters:
+          "For service businesses, the contact or booking path is the equivalent of a checkout. A missing or unclear path means prospective clients cannot engage, and inbound intent is wasted.",
+        recommendedAction:
+          "Confirm the primary URL has a clearly visible contact, booking, or inquiry CTA. For service businesses this should be present in the main navigation and above the fold.",
+        estimatedMonthlyRevenueImpact: 0,
+        evidence: { ...baseEvidence, path_evaluated: "contact_booking" },
+      })
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Ecommerce lane
+  // -------------------------------------------------------------------------
+  if (s.businessType === "ecommerce" || s.businessType === "mixed") {
+
+    // No clear checkout or cart path — the transaction path is broken.
+    if (!s.hasCheckoutSignal) {
+      findings.push({
+        key: "url_source_ecommerce_no_checkout_v1",
+        type: "checkout_friction",
+        severity: "high",
+        title: "No clear checkout or cart path detected on primary surface",
+        summary:
+          "Surface analysis found no cart link, checkout path, or purchase CTA on the primary URL. For an ecommerce site, this is the core conversion mechanism.",
+        whyItMatters:
+          "A missing or invisible checkout path means customers who arrive at the primary surface cannot easily find a way to purchase. This is a direct transaction barrier.",
+        recommendedAction:
+          "Confirm the primary URL provides a clear path to the product catalog and cart or checkout. Cart access and purchase CTAs should be visible without requiring navigation to a secondary page.",
+        estimatedMonthlyRevenueImpact: 0,
+        evidence: { ...baseEvidence, path_evaluated: "checkout" },
+      })
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Unknown / fallback lane — catches sites where no path is clear
+  // -------------------------------------------------------------------------
+  if (s.businessType === "unknown" && s.revenuePathClarity === "none") {
+    findings.push({
       key: "url_source_no_clear_revenue_path_v1",
       type: "setup_gap",
       severity: "medium",
-      title: "Primary URL source has no clear revenue path",
+      title: "Primary URL source has no detectable revenue path",
       summary:
-        "URL-source analysis did not detect a clear pricing, signup, or checkout handoff path on the saved primary surface.",
+        "Surface analysis could not identify a pricing, signup, checkout, or contact path on the primary URL. The surface does not provide enough commercial signal for path evaluation.",
       whyItMatters:
-        "Without a clear revenue path, activation and handoff leakage analysis remains low-confidence for URL-first scanning.",
+        "Without a detectable revenue path, CheckoutLeak cannot evaluate activation, conversion, or recovery gaps for this source. The primary URL may not be the right entry surface.",
       recommendedAction:
-        "Set a source URL that reflects the commercial entry surface and confirm visible pricing, signup, or checkout progression paths.",
+        "Verify that the primary URL reflects the live commercial entry point for this business. The URL should be the page where prospective customers or users first encounter the offer.",
       estimatedMonthlyRevenueImpact: 0,
-      evidence: {
-        detector_version: input.run.detectorVersion,
-        analysis_status: input.run.status,
-        surface_classification: input.run.summary.surfaceClassification,
-        revenue_path_clarity: input.run.summary.revenuePathClarity,
-        has_pricing_path: input.run.summary.hasPricingPath,
-        has_signup_path: input.run.summary.hasSignupPath,
-        has_login_path: input.run.summary.hasLoginPath,
-        has_primary_cta: input.run.summary.hasPrimaryCta,
-        primary_cta_label: input.run.summary.primaryCtaLabel,
-        has_checkout_signal: input.run.summary.hasCheckoutSignal,
-        final_url: input.run.summary.finalUrl,
-        http_status: input.run.summary.httpStatus,
-      },
-    },
-  ] satisfies FindingDraft[]
+      evidence: { ...baseEvidence, path_evaluated: "surface_fallback" },
+    })
+  }
+
+  // -------------------------------------------------------------------------
+  // Quality signals — apply to all business types
+  // -------------------------------------------------------------------------
+
+  // Mobile viewport missing — likely breaks layout on mobile devices.
+  if (!s.hasMobileViewport) {
+    findings.push({
+      key: "url_source_no_mobile_viewport_v1",
+      type: "setup_gap",
+      severity: "low",
+      title: "Mobile viewport not configured on primary surface",
+      summary:
+        "The primary URL does not declare a viewport meta tag. This typically causes the page to render at desktop width on mobile devices, breaking layout and degrading the mobile conversion experience.",
+      whyItMatters:
+        "Mobile sessions represent the majority of web traffic for most businesses. A broken mobile layout directly reduces conversion rates from mobile acquisition.",
+      recommendedAction:
+        "Confirm the primary URL returns a valid viewport meta tag. This is usually configured in the site's base HTML template or CMS settings.",
+      estimatedMonthlyRevenueImpact: 0,
+      evidence: { ...baseEvidence, path_evaluated: "mobile_quality" },
+    })
+  }
+
+  // -------------------------------------------------------------------------
+  // Browser inspection findings — only emitted when Playwright ran successfully
+  // -------------------------------------------------------------------------
+
+  if (bi) {
+    // Mobile layout overflow — content exceeds viewport width on mobile.
+    if (bi.mobileViewportOverflow) {
+      findings.push({
+        key: "url_source_mobile_layout_overflow_v1",
+        type: "setup_gap",
+        severity: "medium",
+        title: "Mobile layout overflows the viewport on primary surface",
+        summary:
+          "Browser inspection detected that page content exceeds the visible viewport width on a 375px mobile screen. This creates horizontal scrolling and clips elements, degrading the mobile experience.",
+        whyItMatters:
+          "Horizontal overflow on mobile forces users to scroll sideways or hides key conversion elements. This directly reduces mobile conversion quality regardless of traffic volume.",
+        recommendedAction:
+          "Inspect the primary URL on a 375px mobile viewport and fix any elements, images, or containers that exceed the viewport width. Common causes are fixed-width containers, unresponsive images, and overflow-hidden bugs.",
+        estimatedMonthlyRevenueImpact: 0,
+        evidence: { ...baseEvidence, path_evaluated: "mobile_layout" },
+      })
+    }
+
+    // No above-the-fold CTA on mobile — users must scroll to find a next step.
+    if (!bi.mobileHasAboveFoldCta && s.revenuePathClarity !== "none") {
+      findings.push({
+        key: "url_source_no_atf_cta_mobile_v1",
+        type: "setup_gap",
+        severity: "medium",
+        title: "No conversion CTA visible above the fold on mobile",
+        summary:
+          "Browser inspection found no interactive call-to-action element visible within the mobile viewport on first load. Users arriving on mobile must scroll before encountering a primary action.",
+        whyItMatters:
+          "Most conversion happens from above-the-fold CTAs. Users who do not see an action within the first screenful have a significantly higher abandonment rate, especially on mobile where attention windows are shorter.",
+        recommendedAction:
+          "Ensure the primary conversion action (signup, contact, buy, demo request) is visible without scrolling on a 375px mobile screen. Review the page hierarchy and ensure the CTA is not pushed below the fold by large headers or hero images.",
+        estimatedMonthlyRevenueImpact: 0,
+        evidence: { ...baseEvidence, path_evaluated: "mobile_atf" },
+      })
+    }
+
+    // Slow page load — DOM content loaded time exceeds threshold.
+    const SLOW_LOAD_THRESHOLD_MS = 3_500
+    if (bi.loadTimeMs !== null && bi.loadTimeMs > SLOW_LOAD_THRESHOLD_MS) {
+      findings.push({
+        key: "url_source_slow_page_load_v1",
+        type: "setup_gap",
+        severity: "low",
+        title: "Primary surface DOM load time is above threshold",
+        summary: `Browser inspection measured a DOM content loaded time of ${bi.loadTimeMs}ms. Pages that take more than ${SLOW_LOAD_THRESHOLD_MS}ms to become interactive show measurably higher bounce rates.`,
+        whyItMatters:
+          "Page load speed directly affects conversion rates. High load times increase bounce rate, reduce ad quality scores, and create a poor first impression that compounds across all acquisition channels.",
+        recommendedAction:
+          "Profile the primary URL using browser DevTools or PageSpeed Insights. Common fixes are image optimization, reducing third-party script weight, enabling caching, and moving to a faster hosting configuration.",
+        estimatedMonthlyRevenueImpact: 0,
+        evidence: { ...baseEvidence, path_evaluated: "load_performance", measured_load_ms: bi.loadTimeMs },
+      })
+    }
+  }
+
+  return findings
 }
+
+// Keep old name as alias so it can be called identically from processQueuedScanV1
+const buildUrlSourceSurfaceFindings = buildUrlSourcePathFindings
 
 export async function processQueuedScanV1(input?: {
   scanId?: string | null
@@ -1230,6 +1453,7 @@ export async function processQueuedScanV1(input?: {
   const simulationOutcome = input?.simulationOutcome ?? null
   let stripeBillingSnapshot: StripeBillingSignalSnapshot | null = null
   let urlSourceAnalysisRun: UrlSourceAnalysisResultV1 | null = null
+  let urlSourceBrowserInspection: UrlSourceBrowserInspectionResultV1 | null = null
   if (
     !simulationOutcome &&
     integrationProvider === "stripe" &&
@@ -1264,12 +1488,31 @@ export async function processQueuedScanV1(input?: {
           entryUrl: primaryUrl,
         })
         console.info(
-          `[scan-runner] url source analysis completed: scan_id=${queuedScan.id}; status=${urlSourceAnalysisRun.status}; classification=${urlSourceAnalysisRun.summary.surfaceClassification}; clarity=${urlSourceAnalysisRun.summary.revenuePathClarity}`
+          `[scan-runner] url source analysis completed: scan_id=${queuedScan.id}; status=${urlSourceAnalysisRun.status}; classification=${urlSourceAnalysisRun.summary.surfaceClassification}; clarity=${urlSourceAnalysisRun.summary.revenuePathClarity}; business_type=${urlSourceAnalysisRun.summary.businessType}`
         )
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         console.error(
           `[scan-runner] url source analysis failed: scan_id=${queuedScan.id}; reason=${message}`
+        )
+      }
+
+      // Browser inspection: runs after the HTML analysis so we can use the
+      // resolved final URL. Gracefully skipped if Playwright is unavailable.
+      const inspectionUrl =
+        urlSourceAnalysisRun?.summary.finalUrl ?? primaryUrl
+      try {
+        urlSourceBrowserInspection = await runUrlSourceBrowserInspectionV1({
+          runId: queuedScan.id,
+          entryUrl: inspectionUrl,
+        })
+        console.info(
+          `[scan-runner] browser inspection completed: scan_id=${queuedScan.id}; status=${urlSourceBrowserInspection.status}; mobile_overflow=${urlSourceBrowserInspection.mobileViewportOverflow}; mobile_atf_cta=${urlSourceBrowserInspection.mobileHasAboveFoldCta}; load_ms=${urlSourceBrowserInspection.loadTimeMs}`
+        )
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        console.error(
+          `[scan-runner] browser inspection failed: scan_id=${queuedScan.id}; reason=${message}`
         )
       }
     }
@@ -1371,6 +1614,7 @@ export async function processQueuedScanV1(input?: {
       : integrationProvider === "checkoutleak_connector"
         ? buildUrlSourceSurfaceFindings({
             run: urlSourceAnalysisRun,
+            browserInspection: urlSourceBrowserInspection,
           })
       : []
 
@@ -1551,6 +1795,31 @@ export async function processQueuedScanV1(input?: {
             urlSourceAnalysisRun?.summary.revenuePathClarity ?? null,
           url_source_no_clear_revenue_path:
             urlSourceAnalysisRun?.summary.noClearRevenuePath ?? null,
+          url_source_business_type:
+            urlSourceAnalysisRun?.summary.businessType ?? null,
+          url_source_browser_inspection_last_run: urlSourceBrowserInspection
+            ? {
+                detector_version: urlSourceBrowserInspection.detectorVersion,
+                status: urlSourceBrowserInspection.status,
+                load_time_ms: urlSourceBrowserInspection.loadTimeMs,
+                page_title: urlSourceBrowserInspection.pageTitle,
+                has_h1: urlSourceBrowserInspection.hasH1,
+                h1_text: urlSourceBrowserInspection.h1Text,
+                form_count: urlSourceBrowserInspection.formCount,
+                mobile_has_atf_cta: urlSourceBrowserInspection.mobileHasAboveFoldCta,
+                mobile_atf_cta_labels: urlSourceBrowserInspection.mobileAboveFoldCtaLabels,
+                mobile_viewport_overflow: urlSourceBrowserInspection.mobileViewportOverflow,
+                mobile_screenshot_ref: urlSourceBrowserInspection.mobileScreenshotRef,
+                mobile_screenshot_sha256: urlSourceBrowserInspection.mobileScreenshotSha256,
+                mobile_screenshot_bytes: urlSourceBrowserInspection.mobileScreenshotBytes,
+                desktop_has_atf_cta: urlSourceBrowserInspection.desktopHasAboveFoldCta,
+                desktop_atf_cta_labels: urlSourceBrowserInspection.desktopAboveFoldCtaLabels,
+                desktop_screenshot_ref: urlSourceBrowserInspection.desktopScreenshotRef,
+                desktop_screenshot_sha256: urlSourceBrowserInspection.desktopScreenshotSha256,
+                desktop_screenshot_bytes: urlSourceBrowserInspection.desktopScreenshotBytes,
+                error_message: urlSourceBrowserInspection.errorMessage,
+              }
+            : null,
         }
       : {}),
     stripe_billing_signal_snapshot: stripeBillingSnapshot
