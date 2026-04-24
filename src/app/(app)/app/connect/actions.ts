@@ -282,9 +282,6 @@ export async function triggerPrimaryUrlSourceAnalysis() {
       scanned_at: new Date().toISOString(),
       detected_issues_count: 0,
       estimated_monthly_leakage: 0,
-      notification_requested: true,
-      notification_reason: "manual_url_source_analysis",
-      notification_recipient_email: session.user.email,
     })
     .select("id")
     .single()
@@ -293,23 +290,21 @@ export async function triggerPrimaryUrlSourceAnalysis() {
     redirect(`/app/stores/${storeId}?scan_status=queue_failed`)
   }
 
-  const triggerResult = await triggerQueuedScanTask({
-    scanId: scanInsert.data.id,
-    organizationId: membershipResult.data.organization_id,
-    storeId,
-    provider: "checkoutleak_connector",
-  })
+  // URL source analysis runs synchronously so the user sees results immediately
+  // on redirect. Trigger.dev is reserved for longer Shopify/Stripe scans.
+  const { processQueuedScanV1 } = await import(
+    "@/server/services/scan-processing-service"
+  )
+  const processed = await processQueuedScanV1({ scanId: scanInsert.data.id })
 
   revalidatePath("/app/stores")
   revalidatePath(`/app/stores/${storeId}`)
 
-  if (!triggerResult.ok) {
-    redirect(
-      `/app/stores/${storeId}?scan_status=${encodeURIComponent(triggerResult.reason)}&scan_id=${encodeURIComponent(scanInsert.data.id)}#surface-analysis`
-    )
+  if (processed.processed) {
+    redirect(`/app/stores/${storeId}?scan_status=completed#surface-analysis`)
   }
 
   redirect(
-    `/app/stores/${storeId}?scan_status=queued&scan_id=${encodeURIComponent(scanInsert.data.id)}#surface-analysis`
+    `/app/stores/${storeId}?scan_status=${encodeURIComponent(processed.reason)}`
   )
 }

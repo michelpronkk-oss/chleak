@@ -258,9 +258,6 @@ export async function triggerUrlSourceAnalysisForStore(storeId: string) {
       scanned_at: new Date().toISOString(),
       detected_issues_count: 0,
       estimated_monthly_leakage: 0,
-      notification_requested: true,
-      notification_reason: "manual_url_source_analysis",
-      notification_recipient_email: session.user.email,
     })
     .select("id")
     .single()
@@ -269,24 +266,20 @@ export async function triggerUrlSourceAnalysisForStore(storeId: string) {
     redirect(`/app/stores/${storeId}?scan_status=queue_failed`)
   }
 
-  const triggerResult = await triggerQueuedScanTask({
-    scanId: insertScan.data.id,
-    organizationId: storeCtx.organizationId,
-    storeId,
-    provider: integrationResult.data.provider,
-  })
+  const { processQueuedScanV1 } = await import(
+    "@/server/services/scan-processing-service"
+  )
+  const processed = await processQueuedScanV1({ scanId: insertScan.data.id })
 
   revalidatePath(`/app/stores/${storeId}`)
   revalidatePath("/app/stores")
 
-  if (!triggerResult.ok) {
-    redirect(
-      `/app/stores/${storeId}?scan_status=${encodeURIComponent(triggerResult.reason)}&scan_id=${encodeURIComponent(insertScan.data.id)}#surface-analysis`
-    )
+  if (processed.processed) {
+    redirect(`/app/stores/${storeId}?scan_status=completed#surface-analysis`)
   }
 
   redirect(
-    `/app/stores/${storeId}?scan_status=queued&scan_id=${encodeURIComponent(insertScan.data.id)}#surface-analysis`
+    `/app/stores/${storeId}?scan_status=${encodeURIComponent(processed.reason)}`
   )
 }
 
