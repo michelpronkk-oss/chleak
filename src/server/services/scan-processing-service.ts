@@ -1063,6 +1063,49 @@ function buildSimulatedFindings(): FindingDraft[] {
   ]
 }
 
+// The lead-gen CTA regex mirrors what the runner uses. Defined here so the
+// finding builder can also correct HTML-misclassified sites using browser CTAs.
+const LEAD_GEN_CTA_RX_SPS =
+  /^(start\s+a\s+project|book\s+a\s+(call|demo|meeting)|schedule\s+a\s+(call|demo|meeting)|request\s+a\s+(quote|consultation|proposal)|contact(\s+us)?|get\s+in\s+touch|work\s+with\s+us|hire\s+us|let'?s\s+talk|talk\s+to\s+us|discuss\s+your\s+project|get\s+a\s+quote|send\s+us\s+a\s+message)$/i
+
+// Resolves the effective business type for finding selection.
+// The HTML runner classifies from static HTML, which may be near-empty on JS-rendered
+// sites. The browser inspector captures the real rendered CTAs. If the browser finds
+// lead-gen CTAs and the HTML classifier returned saas/unknown without self-serve infra,
+// correct it to service_business or agency.
+function resolveEffectiveBusinessType(
+  htmlType: import("@/server/services/url-source-analysis-runner").UrlSourceBusinessTypeV1,
+  summary: UrlSourceAnalysisResultV1["summary"],
+  bi: UrlSourceBrowserInspectionResultV1 | null
+): import("@/server/services/url-source-analysis-runner").UrlSourceBusinessTypeV1 {
+  if (htmlType !== "saas" && htmlType !== "unknown") {
+    return htmlType
+  }
+
+  // Only override if browser inspection is available and found CTAs
+  if (!bi || bi.status !== "completed") return htmlType
+
+  const hasSelfServeInfra =
+    summary.hasSignupPath || summary.hasLoginPath ||
+    (summary.hasPricingPath && summary.hasSubscriptionLanguage)
+  if (hasSelfServeInfra) return htmlType
+
+  // Check browser-visible above-fold CTAs for lead-gen patterns
+  const allBrowserCtaLabels = [
+    ...bi.mobileAboveFoldCtaLabels,
+    ...bi.desktopAboveFoldCtaLabels,
+  ]
+  const hasLeadGenCtaInBrowser = allBrowserCtaLabels.some((label) =>
+    LEAD_GEN_CTA_RX_SPS.test(label.trim())
+  )
+
+  if (hasLeadGenCtaInBrowser) {
+    return "service_business"
+  }
+
+  return htmlType
+}
+
 function buildUrlSourcePathFindings(input: {
   run: UrlSourceAnalysisResultV1 | null
   browserInspection: UrlSourceBrowserInspectionResultV1 | null
@@ -1072,6 +1115,12 @@ function buildUrlSourcePathFindings(input: {
   }
 
   const s = input.run.summary
+  // Use browser inspection to correct misclassification from JS-rendered pages
+  const effectiveBusinessType = resolveEffectiveBusinessType(
+    s.businessType,
+    s,
+    input.browserInspection ?? null
+  )
   const bi = input.browserInspection?.status === "completed" ? input.browserInspection : null
   const findings: FindingDraft[] = []
 
@@ -1114,9 +1163,9 @@ function buildUrlSourcePathFindings(input: {
   }
 
   // -------------------------------------------------------------------------
-  // SaaS lane
+  // SaaS lane — only fires when businessType is definitively saas
   // -------------------------------------------------------------------------
-  if (s.businessType === "saas" || s.businessType === "mixed") {
+  if (effectiveBusinessType === "saas" || effectiveBusinessType === "mixed") {
 
     // Signup path is the growth entry point. If it is absent, the funnel is broken.
     if (!s.hasSignupPath) {
@@ -1132,10 +1181,10 @@ function buildUrlSourcePathFindings(input: {
         recommendedAction:
           "Confirm the primary URL reflects the commercial entry surface. Verify a visible signup or account creation CTA is present above the fold on the main page.",
         estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
-          businessType: s.businessType,
+          businessType: effectiveBusinessType,
           severity: "high",
         }),
-        evidence: { ...baseEvidence, path_evaluated: "activation_signup" },
+        evidence: { ...baseEvidence, path_evaluated: "activation_signup", effective_business_type: effectiveBusinessType },
       })
     }
 
@@ -1153,10 +1202,10 @@ function buildUrlSourcePathFindings(input: {
         recommendedAction:
           "Confirm each pricing tier has a clear CTA linking directly to signup, checkout, or a sales demo flow. The conversion path should be unambiguous from the pricing page.",
         estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
-          businessType: s.businessType,
+          businessType: effectiveBusinessType,
           severity: "medium",
         }),
-        evidence: { ...baseEvidence, path_evaluated: "pricing_handoff" },
+        evidence: { ...baseEvidence, path_evaluated: "pricing_handoff", effective_business_type: effectiveBusinessType },
       })
     }
 
@@ -1174,22 +1223,27 @@ function buildUrlSourcePathFindings(input: {
         recommendedAction:
           "Ensure the primary surface includes a visible signup or trial start CTA alongside the login path. Both returning and new visitors should have a clear next step.",
         estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
-          businessType: s.businessType,
+          businessType: effectiveBusinessType,
           severity: "medium",
         }),
-        evidence: { ...baseEvidence, path_evaluated: "activation_signup" },
+        evidence: { ...baseEvidence, path_evaluated: "activation_signup", effective_business_type: effectiveBusinessType },
       })
     }
   }
 
   // -------------------------------------------------------------------------
-  // Service business lane
+  // Agency and service business lane
   // -------------------------------------------------------------------------
-  if (s.businessType === "agency" || s.businessType === "service_business" || s.businessType === "mixed") {
+  if (
+    effectiveBusinessType === "agency" ||
+    effectiveBusinessType === "service_business" ||
+    effectiveBusinessType === "mixed"
+  ) {
+    const isAgency = effectiveBusinessType === "agency"
 
     // No contact or booking path — the primary revenue conversion is unavailable.
     if (!s.hasContactOrBookingPath) {
-      const businessLabel = s.businessType === "agency" ? "agency" : "service business"
+      const businessLabel = isAgency ? "agency" : "service business"
       findings.push({
         key: "url_source_service_no_inquiry_path_v1",
         type: "setup_gap",
@@ -1202,30 +1256,35 @@ function buildUrlSourcePathFindings(input: {
         recommendedAction:
           "Add a clearly visible contact, booking, or quote CTA in the main navigation and above the fold. Route it to a short inquiry flow or scheduling surface.",
         estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
-          businessType: s.businessType,
+          businessType: effectiveBusinessType,
           severity: "high",
         }),
-        evidence: { ...baseEvidence, path_evaluated: "contact_booking" },
+        evidence: { ...baseEvidence, path_evaluated: "contact_booking", effective_business_type: effectiveBusinessType },
       })
     }
 
     if (s.hasContactOrBookingPath && !s.hasPrimaryCta) {
+      const weakCaptureTitle = isAgency
+        ? "Project inquiry path exists but primary CTA is not visible"
+        : "Service conversion path is incomplete"
       findings.push({
         key: "url_source_service_weak_lead_capture_v1",
         type: "setup_gap",
         severity: "medium",
-        title: "Service conversion path is incomplete",
+        title: weakCaptureTitle,
         summary:
           "A contact or booking route exists, but the primary surface does not expose a clear lead action. Visitors may need to search before they can start an inquiry.",
         whyItMatters:
           "Service revenue depends on reducing friction between visitor intent and the first conversation. Hidden or weak lead actions lower qualified inquiry volume.",
         recommendedAction:
-          "Promote the main lead action with concise language such as Start a project, Book a call, or Request a quote, and keep it visible in the hero and navigation.",
+          isAgency
+            ? "Make the project inquiry CTA prominent in the hero and navigation. Use direct language like Start a project, Book a call, or Let's talk."
+            : "Promote the main lead action with concise language such as Start a project, Book a call, or Request a quote, and keep it visible in the hero and navigation.",
         estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
-          businessType: s.businessType,
+          businessType: effectiveBusinessType,
           severity: "medium",
         }),
-        evidence: { ...baseEvidence, path_evaluated: "lead_capture" },
+        evidence: { ...baseEvidence, path_evaluated: "lead_capture", effective_business_type: effectiveBusinessType },
       })
     }
   }
@@ -1233,7 +1292,7 @@ function buildUrlSourcePathFindings(input: {
   // -------------------------------------------------------------------------
   // Ecommerce lane
   // -------------------------------------------------------------------------
-  if (s.businessType === "ecommerce" || s.businessType === "mixed") {
+  if (effectiveBusinessType === "ecommerce" || effectiveBusinessType === "mixed") {
 
     // No clear checkout or cart path — the transaction path is broken.
     if (!s.hasCheckoutSignal) {
@@ -1249,18 +1308,19 @@ function buildUrlSourcePathFindings(input: {
         recommendedAction:
           "Confirm the primary URL provides a clear path to the product catalog and cart or checkout. Cart access and purchase CTAs should be visible without requiring navigation to a secondary page.",
         estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
-          businessType: s.businessType,
+          businessType: effectiveBusinessType,
           severity: "high",
         }),
-        evidence: { ...baseEvidence, path_evaluated: "checkout" },
+        evidence: { ...baseEvidence, path_evaluated: "checkout", effective_business_type: effectiveBusinessType },
       })
     }
   }
 
   // -------------------------------------------------------------------------
-  // Unknown / fallback lane — catches sites where no path is clear
+  // Unknown / fallback lane — only fires when classification has no model
+  // and no revenue path is detectable at all.
   // -------------------------------------------------------------------------
-  if (s.businessType === "unknown" && s.revenuePathClarity === "none") {
+  if (effectiveBusinessType === "unknown" && s.revenuePathClarity === "none") {
     findings.push({
       key: "url_source_no_clear_revenue_path_v1",
       type: "setup_gap",
@@ -1273,10 +1333,10 @@ function buildUrlSourcePathFindings(input: {
       recommendedAction:
         "Verify that the primary URL reflects the live commercial entry point for this business. The URL should be the page where prospective customers or users first encounter the offer.",
       estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
-        businessType: s.businessType,
+        businessType: effectiveBusinessType,
         severity: "medium",
       }),
-      evidence: { ...baseEvidence, path_evaluated: "surface_fallback" },
+      evidence: { ...baseEvidence, path_evaluated: "surface_fallback", effective_business_type: effectiveBusinessType },
     })
   }
 
@@ -1298,10 +1358,10 @@ function buildUrlSourcePathFindings(input: {
       recommendedAction:
         "Confirm the primary URL returns a valid viewport meta tag. This is usually configured in the site's base HTML template or CMS settings.",
       estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
-        businessType: s.businessType,
+        businessType: effectiveBusinessType,
         severity: "low",
       }),
-      evidence: { ...baseEvidence, path_evaluated: "mobile_quality" },
+      evidence: { ...baseEvidence, path_evaluated: "mobile_quality", effective_business_type: effectiveBusinessType },
     })
   }
 
@@ -1310,9 +1370,11 @@ function buildUrlSourcePathFindings(input: {
   // -------------------------------------------------------------------------
 
   if (bi) {
+    const isLeadBusiness =
+      effectiveBusinessType === "agency" || effectiveBusinessType === "service_business"
+
     // Mobile layout overflow — content exceeds viewport width on mobile.
     if (bi.mobileViewportOverflow) {
-      const isLeadBusiness = s.businessType === "agency" || s.businessType === "service_business"
       findings.push({
         key: "url_source_mobile_layout_overflow_v1",
         type: "setup_gap",
@@ -1329,16 +1391,15 @@ function buildUrlSourcePathFindings(input: {
         recommendedAction:
           "Inspect the primary URL on a 375px mobile viewport and fix any elements, images, or containers that exceed the viewport width. Common causes are fixed-width containers, unresponsive images, and overflow-hidden bugs.",
         estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
-          businessType: s.businessType,
+          businessType: effectiveBusinessType,
           severity: "medium",
         }),
-        evidence: { ...baseEvidence, path_evaluated: "mobile_layout" },
+        evidence: { ...baseEvidence, path_evaluated: "mobile_layout", effective_business_type: effectiveBusinessType },
       })
     }
 
     // No above-the-fold CTA on mobile — users must scroll to find a next step.
     if (!bi.mobileHasAboveFoldCta && s.revenuePathClarity !== "none") {
-      const isLeadBusiness = s.businessType === "agency" || s.businessType === "service_business"
       findings.push({
         key: "url_source_no_atf_cta_mobile_v1",
         type: "setup_gap",
@@ -1355,17 +1416,16 @@ function buildUrlSourcePathFindings(input: {
         recommendedAction:
           "Ensure the primary conversion action is visible without scrolling on a 375px mobile screen. Review the page hierarchy and keep the lead, signup, or purchase action above the fold.",
         estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
-          businessType: s.businessType,
+          businessType: effectiveBusinessType,
           severity: "medium",
         }),
-        evidence: { ...baseEvidence, path_evaluated: "mobile_atf" },
+        evidence: { ...baseEvidence, path_evaluated: "mobile_atf", effective_business_type: effectiveBusinessType },
       })
     }
 
     // Slow page load — DOM content loaded time exceeds threshold.
     const SLOW_LOAD_THRESHOLD_MS = 3_500
     if (bi.loadTimeMs !== null && bi.loadTimeMs > SLOW_LOAD_THRESHOLD_MS) {
-      const isLeadBusiness = s.businessType === "agency" || s.businessType === "service_business"
       findings.push({
         key: "url_source_slow_page_load_v1",
         type: "setup_gap",
@@ -1381,11 +1441,11 @@ function buildUrlSourcePathFindings(input: {
         recommendedAction:
           "Profile the primary URL using browser DevTools or PageSpeed Insights. Common fixes are image optimization, reducing third-party script weight, enabling caching, and moving to a faster hosting configuration.",
         estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
-          businessType: s.businessType,
+          businessType: effectiveBusinessType,
           severity: "low",
           responseTimeMs: bi.loadTimeMs,
         }),
-        evidence: { ...baseEvidence, path_evaluated: "load_performance", measured_load_ms: bi.loadTimeMs },
+        evidence: { ...baseEvidence, path_evaluated: "load_performance", measured_load_ms: bi.loadTimeMs, effective_business_type: effectiveBusinessType },
       })
     }
   }

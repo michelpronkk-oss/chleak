@@ -1,5 +1,5 @@
 export const URL_SOURCE_ANALYSIS_RUNNER_DETECTOR_VERSION =
-  "url_source_surface_runner_v2"
+  "url_source_surface_runner_v3"
 
 export type UrlSourceSurfaceClassificationV1 =
   | "marketing_only"
@@ -295,31 +295,45 @@ function detectServiceLanguage(visibleText: string, labels: string[]): boolean {
 }
 
 function detectAppDashboardLanguage(visibleText: string): boolean {
+  // Only trigger on signals that are contextually SaaS -- not generic tech terms.
+  // "app", "platform", "workflow", "integrations" are mentioned by agencies constantly
+  // when describing what they build for clients. Require specific user-account context.
   return visibleTextIncludes(visibleText.toLowerCase(), [
-    "dashboard",
-    "workspace",
-    "your account",
-    "manage your",
+    "your dashboard",
+    "open the app",
+    "go to dashboard",
     "free trial",
+    "start your free trial",
+    "upgrade your plan",
+    "cancel anytime",
     "saas",
-    "platform",
-    "onboarding",
-    "workflow",
-    "integrations",
-    "app",
   ])
 }
 
 function detectSubscriptionLanguage(visibleText: string): boolean {
   const lower = visibleText.toLowerCase()
+  // Require pricing-adjacent subscription language, not just the word "subscription".
+  // Agencies frequently say "subscription services", "monthly retainer", "recurring revenue"
+  // when describing client work. These are not SaaS signals.
   const tokens = [
     "per month", "/month", "per year", "/year", "/mo",
-    "monthly plan", "annual plan", "billed monthly", "billed annually",
-    "subscription", "cancel anytime", "upgrade your plan", "free tier",
-    "saas", "recurring", "mrr", "arr",
+    "billed monthly", "billed annually",
+    "cancel anytime",
+    "upgrade your plan",
+    "free tier",
+    "start your free trial",
+    "try for free",
+    "saas",
+    "mrr",
+    "arr",
   ]
   return tokens.some((t) => lower.includes(t))
 }
+
+// Lead-gen CTA labels that definitively indicate a service or agency business model.
+// A site whose primary action is one of these is seeking inbound leads, not self-serve signups.
+const LEAD_GEN_CTA_RX =
+  /^(start\s+a\s+project|book\s+a\s+(call|demo|meeting)|schedule\s+a\s+(call|demo|meeting)|request\s+a\s+(quote|consultation|proposal)|contact(\s+us)?|get\s+in\s+touch|work\s+with\s+us|hire\s+us|let'?s\s+talk|talk\s+to\s+us|discuss\s+your\s+project|see\s+how\s+we\s+can\s+help|get\s+a\s+quote|send\s+us\s+a\s+message|drop\s+us\s+a\s+line)$/i
 
 function classifyBusinessType(input: {
   surfaceClassification: UrlSourceSurfaceClassificationV1
@@ -335,50 +349,74 @@ function classifyBusinessType(input: {
   primaryCtaLabel: string | null
 }): UrlSourceBusinessTypeV1 {
   const primaryCta = input.primaryCtaLabel?.toLowerCase().trim() ?? ""
-  const leadCta =
-    /^(start\s+a\s+project|book\s+a\s+call|schedule\s+a\s+call|request\s+a\s+quote|contact(\s+us)?|get\s+in\s+touch|work\s+with\s+us|hire\s+us|let'?s\s+talk)$/.test(primaryCta)
+  const isLeadGenCta = LEAD_GEN_CTA_RX.test(primaryCta)
 
+  // Self-serve infrastructure: the minimum required to be a SaaS.
+  // Without at least one of these, a site cannot be classified as SaaS
+  // regardless of vocabulary signals.
+  const hasSelfServeInfra =
+    input.hasSignupPath ||
+    input.hasLoginPath ||
+    (input.hasPricingPath && input.hasSubscriptionLanguage)
+
+  // Hard rule: if the primary CTA is a lead-gen CTA and there is no self-serve
+  // infrastructure, this is definitively a service or agency business.
+  // This prevents JS-rendered sites whose static HTML lacks agency vocabulary
+  // from being misclassified as SaaS because of noisy signals.
+  if (isLeadGenCta && !hasSelfServeInfra) {
+    return input.hasAgencyLanguage ? "agency" : "service_business"
+  }
+
+  // Weighted scoring — runs when the hard rule does not fire.
   let ecommerceScore = 0
   let saasScore = 0
   let serviceScore = 0
   let agencyScore = 0
 
-  if (input.surfaceClassification === "ecommerce") ecommerceScore += 4
-  if (input.hasCheckoutSignal) ecommerceScore += 4
+  // Ecommerce: requires real transaction infrastructure
+  if (input.surfaceClassification === "ecommerce") ecommerceScore += 5
+  if (input.hasCheckoutSignal) ecommerceScore += 5
+  if (input.hasContactOrBookingPath && !input.hasCheckoutSignal) ecommerceScore -= 3
 
-  if (input.surfaceClassification === "app_first") saasScore += 3
-  if (input.hasSubscriptionLanguage) saasScore += 3
-  if (input.hasSignupPath) saasScore += 2
-  if (input.hasLoginPath) saasScore += 2
-  if (input.hasPricingPath && (input.hasSignupPath || input.hasLoginPath)) saasScore += 2
-  if (input.hasAppDashboardLanguage) saasScore += 1
+  // SaaS: requires actual self-serve infrastructure — vocabulary alone is not enough.
+  // Without signup/login/pricing, saasScore stays at or below 2.
+  if (input.hasSignupPath) saasScore += 6
+  if (input.hasLoginPath) saasScore += 5
+  if (input.hasPricingPath && hasSelfServeInfra) saasScore += 4
+  if (input.surfaceClassification === "app_first") saasScore += 4
+  // Subscription language is only meaningful when combined with self-serve infra.
+  if (input.hasSubscriptionLanguage && hasSelfServeInfra) saasScore += 3
+  // App/dashboard vocabulary is weak even with infra — it signals nothing by itself.
+  if (input.hasAppDashboardLanguage && hasSelfServeInfra) saasScore += 1
 
-  if (input.hasContactOrBookingPath) serviceScore += 3
+  // Service / Agency: contact, project, portfolio signals
+  if (input.hasContactOrBookingPath) serviceScore += 4
   if (input.hasServiceLanguage) serviceScore += 3
-  if (leadCta) serviceScore += 4
-  if (input.hasAgencyLanguage) agencyScore += 4
-  if (leadCta) agencyScore += 2
+  if (isLeadGenCta) serviceScore += 5
+  if (input.hasAgencyLanguage) agencyScore += 6
+  if (isLeadGenCta) agencyScore += 3
 
-  const noSelfServeSaasSignals =
-    !input.hasSignupPath &&
-    !input.hasLoginPath &&
-    !input.hasSubscriptionLanguage &&
-    !input.hasAppDashboardLanguage
-  if (noSelfServeSaasSignals && (serviceScore > 0 || agencyScore > 0)) {
-    saasScore -= 4
-  }
-  if (input.hasContactOrBookingPath && !input.hasCheckoutSignal) {
-    ecommerceScore -= 2
+  // If there is no self-serve infra and there are positive service signals,
+  // further suppress saasScore to prevent weak SaaS vocabulary from winning.
+  if (!hasSelfServeInfra && (serviceScore > 0 || agencyScore > 0)) {
+    saasScore = Math.min(saasScore, 2)
   }
 
   const leadScore = Math.max(serviceScore, agencyScore)
-  const commercialScores = [ecommerceScore, saasScore, leadScore].filter((score) => score >= 4)
-  if (commercialScores.length >= 2) return "mixed"
 
-  if (ecommerceScore >= 4) return "ecommerce"
-  if (saasScore >= 4 && saasScore > leadScore) return "saas"
-  if (agencyScore >= 4) return "agency"
+  // Mixed: two different strong models both score >= 4
+  const strongModels = [ecommerceScore, saasScore, leadScore].filter((s) => s >= 4)
+  if (strongModels.length >= 2) return "mixed"
+
+  // Single dominant model
+  if (ecommerceScore >= 4 && ecommerceScore >= saasScore && ecommerceScore >= leadScore) return "ecommerce"
+  if (saasScore >= 4 && saasScore >= leadScore) return "saas"
+  if (agencyScore >= 4 && agencyScore >= serviceScore) return "agency"
   if (serviceScore >= 4) return "service_business"
+
+  // Weak signal fallback: use vocabulary hints
+  if (input.hasAgencyLanguage) return "agency"
+  if (input.hasServiceLanguage || input.hasContactOrBookingPath) return "service_business"
 
   return "unknown"
 }
