@@ -8,6 +8,7 @@ export const metadata: Metadata = {
 }
 
 import { SubmitButton } from "@/components/ui/submit-button"
+import { ScanStatePill } from "@/components/dashboard/vault-primitives"
 import { normalizeLiveSourceUrl } from "@/lib/live-source"
 import { cn } from "@/lib/utils"
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
@@ -39,6 +40,9 @@ const statusMessage: Record<string, string> = {
   source_not_set: "Set a primary live source URL before running URL-source analysis.",
   queue_failed: "Could not queue URL-source analysis. Retry in a moment.",
   completed: "URL-source analysis completed. Summary has been updated.",
+  queued: "URL-source analysis queued. The worker will update this source when results are ready.",
+  trigger_failed: "URL-source analysis was created, but the worker could not be started. Retry in a moment.",
+  unsupported_provider: "This source does not have a supported scan worker yet.",
   unauthorized: "You are not authorized to run URL-source analysis for this workspace.",
   lookup_failed: "URL-source analysis lookup failed. Retry in a moment.",
   store_missing: "URL-source analysis store context is missing.",
@@ -63,6 +67,8 @@ const errorStatuses = new Set([
   "context_save_failed",
   "source_not_set",
   "queue_failed",
+  "trigger_failed",
+  "unsupported_provider",
   "unauthorized",
   "lookup_failed",
   "store_missing",
@@ -232,9 +238,18 @@ export default async function SourcesPage({
     .sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0] ?? null
   const urlSourceAnalysis = connectData.urlSourceAnalysis
   const urlSourceStoreId = connectData.urlSourceStoreId ?? urlSourceAnalysis?.storeId ?? null
+  const latestUrlSourceScan = connectData.latestUrlSourceScan
+  const latestUrlSourceScanIsActive =
+    latestUrlSourceScan?.status === "queued" || latestUrlSourceScan?.status === "running"
   const latestAnalysisAt = urlSourceAnalysis?.completedAt ?? latestStoreScanAt
   const sourceScanStateLabel = !primarySourceSaved
     ? "Not set"
+    : latestUrlSourceScan?.status === "failed"
+      ? "Analysis failed"
+    : latestUrlSourceScan?.status === "queued"
+      ? "Analysis queued"
+    : latestUrlSourceScan?.status === "running"
+      ? "Analysis running"
     : urlSourceAnalysis?.status === "completed"
       ? "Analyzed"
     : connectedSystemsCount === 0
@@ -246,6 +261,10 @@ export default async function SourcesPage({
           : "Saved | waiting for first scan"
   const sourceScanStateTone = !primarySourceSaved
     ? "text-muted-foreground"
+    : latestUrlSourceScan?.status === "failed"
+      ? "text-destructive"
+    : latestUrlSourceScanIsActive
+      ? "text-primary"
     : urlSourceAnalysis?.status === "completed"
       ? "text-emerald-300"
     : hasCompletedSystemScan
@@ -255,6 +274,12 @@ export default async function SourcesPage({
         : "text-amber-300"
   const sourceScanStateDetail = !primarySourceSaved
     ? "Set a primary URL or domain to create the canonical source context."
+    : latestUrlSourceScan?.status === "failed"
+      ? "The latest analysis failed before completion. Queue another run when ready."
+    : latestUrlSourceScan?.status === "queued"
+      ? "Analysis is queued in the worker. Results will appear in the source detail."
+    : latestUrlSourceScan?.status === "running"
+      ? "Analysis is running in the background. Findings and evidence will update when it completes."
     : urlSourceAnalysis?.status === "completed"
       ? "Surface analysis completed. Revenue path and checkout signals are now in evidence."
     : connectedSystemsCount === 0
@@ -427,7 +452,11 @@ export default async function SourcesPage({
             <div className="rounded-lg border border-border/60 bg-background/30 p-3">
               <dt className="data-mono text-muted-foreground">Latest analysis</dt>
               <dd className="mt-1 text-foreground">
-                {latestAnalysisAt ? formatRelativeTimestamp(latestAnalysisAt) : "Not run yet"}
+                {latestUrlSourceScanIsActive
+                  ? latestUrlSourceScan.status
+                  : latestAnalysisAt
+                    ? formatRelativeTimestamp(latestAnalysisAt)
+                    : "Not run yet"}
               </dd>
             </div>
           </dl>
@@ -476,10 +505,21 @@ export default async function SourcesPage({
             <form action={triggerPrimaryUrlSourceAnalysis} className="mt-4">
               <SubmitButton
                 label={urlSourceAnalysis ? "Re-run surface analysis" : "Run surface analysis"}
-                pendingLabel="Analyzing..."
+                pendingLabel="Queueing scan..."
                 className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
               />
             </form>
+          ) : null}
+          {latestUrlSourceScan ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <ScanStatePill status={latestUrlSourceScan.status} className="py-0.5" />
+              <span>
+                Last run {formatRelativeTimestamp(latestUrlSourceScan.scannedAt)}
+                {latestUrlSourceScan.status === "completed"
+                  ? ` | ${latestUrlSourceScan.detectedIssuesCount} findings`
+                  : " | results pending"}
+              </span>
+            </div>
           ) : null}
         </article>
       </section>
@@ -653,7 +693,11 @@ export default async function SourcesPage({
                 <div className="grid gap-1 text-sm">
                   <p className="text-muted-foreground">
                     Latest analysis:{" "}
-                    {latestAnalysisAt ? formatRelativeTimestamp(latestAnalysisAt) : "Not run yet"}
+                    {latestUrlSourceScanIsActive
+                      ? latestUrlSourceScan.status
+                      : latestAnalysisAt
+                        ? formatRelativeTimestamp(latestAnalysisAt)
+                        : "Not run yet"}
                   </p>
                   <p className="font-semibold text-primary">
                     {connectedSystemsCount > 0

@@ -11,6 +11,7 @@ import {
   LIVE_SOURCE_CONTEXT_COOKIE,
   serializeLiveSourceContext,
 } from "@/server/services/source-connection-state-service"
+import { triggerQueuedScanTask } from "@/server/services/scan-task-service"
 import type { Json } from "@/types/database"
 
 function asRecord(input: unknown): Record<string, unknown> {
@@ -289,19 +290,23 @@ export async function triggerPrimaryUrlSourceAnalysis() {
     redirect(`/app/stores/${storeId}?scan_status=queue_failed`)
   }
 
-  const { processQueuedScanV1 } = await import(
-    "@/server/services/scan-processing-service"
-  )
-  const processed = await processQueuedScanV1({ scanId: scanInsert.data.id })
+  const triggerResult = await triggerQueuedScanTask({
+    scanId: scanInsert.data.id,
+    organizationId: membershipResult.data.organization_id,
+    storeId,
+    provider: "checkoutleak_connector",
+  })
 
   revalidatePath("/app/stores")
   revalidatePath(`/app/stores/${storeId}`)
 
-  if (processed.processed) {
-    redirect(`/app/stores/${storeId}?scan_status=completed#surface-analysis`)
+  if (!triggerResult.ok) {
+    redirect(
+      `/app/stores/${storeId}?scan_status=${encodeURIComponent(triggerResult.reason)}&scan_id=${encodeURIComponent(scanInsert.data.id)}#surface-analysis`
+    )
   }
 
   redirect(
-    `/app/stores/${storeId}?scan_status=${encodeURIComponent(processed.reason)}`
+    `/app/stores/${storeId}?scan_status=queued&scan_id=${encodeURIComponent(scanInsert.data.id)}#surface-analysis`
   )
 }

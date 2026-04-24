@@ -9,7 +9,7 @@ import {
   markShopifyIntegrationErrored,
   persistShopifyIntegration,
 } from "@/server/services/shopify-persistence-service"
-import { processQueuedScanV1 } from "@/server/services/scan-processing-service"
+import { triggerQueuedScanTask } from "@/server/services/scan-task-service"
 import {
   fetchShopifySignalSnapshot,
   SHOPIFY_OAUTH_STATE_COOKIE,
@@ -172,16 +172,21 @@ export async function GET(request: Request) {
 
     if (queuedScanId) {
       console.info(
-        `[shopify] automatic scan processing started: organization=${storedState.organizationId}; scan_id=${queuedScanId}`
+        `[shopify] automatic scan trigger requested: organization=${storedState.organizationId}; scan_id=${queuedScanId}`
       )
-      const autoProcessResult = await processQueuedScanV1({ scanId: queuedScanId })
-      if (autoProcessResult.processed) {
+      const triggerResult = await triggerQueuedScanTask({
+        scanId: queuedScanId,
+        organizationId: storedState.organizationId,
+        storeId: persistence.storeId,
+        provider: "shopify",
+      })
+      if (triggerResult.ok) {
         console.info(
-          `[shopify] automatic scan processing succeeded: organization=${storedState.organizationId}; scan_id=${queuedScanId}; status=${autoProcessResult.status}`
+          `[shopify] automatic scan trigger queued: organization=${storedState.organizationId}; scan_id=${queuedScanId}; task_id=${triggerResult.taskId}; run_id=${triggerResult.runId}`
         )
       } else {
         console.error(
-          `[shopify] automatic scan processing failed: organization=${storedState.organizationId}; scan_id=${queuedScanId}; reason=${autoProcessResult.reason}`
+          `[shopify] automatic scan trigger failed: organization=${storedState.organizationId}; scan_id=${queuedScanId}; reason=${triggerResult.reason}`
         )
       }
     } else {

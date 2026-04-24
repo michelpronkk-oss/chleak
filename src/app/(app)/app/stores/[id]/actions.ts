@@ -5,7 +5,7 @@ import { redirect } from "next/navigation"
 
 import { getServerSession } from "@/lib/auth/session"
 import { createSupabaseAdminClient } from "@/lib/supabase/shared"
-import { processQueuedScanV1 } from "@/server/services/scan-processing-service"
+import { triggerQueuedScanTask } from "@/server/services/scan-task-service"
 import type { Json } from "@/types/database"
 
 type ActivationPageIntentHint =
@@ -235,7 +235,7 @@ export async function triggerUrlSourceAnalysisForStore(storeId: string) {
 
   const integrationResult = await storeCtx.admin
     .from("store_integrations")
-    .select("id")
+    .select("id, provider")
     .eq("organization_id", storeCtx.organizationId)
     .eq("store_id", storeId)
     .eq("provider", "checkoutleak_connector")
@@ -266,19 +266,24 @@ export async function triggerUrlSourceAnalysisForStore(storeId: string) {
     redirect(`/app/stores/${storeId}?scan_status=queue_failed`)
   }
 
-  const processed = await processQueuedScanV1({ scanId: insertScan.data.id })
+  const triggerResult = await triggerQueuedScanTask({
+    scanId: insertScan.data.id,
+    organizationId: storeCtx.organizationId,
+    storeId,
+    provider: integrationResult.data.provider,
+  })
 
   revalidatePath(`/app/stores/${storeId}`)
   revalidatePath("/app/stores")
 
-  if (processed.processed) {
+  if (!triggerResult.ok) {
     redirect(
-      `/app/stores/${storeId}?scan_status=completed&scan_id=${encodeURIComponent(insertScan.data.id)}#surface-analysis`
+      `/app/stores/${storeId}?scan_status=${encodeURIComponent(triggerResult.reason)}&scan_id=${encodeURIComponent(insertScan.data.id)}#surface-analysis`
     )
   }
 
   redirect(
-    `/app/stores/${storeId}?scan_status=${encodeURIComponent(processed.reason)}&scan_id=${encodeURIComponent(insertScan.data.id)}`
+    `/app/stores/${storeId}?scan_status=queued&scan_id=${encodeURIComponent(insertScan.data.id)}#surface-analysis`
   )
 }
 
@@ -295,6 +300,21 @@ export async function triggerActivationTestRun(storeId: string) {
 
   if (!storeCtx) {
     redirect(`/app/stores/${storeId}?scan_status=not_found`)
+  }
+
+  const integrationResult = await storeCtx.admin
+    .from("store_integrations")
+    .select("id, provider")
+    .eq("organization_id", storeCtx.organizationId)
+    .eq("store_id", storeId)
+    .neq("status", "disconnected")
+    .order("installed_at", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (integrationResult.error || !integrationResult.data) {
+    redirect(`/app/stores/${storeId}?scan_status=integration_missing`)
   }
 
   const insertScan = await storeCtx.admin
@@ -314,17 +334,22 @@ export async function triggerActivationTestRun(storeId: string) {
     redirect(`/app/stores/${storeId}?scan_status=queue_failed`)
   }
 
-  const processed = await processQueuedScanV1({ scanId: insertScan.data.id })
+  const triggerResult = await triggerQueuedScanTask({
+    scanId: insertScan.data.id,
+    organizationId: storeCtx.organizationId,
+    storeId,
+    provider: integrationResult.data.provider,
+  })
 
   revalidatePath(`/app/stores/${storeId}`)
 
-  if (processed.processed) {
+  if (!triggerResult.ok) {
     redirect(
-      `/app/stores/${storeId}?scan_status=completed&scan_id=${encodeURIComponent(insertScan.data.id)}`
+      `/app/stores/${storeId}?scan_status=${encodeURIComponent(triggerResult.reason)}&scan_id=${encodeURIComponent(insertScan.data.id)}`
     )
   }
 
   redirect(
-    `/app/stores/${storeId}?scan_status=${encodeURIComponent(processed.reason)}&scan_id=${encodeURIComponent(insertScan.data.id)}`
+    `/app/stores/${storeId}?scan_status=queued&scan_id=${encodeURIComponent(insertScan.data.id)}`
   )
 }

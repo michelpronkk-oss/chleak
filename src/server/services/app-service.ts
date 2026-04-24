@@ -17,7 +17,7 @@ import { getServerSession } from "@/lib/auth/session"
 import { createSupabaseAdminClient } from "@/lib/supabase/shared"
 import { ensureWorkspaceForUser } from "@/server/services/account-bootstrap-service"
 import { getFixPlanHrefForIssue } from "@/server/services/fix-plan-service"
-import type { DashboardSnapshot, Store } from "@/types/domain"
+import type { DashboardSnapshot, Scan, Store } from "@/types/domain"
 
 import { getDashboardSnapshotForOrganization } from "./dashboard-service"
 import {
@@ -831,6 +831,28 @@ function readUrlSourceAnalysisLastRunView(input: {
     evidenceRows,
     errorMessage: readStringFromRecord(runRecord, "error_message"),
     storeId: input.storeId,
+  }
+}
+
+function mapScanView(row: {
+  id: string
+  organization_id: string
+  store_id: string
+  status: string
+  scanned_at: string
+  completed_at: string | null
+  detected_issues_count: number
+  estimated_monthly_leakage: number
+}): Scan {
+  return {
+    id: row.id,
+    organizationId: row.organization_id,
+    storeId: row.store_id,
+    status: row.status as Scan["status"],
+    scannedAt: row.scanned_at,
+    completedAt: row.completed_at,
+    detectedIssuesCount: row.detected_issues_count,
+    estimatedMonthlyLeakage: row.estimated_monthly_leakage,
   }
 }
 
@@ -1821,6 +1843,20 @@ export async function getConnectJourneyData() {
     !urlSourceIntegrationResult.error && urlSourceIntegrationResult.data
       ? urlSourceIntegrationResult.data.store_id
       : null
+  const latestUrlSourceScanResult = urlSourceStoreId
+    ? await createSupabaseAdminClient()
+        .from("scans")
+        .select("id, organization_id, store_id, status, scanned_at, completed_at, detected_issues_count, estimated_monthly_leakage")
+        .eq("organization_id", journey.organizationId)
+        .eq("store_id", urlSourceStoreId)
+        .order("scanned_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : null
+  const latestUrlSourceScan =
+    latestUrlSourceScanResult && !latestUrlSourceScanResult.error && latestUrlSourceScanResult.data
+      ? mapScanView(latestUrlSourceScanResult.data)
+      : null
 
   return {
     onboardingState: journey.state,
@@ -1843,6 +1879,7 @@ export async function getConnectJourneyData() {
     liveSourceVerification,
     urlSourceAnalysis,
     urlSourceStoreId,
+    latestUrlSourceScan,
     organization: journey.baseSnapshot.organization,
   }
 }
@@ -2181,7 +2218,8 @@ export async function getStoreDetailData(storeId: string) {
   }
 
   const isWebsiteStore = store.platform === "website"
-  const useDirectQuery = isWebsiteStore && !isReadyState(journey.state) && !isPendingScanState(journey.state)
+  const useDirectQuery =
+    isWebsiteStore || (isPendingScanState(journey.state) && store.id === storeId)
 
   let scans: typeof snapshot.scans
   let issues: typeof snapshot.issues
@@ -2202,16 +2240,7 @@ export async function getStoreDetailData(storeId: string) {
         .eq("store_id", storeId)
         .neq("status", "resolved"),
     ])
-    scans = (scansResult.data ?? []).map((s) => ({
-      id: s.id,
-      organizationId: s.organization_id,
-      storeId: s.store_id,
-      status: s.status as import("@/types/domain").ScanStatus,
-      scannedAt: s.scanned_at,
-      completedAt: s.completed_at,
-      detectedIssuesCount: s.detected_issues_count,
-      estimatedMonthlyLeakage: s.estimated_monthly_leakage,
-    }))
+    scans = (scansResult.data ?? []).map(mapScanView)
     issues = (issuesResult.data ?? []).map((i) => ({
       id: i.id,
       organizationId: i.organization_id,

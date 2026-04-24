@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: "Source Detail",
 }
 
-import { MetaPill, RankedQueueRow, SeverityPill, VaultPanel } from "@/components/dashboard/vault-primitives"
+import { MetaPill, RankedQueueRow, ScanStatePill, SeverityPill, VaultPanel } from "@/components/dashboard/vault-primitives"
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
 import { SubmitButton } from "@/components/ui/submit-button"
 import { getStoreDetailData, getStoresIndexData } from "@/server/services/app-service"
@@ -24,7 +24,10 @@ const hintStatusMessage: Record<string, string> = {
 
 const scanStatusMessage: Record<string, string> = {
   completed: "Scan completed. Results have been updated.",
+  queued: "Scan queued. Results will appear here when the background run completes.",
   queue_failed: "Could not queue a test scan. Retry in a moment.",
+  trigger_failed: "Scan was created, but the worker could not be started. Retry in a moment.",
+  unsupported_provider: "This source does not have a supported scan worker yet.",
   unauthorized: "You are not authorized to trigger scans for this store.",
   not_found: "Store context was not found for this workspace.",
   scan_not_queued_or_missing: "Queued test scan could not be processed.",
@@ -115,6 +118,8 @@ export default async function StoreDetailPage({
   const showLiveShopifyActivationControls = isShopifySource && !isDemoMode
   const showUrlSourceControls = isWebsiteSource && !isDemoMode
   const urlSourceAnalysis = data.urlSourceAnalysis ?? null
+  const latestScanIsActive =
+    data.latestScan?.status === "queued" || data.latestScan?.status === "running"
   const liveSourceSurface = data.integration?.liveSourceSurface ?? null
   const connectedSystems = (
     liveSourceSurface?.connectedSystems?.length
@@ -173,7 +178,9 @@ export default async function StoreDetailPage({
           </p>
           <p className="vault-metric-delta">
             {data.latestScan
-              ? `${data.latestScan.detectedIssuesCount} findings`
+              ? data.latestScan.status === "completed"
+                ? `${data.latestScan.detectedIssuesCount} findings`
+                : data.latestScan.status
               : isDemoMode
                 ? "No simulated scan yet"
                 : "Awaiting initial pass"}
@@ -438,10 +445,13 @@ export default async function StoreDetailPage({
                 {data.scans.slice(0, 4).map((scan) => (
                   <li key={scan.id} className="rounded-md border border-border/60 bg-background/30 px-3 py-2.5">
                     <p>
-                      Scan {scan.id.slice(-4)} | {scan.status}
+                      Scan {scan.id.slice(-4)} <ScanStatePill status={scan.status} className="ml-2 py-0.5" />
                     </p>
                     <p className="mt-1 text-xs">
-                      {formatRelativeTimestamp(scan.scannedAt)} | {scan.detectedIssuesCount} issues
+                      {formatRelativeTimestamp(scan.scannedAt)}
+                      {scan.status === "completed"
+                        ? ` | ${scan.detectedIssuesCount} issues`
+                        : " | results pending"}
                     </p>
                   </li>
                 ))}
@@ -663,12 +673,18 @@ export default async function StoreDetailPage({
             <VaultPanel title="Surface analysis scan" meta="Run surface analysis on this source">
               <div className="px-4 py-4 sm:px-5">
                 <p className="text-sm text-muted-foreground">
-                  Analyze the live revenue surface to detect pricing path, signup flow, and checkout signal presence.
+                  Analyze the live revenue surface to detect pricing path, signup flow, and checkout signal presence. Results appear in Surface analysis.
                 </p>
+                {latestScanIsActive ? (
+                  <div className="mt-3 rounded-md border border-primary/25 bg-primary/[0.06] px-3 py-2 text-xs text-muted-foreground">
+                    <ScanStatePill status={data.latestScan.status} className="mr-2 py-0.5" />
+                    Background analysis is active. This page will show new evidence when it completes.
+                  </div>
+                ) : null}
                 <form action={runSurfaceAnalysisAction} className="mt-4">
                   <SubmitButton
                     label={urlSourceAnalysis ? "Re-run surface analysis" : "Run surface analysis"}
-                    pendingLabel="Analyzing..."
+                    pendingLabel="Queueing scan..."
                   />
                 </form>
                 {activeScanStatus ? (
@@ -689,12 +705,18 @@ export default async function StoreDetailPage({
                 {showLiveShopifyActivationControls ? (
                   <>
                     <p className="text-sm text-muted-foreground">
-                      Trigger a fresh activation scan and review evidence in this source detail.
+                      Trigger a fresh activation scan and review evidence in this source detail when the worker completes.
                     </p>
+                    {latestScanIsActive ? (
+                      <div className="mt-3 rounded-md border border-primary/25 bg-primary/[0.06] px-3 py-2 text-xs text-muted-foreground">
+                        <ScanStatePill status={data.latestScan.status} className="mr-2 py-0.5" />
+                        Background scan is active. Results will appear in recent activity and linked opportunities.
+                      </div>
+                    ) : null}
                     <form action={runTestScanAction} className="mt-4">
                       <SubmitButton
                         label="Run activation test scan"
-                        pendingLabel="Running scan..."
+                        pendingLabel="Queueing scan..."
                       />
                     </form>
                     {activeScanStatus ? (

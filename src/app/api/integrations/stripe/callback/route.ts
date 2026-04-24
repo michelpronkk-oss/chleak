@@ -6,7 +6,7 @@ import {
   markStripeIntegrationErrored,
   persistStripeIntegration,
 } from "@/server/services/stripe-persistence-service"
-import { processQueuedScanV1 } from "@/server/services/scan-processing-service"
+import { triggerQueuedScanTask } from "@/server/services/scan-task-service"
 import {
   STRIPE_OAUTH_STATE_COOKIE,
   exchangeStripeCodeForToken,
@@ -116,10 +116,15 @@ export async function GET(request: Request) {
     })
 
     if (persistence.scanId) {
-      const autoProcessResult = await processQueuedScanV1({ scanId: persistence.scanId })
-      if (!autoProcessResult.processed) {
+      const triggerResult = await triggerQueuedScanTask({
+        scanId: persistence.scanId,
+        organizationId: storedState.organizationId,
+        storeId: persistence.storeId,
+        provider: "stripe",
+      })
+      if (!triggerResult.ok) {
         console.error(
-          `[stripe] automatic scan processing failed: organization=${storedState.organizationId}; scan_id=${persistence.scanId}; reason=${autoProcessResult.reason}`
+          `[stripe] automatic scan trigger failed: organization=${storedState.organizationId}; scan_id=${persistence.scanId}; reason=${triggerResult.reason}`
         )
       }
     }
