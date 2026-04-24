@@ -27,6 +27,9 @@ export interface UrlSourceBrowserInspectionResultV1 {
   pageTitle: string | null
   hasH1: boolean
   h1Text: string | null
+  // Mobile-specific H1 rendering
+  mobileH1FontSizePx: number | null
+  mobileH1IsOversized: boolean
   formCount: number
   mobileHasAboveFoldCta: boolean
   mobileAboveFoldCtaLabels: string[]
@@ -39,6 +42,8 @@ export interface UrlSourceBrowserInspectionResultV1 {
   desktopScreenshotRef: string | null
   desktopScreenshotSha256: string | null
   desktopScreenshotBytes: number | null
+  // Rendered body text sample for copy quality analysis
+  mobileVisibleText: string
   errorMessage: string | null
 }
 
@@ -50,9 +55,12 @@ interface DomMetrics {
   title: string
   h1Text: string | null
   hasH1: boolean
+  h1FontSizePx: number | null
+  h1IsOversized: boolean
   formCount: number
   viewportOverflow: boolean
   aboveFoldCtaLabels: string[]
+  visibleBodyText: string
   loadTimeMs: number | null
 }
 
@@ -66,6 +74,24 @@ async function evaluateDom(
       const h1 = document.querySelector("h1")
       const h1Text = h1?.textContent?.trim() ?? null
       const hasH1 = Boolean(h1)
+
+      // Measure the rendered H1 font size. On mobile viewports this reveals
+      // whether the heading is too large and pushing content below the fold.
+      let h1FontSizePx: number | null = null
+      let h1IsOversized = false
+      if (h1) {
+        try {
+          const computed = window.getComputedStyle(h1)
+          const parsed = parseFloat(computed.fontSize)
+          if (!isNaN(parsed)) {
+            h1FontSizePx = parsed
+            // > 52px on a 375px viewport typically causes multi-line overflow
+            // that pushes the primary CTA below the fold
+            h1IsOversized = parsed > 52
+          }
+        } catch {}
+      }
+
       const formCount = document.querySelectorAll("form").length
 
       const scrollWidth = document.documentElement.scrollWidth
@@ -90,6 +116,12 @@ async function evaluateDom(
         .filter((t) => t.length > 1 && t.length < 80)
         .slice(0, 20)
 
+      // Capture a compact sample of visible body text for copy quality checks
+      const visibleBodyText = (document.body?.innerText ?? "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 3000)
+
       let loadTimeMs: number | null = null
       try {
         const timing = performance.timing
@@ -98,16 +130,30 @@ async function evaluateDom(
         }
       } catch {}
 
-      return { title, h1Text, hasH1, formCount, viewportOverflow, aboveFoldCtaLabels, loadTimeMs }
+      return {
+        title,
+        h1Text,
+        hasH1,
+        h1FontSizePx,
+        h1IsOversized,
+        formCount,
+        viewportOverflow,
+        aboveFoldCtaLabels,
+        visibleBodyText,
+        loadTimeMs,
+      }
     }, viewportHeight)
   } catch {
     return {
       title: "",
       h1Text: null,
       hasH1: false,
+      h1FontSizePx: null,
+      h1IsOversized: false,
       formCount: 0,
       viewportOverflow: false,
       aboveFoldCtaLabels: [],
+      visibleBodyText: "",
       loadTimeMs: null,
     }
   }
@@ -168,10 +214,13 @@ export async function runUrlSourceBrowserInspectionV1(input: {
     pageTitle: null,
     hasH1: false,
     h1Text: null,
+    mobileH1FontSizePx: null,
+    mobileH1IsOversized: false,
     formCount: 0,
     mobileHasAboveFoldCta: false,
     mobileAboveFoldCtaLabels: [],
     mobileViewportOverflow: false,
+    mobileVisibleText: "",
     mobileScreenshotRef: null,
     mobileScreenshotSha256: null,
     mobileScreenshotBytes: null,
@@ -264,6 +313,8 @@ export async function runUrlSourceBrowserInspectionV1(input: {
       pageTitle: content.title || null,
       hasH1: content.hasH1,
       h1Text: content.h1Text,
+      mobileH1FontSizePx: mobileMetrics?.h1FontSizePx ?? null,
+      mobileH1IsOversized: mobileMetrics?.h1IsOversized ?? false,
       formCount: content.formCount,
       mobileHasAboveFoldCta: (mobileMetrics?.aboveFoldCtaLabels.length ?? 0) > 0,
       mobileAboveFoldCtaLabels: mobileMetrics?.aboveFoldCtaLabels ?? [],
@@ -276,6 +327,7 @@ export async function runUrlSourceBrowserInspectionV1(input: {
       desktopScreenshotRef: desktopScreenshot?.reference ?? null,
       desktopScreenshotSha256: desktopScreenshot?.sha256 ?? null,
       desktopScreenshotBytes: desktopScreenshot?.bytes ?? null,
+      mobileVisibleText: mobileMetrics?.visibleBodyText ?? "",
       errorMessage: null,
     }
   } catch (err) {

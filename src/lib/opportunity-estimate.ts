@@ -16,6 +16,38 @@ function roundToHundreds(value: number) {
   return Math.round(value / 100) * 100
 }
 
+// Calibrate missed lead count from detected surface friction signals.
+// Each signal represents a real reason a visitor might not complete their inquiry.
+function calibrateLeadCount(input: {
+  mobileHasAboveFoldCta: boolean | null | undefined
+  mobileViewportOverflow: boolean | null | undefined
+  responseTimeMs: number | null | undefined
+  formCount: number | null | undefined
+  mobileH1IsOversized: boolean | null | undefined
+  hasMobileViewport: boolean | null | undefined
+}): { low: number; high: number } {
+  let frictionScore = 0
+
+  // No mobile viewport: layout likely broken → strong friction
+  if (input.hasMobileViewport === false) frictionScore += 2
+  // Mobile ATF CTA absent: visitor must scroll before seeing the action
+  if (input.mobileHasAboveFoldCta === false) frictionScore += 1.5
+  // Mobile layout overflows: horizontal scroll frustrates mobile visitors
+  if (input.mobileViewportOverflow === true) frictionScore += 1
+  // H1 oversized: pushes CTA below fold on mobile
+  if (input.mobileH1IsOversized === true) frictionScore += 0.5
+  // Slow page load: bounce before page becomes interactive
+  if (input.responseTimeMs !== null && input.responseTimeMs !== undefined && input.responseTimeMs > 3500) frictionScore += 1
+  // No form detected: inquiry completion harder without a direct form
+  if (input.formCount !== null && input.formCount !== undefined && input.formCount === 0) frictionScore += 0.5
+
+  // Base: 1-2 missed leads on a healthy path with no friction
+  // Each friction unit adds proportional missed lead potential
+  const low = Math.max(1, Math.round(1 + frictionScore * 0.3))
+  const high = Math.max(low + 1, Math.min(8, Math.round(2 + frictionScore * 0.8)))
+  return { low, high }
+}
+
 function estimateRange(input: {
   base: number
   revenuePathClarity: string | null | undefined
@@ -45,6 +77,13 @@ export function getDirectionalOpportunityEstimate(input: {
   issueImpact?: number | null | undefined
   issueCount?: number | null | undefined
   hasScreenshotEvidence?: boolean
+  // Browser inspection signals for calibrated lead count
+  mobileHasAboveFoldCta?: boolean | null
+  mobileViewportOverflow?: boolean | null
+  responseTimeMs?: number | null
+  formCount?: number | null
+  mobileH1IsOversized?: boolean | null
+  hasMobileViewport?: boolean | null
 }): OpportunityEstimate {
   const hasIssueSignal = (input.issueImpact ?? 0) > 0 || (input.issueCount ?? 0) > 0
   const hasEvidenceBackedFinding = hasIssueSignal || input.hasScreenshotEvidence === true
@@ -56,8 +95,16 @@ export function getDirectionalOpportunityEstimate(input: {
       revenuePathClarity: input.revenuePathClarity,
       hasEvidenceBackedFinding,
     })
-    const missedLeadLow = 1
-    const missedLeadHigh = range.high >= 6000 ? 4 : 3
+    const calibrated = calibrateLeadCount({
+      mobileHasAboveFoldCta: input.mobileHasAboveFoldCta,
+      mobileViewportOverflow: input.mobileViewportOverflow,
+      responseTimeMs: input.responseTimeMs,
+      formCount: input.formCount,
+      mobileH1IsOversized: input.mobileH1IsOversized,
+      hasMobileViewport: input.hasMobileViewport,
+    })
+    const missedLeadLow = calibrated.low
+    const missedLeadHigh = calibrated.high
     return {
       label: "Pipeline opportunity",
       detail: `${missedLeadLow}-${missedLeadHigh} missed leads/month`,

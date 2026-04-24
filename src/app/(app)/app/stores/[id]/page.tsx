@@ -228,6 +228,8 @@ export default async function StoreDetailPage({
     issueImpact: data.estimatedLeakage,
     issueCount: data.issues.length,
     hasScreenshotEvidence: urlSourceScreenshots.some((shot) => Boolean(shot.src)),
+    // Browser inspection signals available from the HTML analysis runner
+    responseTimeMs: urlSourceAnalysis?.responseTimeMs ?? null,
   })
   const businessSignalRows = urlSourceAnalysis
     ? getBusinessSignalRows({

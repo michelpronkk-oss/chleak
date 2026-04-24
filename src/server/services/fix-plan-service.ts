@@ -194,6 +194,8 @@ function readFindingEvidenceForIssueType(input: {
       "url_source_mobile_layout_overflow_v1",
       "url_source_no_atf_cta_mobile_v1",
       "url_source_slow_page_load_v1",
+      "url_source_mobile_h1_oversized_v1",
+      "url_source_generic_copy_detected_v1",
     ],
     checkout_friction: [
       "url_source_ecommerce_no_checkout_v1",

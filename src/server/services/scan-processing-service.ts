@@ -1144,6 +1144,8 @@ function buildUrlSourcePathFindings(input: {
     response_time_ms: s.responseTimeMs,
     final_url: s.finalUrl,
     http_status: s.httpStatus,
+    has_ai_generic_copy: s.hasAiGenericCopy,
+    ai_generic_copy_tokens: s.aiGenericCopyTokens?.join(", ") ?? null,
     // Browser inspection signals
     browser_load_time_ms: bi?.loadTimeMs ?? null,
     browser_final_url: bi?.finalUrl ?? null,
@@ -1533,6 +1535,57 @@ function buildUrlSourcePathFindings(input: {
           responseTimeMs: bi.loadTimeMs,
         }),
         evidence: { ...baseEvidence, path_evaluated: "load_performance", measured_load_ms: bi.loadTimeMs, effective_business_type: effectiveBusinessType },
+      })
+    }
+
+    // H1 heading is oversized on mobile — pushes primary CTA below the fold.
+    if (bi.mobileH1IsOversized && bi.mobileH1FontSizePx !== null) {
+      findings.push({
+        key: "url_source_mobile_h1_oversized_v1",
+        type: "setup_gap",
+        severity: "low",
+        title: `Mobile heading is oversized at ${Math.round(bi.mobileH1FontSizePx)}px`,
+        summary:
+          `The primary H1 heading renders at ${Math.round(bi.mobileH1FontSizePx)}px on a 375px mobile screen. This is likely pushing the main conversion CTA below the visible fold before the visitor can act.`,
+        whyItMatters:
+          "Oversized headings on mobile reduce the visible content above the fold, meaning visitors must scroll before seeing the primary action. This increases bounce rate and reduces conversion from mobile traffic.",
+        recommendedAction:
+          "Reduce the H1 font size on mobile to 36-44px using responsive CSS (clamp or media query). The headline should occupy no more than 30% of the screen height on a 375px viewport, leaving the primary CTA in view.",
+        estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
+          businessType: effectiveBusinessType,
+          severity: "low",
+        }),
+        evidence: {
+          ...baseEvidence,
+          path_evaluated: "mobile_heading",
+          h1_font_size_px: bi.mobileH1FontSizePx,
+          effective_business_type: effectiveBusinessType,
+        },
+      })
+    }
+
+    // AI or generic copy detected — reduces trust and conversion confidence.
+    const aiCopyTokens = asString(baseEvidence.ai_generic_copy_tokens)
+    const hasAiCopy = Boolean(baseEvidence.has_ai_generic_copy)
+    if (hasAiCopy && bi.mobileVisibleText) {
+      findings.push({
+        key: "url_source_generic_copy_detected_v1",
+        type: "setup_gap",
+        severity: "low",
+        title: "Primary surface copy reads as generic or AI-generated",
+        summary:
+          "Surface analysis detected language patterns common to AI-generated or templated marketing copy. Generic copy reduces trust, lowers conversion, and makes differentiation harder for prospects.",
+        whyItMatters:
+          "Prospects visiting service and SaaS sites are sensitive to copy quality. Generic phrasing reduces credibility and weakens the case for contacting or signing up. Specific, voice-led copy converts better.",
+        recommendedAction:
+          "Replace generic phrases with specific, outcome-focused language. Describe what the business actually does and for whom. Use concrete results, named clients or outcomes, and direct verbs instead of adjective-heavy abstractions.",
+        estimatedMonthlyRevenueImpact: 0,
+        evidence: {
+          ...baseEvidence,
+          path_evaluated: "copy_quality",
+          detected_tokens: aiCopyTokens ?? "generic language patterns",
+          effective_business_type: effectiveBusinessType,
+        },
       })
     }
   }

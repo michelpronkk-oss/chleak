@@ -53,6 +53,9 @@ export interface UrlSourceAnalysisSummaryV1 {
   hasContactOrBookingPath: boolean
   hasSubscriptionLanguage: boolean
   responseTimeMs: number | null
+  // Copy quality signals
+  hasAiGenericCopy: boolean
+  aiGenericCopyTokens: string[]
 }
 
 export interface UrlSourceAnalysisResultV1 {
@@ -308,6 +311,29 @@ function detectAppDashboardLanguage(visibleText: string): boolean {
     "cancel anytime",
     "saas",
   ])
+}
+
+// Detects copy that reads as AI-generated or generically templated.
+// Requires 2+ matched tokens to reduce false positives on real human copy
+// that happens to use one common word.
+const AI_CLICHE_TOKENS = [
+  "leverage", "synergize", "holistic approach", "game-changing",
+  "cutting-edge", "seamless experience", "empower your",
+  "revolutionize", "transformative solution", "innovative solution",
+  "scalable solution", "scalable platform", "robust platform",
+  "world-class", "best-in-class", "state-of-the-art", "paradigm shift",
+  "thought leader", "disruptive", "unlock your potential",
+  "drive growth", "streamline your", "next-level",
+  "supercharge", "reimagine", "future-proof", "at scale",
+  "end-to-end solution", "360-degree", "synergy", "ideate",
+  "low-hanging fruit", "move the needle", "boil the ocean",
+  "circle back", "deep dive into", "gain traction",
+] as const
+
+function detectAiGenericCopy(visibleText: string): { detected: boolean; tokens: string[] } {
+  const lower = visibleText.toLowerCase()
+  const matched = AI_CLICHE_TOKENS.filter((t) => lower.includes(t))
+  return { detected: matched.length >= 2, tokens: matched.slice(0, 6) }
 }
 
 function detectSubscriptionLanguage(visibleText: string): boolean {
@@ -642,6 +668,8 @@ function buildFailedResult(input: {
       hasContactOrBookingPath: false,
       hasSubscriptionLanguage: false,
       responseTimeMs: null,
+      hasAiGenericCopy: false,
+      aiGenericCopyTokens: [],
     },
     evidenceRows: [
       { label: "Runner status", value: "failed" },
@@ -765,6 +793,7 @@ export async function runUrlSourceAnalysisV1(input: {
   const hasSubscriptionLanguage = detectSubscriptionLanguage(visibleBodyText)
   const hasAgencyLanguage = detectAgencyLanguage(visibleBodyText, allLabels)
   const hasServiceLanguage = detectServiceLanguage(visibleBodyText, allLabels)
+  const aiCopyCheck = detectAiGenericCopy(visibleBodyText)
   const hasAppDashboardLanguage = detectAppDashboardLanguage(visibleBodyText)
 
   // --- Primary CTA ---
@@ -858,6 +887,8 @@ export async function runUrlSourceAnalysisV1(input: {
       hasContactOrBookingPath,
       hasSubscriptionLanguage,
       responseTimeMs,
+      hasAiGenericCopy: aiCopyCheck.detected,
+      aiGenericCopyTokens: aiCopyCheck.tokens,
     },
     evidenceRows,
     errorMessage: null,
