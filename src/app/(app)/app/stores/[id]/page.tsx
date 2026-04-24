@@ -257,6 +257,14 @@ export default async function StoreDetailPage({
   const rankedIssues = [...data.issues].sort(
     (a, b) => b.estimatedMonthlyRevenueImpact - a.estimatedMonthlyRevenueImpact
   )
+  // Hard issues require operator action (critical, high, medium).
+  // Optimization opportunities are present but not broken (low severity).
+  const hardIssues = rankedIssues.filter((i) => i.severity !== "low")
+  const opportunityItems = rankedIssues.filter((i) => i.severity === "low")
+  const primaryMove = hardIssues[0] ?? null
+  const primaryOpportunity = opportunityItems[0] ?? null
+  const hasHardIssue = hardIssues.length > 0
+  const hasOpportunity = opportunityItems.length > 0
 
   return (
     <div className="space-y-5 pb-24 lg:pb-4">
@@ -297,8 +305,14 @@ export default async function StoreDetailPage({
         </article>
         <article className="vault-metric-cell">
           <p className="vault-metric-key">Open issues</p>
-          <p className="vault-metric-value">{data.issues.length}</p>
-          <p className="vault-metric-delta">Ranked by exposure</p>
+          <p className="vault-metric-value">{hardIssues.length}</p>
+          <p className="vault-metric-delta">
+            {hasOpportunity && !hasHardIssue
+              ? `${opportunityItems.length} optimization${opportunityItems.length !== 1 ? "s" : ""} available`
+              : hasOpportunity
+                ? `${opportunityItems.length} optimization${opportunityItems.length !== 1 ? "s" : ""} also available`
+                : "Ranked by exposure"}
+          </p>
         </article>
         <article className="vault-metric-cell">
           <p className="vault-metric-key">Latest scan</p>
@@ -324,9 +338,9 @@ export default async function StoreDetailPage({
 
       <section className="vault-dashboard-grid">
         <div className="space-y-5">
-          <VaultPanel title={`Issue queue | ${rankedIssues.length} open`} meta="Sorted by exposure">
-            {rankedIssues.length ? (
-              rankedIssues.map((issue) => (
+          <VaultPanel title={`Issue queue | ${hardIssues.length} open`} meta="Sorted by exposure">
+            {hardIssues.length ? (
+              hardIssues.map((issue) => (
                 <RankedQueueRow
                   key={issue.id}
                   severity={issue.severity}
@@ -337,7 +351,11 @@ export default async function StoreDetailPage({
                 />
               ))
             ) : (
-              <div className="px-5 py-8 text-sm text-muted-foreground">No open issues for this source.</div>
+              <div className="px-5 py-8 text-sm text-muted-foreground">
+                {hasOpportunity
+                  ? "No active issues. Optimization opportunities are available below."
+                  : "No open issues for this source."}
+              </div>
             )}
           </VaultPanel>
 
@@ -539,27 +557,56 @@ export default async function StoreDetailPage({
 
         <div className="space-y-5">
           <section className="vault-panel-shell border-[color:var(--signal-line)] bg-[linear-gradient(180deg,var(--signal-dim),var(--ink-100)_60%)] p-5 sm:p-6">
-            <p className="vault-metric-key text-[color:var(--signal)]">Recommended move</p>
+            <p className="vault-metric-key text-[color:var(--signal)]">
+              {isDemoMode
+                ? "Recommended move"
+                : hasHardIssue
+                  ? "Recommended move"
+                  : hasOpportunity
+                    ? "Optimization available"
+                    : "Source status"}
+            </p>
             <h2 className="mt-2 text-lg font-semibold tracking-tight text-foreground">
-              {rankedIssues[0]?.title ?? (isDemoMode ? "No simulated intervention required" : "No active intervention required")}
+              {primaryMove?.title ??
+                primaryOpportunity?.title ??
+                (isDemoMode ? "No simulated intervention required" : "Source path is healthy")}
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              {rankedIssues[0]?.summary ??
+              {primaryMove?.summary ??
+                primaryOpportunity?.summary ??
                 (isDemoMode
                   ? "This simulated source is currently stable."
-                  : "Source is stable. Continue monitoring.")}
+                  : "Core revenue path is detected and active. Review the optimization brief or continue monitoring.")}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {rankedIssues[0] ? <SeverityPill severity={rankedIssues[0].severity} /> : null}
-              <MetaPill>{formatCompactCurrency(rankedIssues[0]?.estimatedMonthlyRevenueImpact ?? 0)}</MetaPill>
+              {hasHardIssue && primaryMove ? (
+                <SeverityPill severity={primaryMove.severity} />
+              ) : null}
+              <MetaPill>
+                {formatCompactCurrency(
+                  primaryMove?.estimatedMonthlyRevenueImpact ??
+                  primaryOpportunity?.estimatedMonthlyRevenueImpact ??
+                  0
+                )}
+              </MetaPill>
             </div>
-            <Link
-              href={data.fixPlanLinks[0]?.href ?? "/app/stores"}
-              className="marketing-primary-cta mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
-            >
-              Review action brief
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+            {(hasHardIssue || hasOpportunity) ? (
+              <Link
+                href={data.fixPlanLinks[0]?.href ?? "/app/stores"}
+                className="marketing-primary-cta mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
+              >
+                {hasHardIssue ? "Review action brief" : "Review optimization brief"}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            ) : (
+              <Link
+                href="/app/stores"
+                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md border border-border/60 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Open sources
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            )}
             {data.setupAttentionMessage ? (
               <p className="mt-3 text-xs text-amber-300">{data.setupAttentionMessage}</p>
             ) : null}
@@ -595,25 +642,35 @@ export default async function StoreDetailPage({
           </VaultPanel>
 
           <VaultPanel
-            title="Linked opportunities"
-            meta={`${data.fixPlanLinks.length} ${isDemoMode ? "simulated " : ""}fix plans`}
+            title={hasOpportunity && !hasHardIssue ? "Optimization briefs" : "Linked opportunities"}
+            meta={`${data.fixPlanLinks.length} ${isDemoMode ? "simulated " : ""}action brief${data.fixPlanLinks.length !== 1 ? "s" : ""}`}
           >
             <ul className="space-y-2.5 px-4 py-3 sm:px-5">
               {data.fixPlanLinks.length ? (
-                data.fixPlanLinks.map((plan) => (
-                  <li key={plan.issueId} className="rounded-md border border-border/60 bg-background/30 px-3 py-2.5">
-                    <p className="text-sm font-medium">{plan.title}</p>
-                    <p className="mt-1 text-xs text-primary">
-                      {formatCompactCurrency(plan.estimatedMonthlyRevenueImpact)} / month
-                    </p>
-                    <Link
-                      href={plan.href}
-                      className="vault-link mt-2 inline-flex items-center gap-1 text-xs"
-                    >
-                      Review action brief <ArrowRight className="h-3 w-3" />
-                    </Link>
-                  </li>
-                ))
+                data.fixPlanLinks.map((plan) => {
+                  const isOpportunityPlan = opportunityItems.some(
+                    (o) => o.id === plan.issueId
+                  )
+                  return (
+                    <li key={plan.issueId} className="rounded-md border border-border/60 bg-background/30 px-3 py-2.5">
+                      {isOpportunityPlan ? (
+                        <span className="mb-1.5 inline-flex items-center rounded border border-emerald-400/25 bg-emerald-400/[0.07] px-1.5 py-0.5 font-mono text-[0.6rem] tracking-[0.07em] uppercase text-emerald-400">
+                          Optimization
+                        </span>
+                      ) : null}
+                      <p className="text-sm font-medium">{plan.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {formatCompactCurrency(plan.estimatedMonthlyRevenueImpact)} pipeline opportunity
+                      </p>
+                      <Link
+                        href={plan.href}
+                        className="vault-link mt-2 inline-flex items-center gap-1 text-xs"
+                      >
+                        {isOpportunityPlan ? "Review optimization brief" : "Review action brief"} <ArrowRight className="h-3 w-3" />
+                      </Link>
+                    </li>
+                  )
+                })
               ) : (
                 <li className="text-sm text-muted-foreground">
                   {isDemoMode

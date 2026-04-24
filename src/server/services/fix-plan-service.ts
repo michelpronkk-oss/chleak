@@ -177,6 +177,7 @@ function readFindingEvidenceForIssueType(input: {
       "shopify_activation_flow_dead_end_v1",
       "shopify_activation_funnel_dropout_v1",
       "url_source_saas_no_growth_funnel_v1",
+      "url_source_saas_activation_optimization_v1",
     ],
     failed_payment_recovery: ["stripe_failed_payment_recovery_gap_v1"],
     setup_gap: [
@@ -188,6 +189,7 @@ function readFindingEvidenceForIssueType(input: {
       "url_source_service_no_contact_path_v1",
       "url_source_service_no_inquiry_path_v1",
       "url_source_service_weak_lead_capture_v1",
+      "url_source_service_inquiry_path_optimization_v1",
       "url_source_no_mobile_viewport_v1",
       "url_source_mobile_layout_overflow_v1",
       "url_source_no_atf_cta_mobile_v1",
@@ -195,6 +197,7 @@ function readFindingEvidenceForIssueType(input: {
     ],
     checkout_friction: [
       "url_source_ecommerce_no_checkout_v1",
+      "url_source_ecommerce_checkout_optimization_v1",
     ],
     payment_method_coverage: [],
     signup_form_abandonment: [

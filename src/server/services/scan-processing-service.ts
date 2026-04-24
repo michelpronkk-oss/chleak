@@ -1229,6 +1229,33 @@ function buildUrlSourcePathFindings(input: {
         evidence: { ...baseEvidence, path_evaluated: "activation_signup", effective_business_type: effectiveBusinessType },
       })
     }
+
+    // Healthy path optimization opportunity — fires when signup AND a conversion
+    // anchor (login or pricing) are both present. Core funnel is working.
+    if (s.hasSignupPath && (s.hasLoginPath || s.hasPricingPath)) {
+      findings.push({
+        key: "url_source_saas_activation_optimization_v1",
+        type: "activation_funnel_dropout",
+        severity: "low",
+        title: "Optimization: verify signup and first-value activation handoff",
+        summary:
+          "Signup and core conversion paths are detected. Activation quality improvement is available by verifying the first-value handoff after signup and confirming the trial or onboarding path is frictionless.",
+        whyItMatters:
+          "Signup-to-activation conversion is where most SaaS revenue leaks. Even a functioning signup path can have a weak handoff to first value, increasing trial churn before the product is experienced.",
+        recommendedAction:
+          "Confirm the signup flow leads directly to a first-value activation step. Verify the trial or onboarding path is visible from the primary surface. Review the first email or in-app prompt after signup.",
+        estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
+          businessType: effectiveBusinessType,
+          severity: "low",
+        }),
+        evidence: {
+          ...baseEvidence,
+          path_evaluated: "activation_optimization",
+          effective_business_type: effectiveBusinessType,
+          signup_path_present: true,
+        },
+      })
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -1287,6 +1314,40 @@ function buildUrlSourcePathFindings(input: {
         evidence: { ...baseEvidence, path_evaluated: "lead_capture", effective_business_type: effectiveBusinessType },
       })
     }
+
+    // Healthy path optimization opportunity — fires only when the core lead-gen
+    // path IS present (contact + primary CTA both detected). This gives the
+    // operator a concrete next step and explains the pipeline opportunity estimate.
+    if (s.hasContactOrBookingPath && s.hasPrimaryCta) {
+      const optimizationTitle = isAgency
+        ? "Optimization: strengthen the project inquiry path"
+        : "Optimization: tighten the primary lead capture path"
+      findings.push({
+        key: "url_source_service_inquiry_path_optimization_v1",
+        type: "setup_gap",
+        severity: "low",
+        title: optimizationTitle,
+        summary:
+          isAgency
+            ? "Lead generation path is healthy. Primary CTA and contact route are both detected. Pipeline improvement is available by making the project request flow more direct and reducing steps to first inquiry."
+            : "Service conversion path is healthy. Contact and primary CTA are both present. Lead capture quality can improve by shortening the path from interest to inquiry.",
+        whyItMatters:
+          "For agencies and service businesses, each additional step between visitor arrival and first inquiry reduces qualified lead volume. Small improvements compound across all acquisition channels.",
+        recommendedAction:
+          "Verify the primary CTA leads directly to a short intake form or booking step. Place one strong lead action above the fold on mobile. Add client proof (case study, testimonial, or result) adjacent to the main CTA to reduce hesitation.",
+        estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
+          businessType: effectiveBusinessType,
+          severity: "low",
+        }),
+        evidence: {
+          ...baseEvidence,
+          path_evaluated: "lead_capture_optimization",
+          effective_business_type: effectiveBusinessType,
+          inquiry_path_present: true,
+          primary_cta_present: true,
+        },
+      })
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -1312,6 +1373,32 @@ function buildUrlSourcePathFindings(input: {
           severity: "high",
         }),
         evidence: { ...baseEvidence, path_evaluated: "checkout", effective_business_type: effectiveBusinessType },
+      })
+    }
+
+    // Healthy checkout optimization — fires when checkout signal IS detected.
+    if (s.hasCheckoutSignal) {
+      findings.push({
+        key: "url_source_ecommerce_checkout_optimization_v1",
+        type: "checkout_friction",
+        severity: "low",
+        title: "Optimization: verify checkout quality and payment trust signals",
+        summary:
+          "Checkout or cart path is detected. Conversion quality improvement is available by verifying mobile checkout visibility, payment method trust signals, and product-to-checkout path clarity.",
+        whyItMatters:
+          "A visible checkout path does not guarantee conversion. Mobile layout, payment trust signals, and clear product-to-cart flow all directly affect checkout completion rate.",
+        recommendedAction:
+          "Verify the checkout path is visible and functional on mobile. Confirm payment trust signals (accepted cards, SSL badge, secure checkout indicator) are visible before the payment step. Review product-to-cart step count.",
+        estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
+          businessType: effectiveBusinessType,
+          severity: "low",
+        }),
+        evidence: {
+          ...baseEvidence,
+          path_evaluated: "checkout_optimization",
+          effective_business_type: effectiveBusinessType,
+          checkout_path_present: true,
+        },
       })
     }
   }
