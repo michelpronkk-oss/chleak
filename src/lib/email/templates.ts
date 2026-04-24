@@ -265,6 +265,9 @@ export interface ScanCompletionTemplateInput {
   detectedIssuesCount: number
   criticalIssuesCount: number
   estimatedMonthlyLeakage: number
+  topIssueTitle?: string | null
+  topIssueEstimatedImpact?: number | null
+  isScheduledMonitoring?: boolean
   scanFamilyLabel: string
   appUrl: string
 }
@@ -286,9 +289,15 @@ export function buildScanCompletionTemplate(input: ScanCompletionTemplateInput) 
   const sourceLabel = escapeHtml(input.sourceLabel)
   const workspaceName = escapeHtml(input.workspaceName)
   const scanFamilyLabel = escapeHtml(input.scanFamilyLabel)
+  const topIssueTitle = input.topIssueTitle ? escapeHtml(input.topIssueTitle) : null
+  const topIssueImpact =
+    input.topIssueEstimatedImpact !== null &&
+    input.topIssueEstimatedImpact !== undefined
+      ? formatMoney(input.topIssueEstimatedImpact)
+      : null
   const subject =
     input.resultKind === "issues_found"
-      ? `${input.detectedIssuesCount} ${input.detectedIssuesCount === 1 ? "issue" : "issues"} found for ${input.sourceLabel}`
+      ? `CheckoutLeak found ${input.detectedIssuesCount} ${input.detectedIssuesCount === 1 ? "issue" : "issues"} on ${input.sourceLabel}`
       : input.resultKind === "failed"
         ? `Scan needs attention for ${input.sourceLabel}`
         : `No critical issues found for ${input.sourceLabel}`
@@ -306,7 +315,9 @@ export function buildScanCompletionTemplate(input: ScanCompletionTemplateInput) 
         : "No critical issues found."
   const body =
     input.resultKind === "issues_found"
-      ? `CheckoutLeak found ${input.detectedIssuesCount} ${input.detectedIssuesCount === 1 ? "issue" : "issues"} on ${sourceLabel}. Review the evidence and ranked next step in the source detail.`
+      ? input.isScheduledMonitoring
+        ? `CheckoutLeak is monitoring ${sourceLabel} automatically and found ${input.detectedIssuesCount} ${input.detectedIssuesCount === 1 ? "issue" : "issues"}. Review the evidence and ranked next step in the source detail.`
+        : `CheckoutLeak found ${input.detectedIssuesCount} ${input.detectedIssuesCount === 1 ? "issue" : "issues"} on ${sourceLabel}. Review the evidence and ranked next step in the source detail.`
       : input.resultKind === "failed"
         ? `CheckoutLeak could not complete the latest scan for ${sourceLabel}. The source detail is ready for a retry when you are.`
         : `CheckoutLeak completed the latest scan for ${sourceLabel}. No critical issues were found, and the source remains in monitoring.`
@@ -356,6 +367,14 @@ export function buildScanCompletionTemplate(input: ScanCompletionTemplateInput) 
                 <td style="padding:10px 0;font-family:monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#3d4860;border-bottom:1px solid #1e2640;">Critical issues</td>
                 <td style="padding:10px 0;font-size:13px;color:#e8ecf4;text-align:right;border-bottom:1px solid #1e2640;">${input.criticalIssuesCount}</td>
               </tr>
+              ${
+                topIssueTitle
+                  ? `<tr>
+                <td style="padding:10px 0;font-family:monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#3d4860;border-bottom:1px solid #1e2640;">Top issue</td>
+                <td style="padding:10px 0;font-size:13px;color:#e8ecf4;text-align:right;border-bottom:1px solid #1e2640;">${topIssueTitle}${topIssueImpact ? ` (${topIssueImpact})` : ""}</td>
+              </tr>`
+                  : ""
+              }
               <tr>
                 <td style="padding:10px 0;font-family:monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#3d4860;">Estimated leakage</td>
                 <td style="padding:10px 0;font-size:13px;color:#c89a10;text-align:right;">${impactLabel}</td>

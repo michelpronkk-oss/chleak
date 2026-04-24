@@ -1,5 +1,3 @@
-import { formatCompactCurrency } from "@/lib/format"
-
 export type OpportunityConfidence = "low" | "moderate" | "high"
 
 export interface OpportunityEstimate {

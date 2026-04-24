@@ -101,14 +101,33 @@ export async function sendScanCompletionNotification(
     .eq("notification_requested", true)
     .is("notification_sent_at", null)
     .or("notification_status.is.null,notification_status.eq.failed")
-    .select("id, notification_recipient_email")
+    .select("id, notification_recipient_email, notification_reason")
     .maybeSingle()
 
   if (claimResult.error || !claimResult.data) {
     return { status: "skipped" as const, reason: "not_requested_or_already_sent" }
   }
 
-  const [storeResult, organizationResult, criticalIssuesResult] = await Promise.all([
+  const isScheduledMonitoring =
+    claimResult.data.notification_reason === "scheduled_website_monitoring"
+
+  if (
+    isScheduledMonitoring &&
+    input.status === "completed" &&
+    input.outcome !== "issues_found"
+  ) {
+    await admin
+      .from("scans")
+      .update({
+        notification_status: "skipped",
+        notification_error: "Scheduled monitoring scan completed without new findings.",
+      })
+      .eq("id", input.scanId)
+
+    return { status: "skipped" as const, reason: "scheduled_scan_without_issues" }
+  }
+
+  const [storeResult, organizationResult, criticalIssuesResult, topIssueResult] = await Promise.all([
     admin
       .from("stores")
       .select("name, domain, platform")
@@ -128,6 +147,17 @@ export async function sendScanCompletionNotification(
       .eq("scan_id", input.scanId)
       .eq("severity", "critical")
       .neq("status", "resolved"),
+    admin
+      .from("issues")
+      .select("title, estimated_monthly_revenue_impact")
+      .eq("organization_id", input.organizationId)
+      .eq("store_id", input.storeId)
+      .eq("scan_id", input.scanId)
+      .neq("status", "resolved")
+      .order("estimated_monthly_revenue_impact", { ascending: false })
+      .order("detected_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ])
 
   const recipient = await resolveRecipient({
@@ -173,6 +203,10 @@ export async function sendScanCompletionNotification(
       detectedIssuesCount: input.detectedIssuesCount,
       criticalIssuesCount: criticalIssuesResult.count ?? 0,
       estimatedMonthlyLeakage: input.estimatedMonthlyLeakage,
+      topIssueTitle: topIssueResult.data?.title ?? null,
+      topIssueEstimatedImpact:
+        topIssueResult.data?.estimated_monthly_revenue_impact ?? null,
+      isScheduledMonitoring,
       scanFamilyLabel: formatScanFamily(input.scanFamily),
       appUrl: `${getAppUrl()}${sourcePath}`,
     })
