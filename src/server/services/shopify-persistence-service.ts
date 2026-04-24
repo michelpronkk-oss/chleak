@@ -35,6 +35,7 @@ export async function persistShopifyIntegration(input: {
   shopName: string
   scopes: string[]
   accessToken: string
+  notificationRecipientEmail?: string | null
   signalSnapshot?: {
     capturedAt: string
     ordersLast30Days: number | null
@@ -152,6 +153,9 @@ export async function persistShopifyIntegration(input: {
     scanned_at: new Date().toISOString(),
     detected_issues_count: 0,
     estimated_monthly_leakage: 0,
+    notification_requested: true,
+    notification_reason: "shopify_oauth_first_scan",
+    notification_recipient_email: input.notificationRecipientEmail ?? null,
   }
 
   console.info(
@@ -181,6 +185,7 @@ export async function persistShopifyIntegration(input: {
 export async function enqueueShopifyQueuedScan(input: {
   organizationId: string
   storeId: string
+  notificationRecipientEmail?: string | null
 }) {
   const supabase = createSupabaseAdminClient()
   const scanInsert: ScanInsert = {
@@ -190,6 +195,9 @@ export async function enqueueShopifyQueuedScan(input: {
     scanned_at: new Date().toISOString(),
     detected_issues_count: 0,
     estimated_monthly_leakage: 0,
+    notification_requested: true,
+    notification_reason: "shopify_oauth_first_scan_retry",
+    notification_recipient_email: input.notificationRecipientEmail ?? null,
   }
 
   console.info(

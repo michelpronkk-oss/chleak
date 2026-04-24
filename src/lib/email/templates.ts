@@ -258,6 +258,133 @@ export function buildIssueDetectedTemplate(input: IssueDetectedTemplateInput) {
   return { subject, html }
 }
 
+export interface ScanCompletionTemplateInput {
+  sourceLabel: string
+  workspaceName: string
+  resultKind: "issues_found" | "clean" | "failed"
+  detectedIssuesCount: number
+  criticalIssuesCount: number
+  estimatedMonthlyLeakage: number
+  scanFamilyLabel: string
+  appUrl: string
+}
+
+function escapeHtml(input: string) {
+  return input
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;")
+}
+
+function formatMoney(value: number) {
+  return `$${Math.round(value).toLocaleString()}`
+}
+
+export function buildScanCompletionTemplate(input: ScanCompletionTemplateInput) {
+  const sourceLabel = escapeHtml(input.sourceLabel)
+  const workspaceName = escapeHtml(input.workspaceName)
+  const scanFamilyLabel = escapeHtml(input.scanFamilyLabel)
+  const subject =
+    input.resultKind === "issues_found"
+      ? `${input.detectedIssuesCount} ${input.detectedIssuesCount === 1 ? "issue" : "issues"} found for ${input.sourceLabel}`
+      : input.resultKind === "failed"
+        ? `Scan needs attention for ${input.sourceLabel}`
+        : `No critical issues found for ${input.sourceLabel}`
+  const eyebrow =
+    input.resultKind === "issues_found"
+      ? "Scan complete"
+      : input.resultKind === "failed"
+        ? "Scan needs attention"
+        : "Scan complete"
+  const headline =
+    input.resultKind === "issues_found"
+      ? "New findings are ready."
+      : input.resultKind === "failed"
+        ? "The scan did not complete."
+        : "No critical issues found."
+  const body =
+    input.resultKind === "issues_found"
+      ? `CheckoutLeak found ${input.detectedIssuesCount} ${input.detectedIssuesCount === 1 ? "issue" : "issues"} on ${sourceLabel}. Review the evidence and ranked next step in the source detail.`
+      : input.resultKind === "failed"
+        ? `CheckoutLeak could not complete the latest scan for ${sourceLabel}. The source detail is ready for a retry when you are.`
+        : `CheckoutLeak completed the latest scan for ${sourceLabel}. No critical issues were found, and the source remains in monitoring.`
+  const impactLabel =
+    input.resultKind === "issues_found"
+      ? formatMoney(input.estimatedMonthlyLeakage)
+      : input.resultKind === "failed"
+        ? "Not scored"
+        : "No new leakage"
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0b0e16;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0b0e16">
+  <tr>
+    <td align="center" style="padding:48px 20px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:500px;">
+        <tr>
+          <td style="background-color:#111624;border:1px solid #1e2640;border-radius:16px;padding:36px 40px;">
+            <p style="margin:0 0 28px 0;font-family:monospace;font-size:11px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:#2e3a54;">CHECKOUTLEAK</p>
+            <p style="margin:0 0 10px 0;font-family:monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#c89a10;">${eyebrow}</p>
+            <h1 style="margin:0 0 14px 0;font-size:22px;font-weight:600;letter-spacing:-0.025em;line-height:1.2;color:#e8ecf4;">${headline}</h1>
+            <p style="margin:0 0 22px 0;font-size:14px;line-height:1.75;color:#7f8dab;">${body}</p>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+              <tr>
+                <td style="padding:10px 0;font-family:monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#3d4860;border-bottom:1px solid #1e2640;">Source</td>
+                <td style="padding:10px 0;font-size:13px;color:#e8ecf4;text-align:right;border-bottom:1px solid #1e2640;">${sourceLabel}</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 0;font-family:monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#3d4860;border-bottom:1px solid #1e2640;">Workspace</td>
+                <td style="padding:10px 0;font-size:13px;color:#e8ecf4;text-align:right;border-bottom:1px solid #1e2640;">${workspaceName}</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 0;font-family:monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#3d4860;border-bottom:1px solid #1e2640;">Scan family</td>
+                <td style="padding:10px 0;font-size:13px;color:#e8ecf4;text-align:right;border-bottom:1px solid #1e2640;">${scanFamilyLabel}</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 0;font-family:monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#3d4860;border-bottom:1px solid #1e2640;">Findings</td>
+                <td style="padding:10px 0;font-size:13px;color:#e8ecf4;text-align:right;border-bottom:1px solid #1e2640;">${input.detectedIssuesCount}</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 0;font-family:monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#3d4860;border-bottom:1px solid #1e2640;">Critical issues</td>
+                <td style="padding:10px 0;font-size:13px;color:#e8ecf4;text-align:right;border-bottom:1px solid #1e2640;">${input.criticalIssuesCount}</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 0;font-family:monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#3d4860;">Estimated leakage</td>
+                <td style="padding:10px 0;font-size:13px;color:#c89a10;text-align:right;">${impactLabel}</td>
+              </tr>
+            </table>
+            <table cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="border-radius:8px;background-color:#c89a10;">
+                  <a href="${escapeHtml(input.appUrl)}" style="display:inline-block;padding:14px 28px;font-size:13px;font-weight:600;color:#0b0e16;text-decoration:none;letter-spacing:0.01em;border-radius:8px;">Open source detail &rarr;</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:20px 40px 0;">
+            <p style="margin:0;font-family:monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#222d44;">Monitoring signal / checkoutleak.com</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>`
+
+  return { subject, html }
+}
+
 export interface WeeklySummaryTemplateInput {
   organizationName: string
   estimatedMonthlyLeakage: number

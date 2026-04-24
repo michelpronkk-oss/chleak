@@ -304,6 +304,12 @@ export type Database = {
           detected_issues_count: number
           estimated_monthly_leakage: number
           id: string
+          notification_error: string | null
+          notification_reason: string | null
+          notification_recipient_email: string | null
+          notification_requested: boolean
+          notification_sent_at: string | null
+          notification_status: string | null
           organization_id: string
           scanned_at: string
           status: string
@@ -315,6 +321,12 @@ export type Database = {
           detected_issues_count?: number
           estimated_monthly_leakage?: number
           id?: string
+          notification_error?: string | null
+          notification_reason?: string | null
+          notification_recipient_email?: string | null
+          notification_requested?: boolean
+          notification_sent_at?: string | null
+          notification_status?: string | null
           organization_id: string
           scanned_at?: string
           status?: string
@@ -326,6 +338,12 @@ export type Database = {
           detected_issues_count?: number
           estimated_monthly_leakage?: number
           id?: string
+          notification_error?: string | null
+          notification_reason?: string | null
+          notification_recipient_email?: string | null
+          notification_requested?: boolean
+          notification_sent_at?: string | null
+          notification_status?: string | null
           organization_id?: string
           scanned_at?: string
           status?: string

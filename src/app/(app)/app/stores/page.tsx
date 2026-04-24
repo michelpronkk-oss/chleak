@@ -1,7 +1,17 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { ArrowRight, Check, ChevronRight, CircleCheck, CircleDashed, CircleDot, Globe2 } from "lucide-react"
+import {
+  ArrowRight,
+  Check,
+  ChevronRight,
+  CircleCheck,
+  CircleDashed,
+  CircleDot,
+  CreditCard,
+  Globe2,
+  ShoppingBag,
+} from "lucide-react"
 
 export const metadata: Metadata = {
   title: "Sources",
@@ -79,7 +89,33 @@ const errorStatuses = new Set([
   "completion_failed",
 ])
 
-const progressSteps = ["Plan active", "Set source URL", "Connect systems", "Findings"]
+const progressSteps = ["Plan active", "Set source", "Analyze", "Enrich"]
+
+type SystemRelevance = "recommended" | "useful" | "optional"
+
+function getBusinessTypeLabel(value: string | null | undefined) {
+  if (value === "saas") return "SaaS"
+  if (value === "service_business") return "Service business"
+  if (value === "ecommerce") return "Ecommerce"
+  if (value === "mixed") return "Mixed revenue model"
+  return "Source type pending"
+}
+
+function getSystemRelevanceLabel(relevance: SystemRelevance) {
+  if (relevance === "recommended") return "Recommended"
+  if (relevance === "useful") return "Useful"
+  return "Optional"
+}
+
+function getSystemRelevanceClass(relevance: SystemRelevance) {
+  if (relevance === "recommended") {
+    return "border-primary/35 bg-primary/[0.08] text-primary"
+  }
+  if (relevance === "useful") {
+    return "border-emerald-400/30 bg-emerald-400/[0.08] text-emerald-300"
+  }
+  return "border-border/60 bg-background/30 text-muted-foreground"
+}
 
 function formatSourceStatus(status: string) {
   return status.replaceAll("_", " ")
@@ -196,8 +232,6 @@ export default async function SourcesPage({
     connectData.onboardingState === "completed_shopify" ||
     connectData.onboardingState === "completed_stripe" ||
     connectData.onboardingState === "demo"
-  const currentProgressStep = isReady ? 4 : isPendingShopify || isPendingStripe ? 3 : 2
-
   const stripeMissingList = (
     missing?.split(",").map((item) => item.trim()).filter(Boolean) ??
     connectData.stripeSetupMissing ??
@@ -207,6 +241,10 @@ export default async function SourcesPage({
     ? `Missing: ${stripeMissingList.join(", ")}.`
     : "Missing: Stripe connection configuration."
 
+  const inferredShopDomain =
+    normalizedLiveSource?.hostname.endsWith(".myshopify.com")
+      ? normalizedLiveSource.hostname
+      : null
   const shopifyButtonLabel =
     connectData.shopifySetupAttention
       ? "Retry Shopify setup"
@@ -242,6 +280,34 @@ export default async function SourcesPage({
   const latestUrlSourceScanIsActive =
     latestUrlSourceScan?.status === "queued" || latestUrlSourceScan?.status === "running"
   const latestAnalysisAt = urlSourceAnalysis?.completedAt ?? latestStoreScanAt
+  const businessType = urlSourceAnalysis?.businessType ?? null
+  const sourceTypeLabel = getBusinessTypeLabel(businessType)
+  const hasEcommerceSignal =
+    businessType === "ecommerce" ||
+    businessType === "mixed" ||
+    urlSourceAnalysis?.surfaceClassification === "ecommerce" ||
+    urlSourceAnalysis?.hasCheckoutSignal === true ||
+    Boolean(inferredShopDomain)
+  const hasSaasSignal =
+    businessType === "saas" ||
+    businessType === "mixed" ||
+    urlSourceAnalysis?.hasPricingPath === true ||
+    urlSourceAnalysis?.hasSignupPath === true
+  const isServiceBusiness = businessType === "service_business"
+  const shopifyRelevance: SystemRelevance =
+    hasEcommerceSignal ? "recommended" : isServiceBusiness || hasSaasSignal ? "optional" : "useful"
+  const stripeRelevance: SystemRelevance =
+    hasSaasSignal ? "recommended" : hasEcommerceSignal ? "useful" : "optional"
+  const showShopifyInlineSetup =
+    connectData.shopifySourceState.status !== "not_connected" ||
+    shopifyRelevance === "recommended" ||
+    Boolean(inferredShopDomain)
+  const currentProgressStep =
+    isReady || Boolean(urlSourceAnalysis)
+      ? 4
+      : latestUrlSourceScanIsActive || primarySourceSaved
+        ? 3
+        : 2
   const sourceScanStateLabel = !primarySourceSaved
     ? "Not set"
     : latestUrlSourceScan?.status === "failed"
@@ -283,12 +349,12 @@ export default async function SourcesPage({
     : urlSourceAnalysis?.status === "completed"
       ? "Surface analysis completed. Revenue path and checkout signals are now in evidence."
     : connectedSystemsCount === 0
-      ? "Primary source saved. Connect Shopify or Stripe for deeper activation and checkout evidence."
-      : hasCompletedSystemScan
-        ? "Primary source is active and used as canonical context for connected system scans."
-        : isPendingShopify || isPendingStripe
-          ? "Connected systems are running first analysis. Primary source is attached as context."
-          : "Connected systems exist. First analysis has not completed yet."
+      ? "Primary source saved. Run analysis first, then connect relevant systems for deeper evidence."
+    : hasCompletedSystemScan
+      ? "Primary source is active and used as canonical context for optional system scans."
+    : isPendingShopify || isPendingStripe
+      ? "Connected systems are running first analysis. Primary source is attached as context."
+      : "Connected systems exist. First analysis has not completed yet."
   const liveSourceUpdatedAt =
     connectData.liveSourceContext && "updatedAt" in connectData.liveSourceContext
       ? connectData.liveSourceContext.updatedAt
@@ -304,10 +370,10 @@ export default async function SourcesPage({
       <section className="space-y-2" id="source-setup">
         <p className="data-mono text-muted-foreground">Sources</p>
         <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
-          Live Source and System Connections
+          Revenue Source and Signal Coverage
         </h1>
         <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-          Set the primary live source URL, then connect Shopify and Stripe systems for deeper activation, checkout, and billing evidence.
+          Set the primary URL first. CheckoutLeak analyzes the revenue surface, then recommends optional systems that can deepen signal quality.
         </p>
         {isDemoMode ? (
           <p className="text-sm text-amber-300">
@@ -349,7 +415,7 @@ export default async function SourcesPage({
       <section className="vault-panel-shell p-4 sm:p-5">
         <p className="data-mono text-muted-foreground">Primary live source</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          This URL or domain is the canonical source context for scans and source detail evidence.
+          This URL or domain is the canonical revenue surface. Connected systems enrich it, but they do not replace it.
         </p>
         <form action={setLiveSourceContext} className="mt-4 space-y-3">
           <div className="space-y-2">
@@ -444,9 +510,9 @@ export default async function SourcesPage({
               </dd>
             </div>
             <div className="rounded-lg border border-border/60 bg-background/30 p-3">
-              <dt className="data-mono text-muted-foreground">Connected systems</dt>
+              <dt className="data-mono text-muted-foreground">Detected model</dt>
               <dd className="mt-1 text-foreground">
-                {connectedSystemsCount > 0 ? connectedSystemsCount : "None"}
+                {urlSourceAnalysis ? sourceTypeLabel : "Analyze source"}
               </dd>
             </div>
             <div className="rounded-lg border border-border/60 bg-background/30 p-3">
@@ -465,7 +531,7 @@ export default async function SourcesPage({
             <div className="mt-4 rounded-lg border border-border/60 bg-background/30 p-3">
               <p className="data-mono text-muted-foreground">Surface analysis</p>
               <p className="mt-2 text-sm text-foreground">
-                {urlSourceAnalysis.surfaceClassification ?? "unknown"} | Revenue path:{" "}
+                {sourceTypeLabel} | {urlSourceAnalysis.surfaceClassification ?? "unknown"} | Revenue path:{" "}
                 {urlSourceAnalysis.revenuePathClarity ?? "unknown"}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
@@ -524,92 +590,170 @@ export default async function SourcesPage({
         </article>
       </section>
 
-      <section className="vault-source-grid">
-        <article className="vault-source-cell">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="font-mono text-[0.68rem] tracking-[0.1em] uppercase text-muted-foreground/60">
-                Shopify
-              </p>
-              <h2 className="mt-1.5 text-base font-semibold tracking-tight">
-                Connected system | checkout and activation depth
-              </h2>
-            </div>
-            <SourceStatusBadge status={connectData.shopifySourceState.status} />
-          </div>
-          <p className="mt-2.5 text-sm leading-[1.72] text-muted-foreground">
-            Detects checkout friction, payment method gaps, and activation progression leaks.
-          </p>
-          <div className="my-4 h-px bg-border/40" />
-          <form method="GET" action="/api/integrations/shopify/install" className="space-y-3">
-            <input type="hidden" name="orgId" value={connectData.organization.id} />
-            <div className="space-y-2">
-              <label
-                className="block font-mono text-[0.68rem] tracking-[0.08em] uppercase text-muted-foreground/60"
-                htmlFor="shop"
-              >
-                Shopify domain
-              </label>
-              <input
-                id="shop"
-                name="shop"
-                defaultValue={shopFromParams ?? connectData.shopifySourceState.shopDomain ?? ""}
-                placeholder="your-store.myshopify.com"
-                className="vault-input w-full rounded-lg px-3.5 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/40"
-                required
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                inputMode="url"
-                pattern="[a-z0-9-]+\.myshopify\.com"
-                title="Use format: your-store.myshopify.com"
-              />
-            </div>
-            <ShopifyConnectSubmitButton
-              disabled={!connectData.shopifyConfigured}
-              label={connectData.shopifyConfigured ? shopifyButtonLabel : "Shopify setup required"}
-            />
-          </form>
-          {connectData.shopifySourceState.status !== "not_connected" ? (
-            <div className="mt-2">
-              <DisconnectButton
-                label="Disconnect Shopify"
-                action="/api/integrations/shopify/disconnect"
-                next="/app/stores?provider=shopify&status=disconnected"
-              />
-            </div>
-          ) : null}
-          {connectData.shopifySourceState.shopDomain ? (
-            <p className="mt-3 font-mono text-[0.65rem] tracking-[0.06em] text-muted-foreground/45">
-              {connectData.shopifySourceState.shopDomain}
-            </p>
-          ) : null}
-          {shopifySetupMessage ? (
-            <p className="mt-2 text-xs text-amber-300">{shopifySetupMessage}</p>
-          ) : null}
-        </article>
-
-        <article className="vault-source-cell">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="font-mono text-[0.68rem] tracking-[0.1em] uppercase text-muted-foreground/60">
-                Stripe
-              </p>
-              <h2 className="mt-1.5 text-base font-semibold tracking-tight">
-                Connected system | billing recovery depth
-              </h2>
-            </div>
-            <SourceStatusBadge status={connectData.stripeSourceState.status} />
-          </div>
-          <p className="mt-2.5 text-sm leading-[1.72] text-muted-foreground">
-            Detects failed renewal leakage, retry gaps, and dunning lifecycle inefficiencies.
-          </p>
-          <div className="my-4 h-px bg-border/40" />
+      <section className="surface-card p-4 sm:p-5 lg:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
+            <p className="data-mono text-muted-foreground">Optional signal systems</p>
+            <h2 className="mt-1.5 text-base font-semibold tracking-tight sm:text-lg">
+              Recommended enrichments
+            </h2>
+          </div>
+          <span className="rounded-md border border-border/70 px-2 py-1 font-mono text-[0.65rem] uppercase text-muted-foreground">
+            {urlSourceAnalysis ? sourceTypeLabel : "Analyze source first"}
+          </span>
+        </div>
+        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+          Systems add operational evidence to the primary source. Relevance updates after surface analysis, and unsupported systems can stay unconnected.
+        </p>
+
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          <article className="rounded-xl border border-border/70 bg-background/35 p-4 sm:p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-mono text-[0.68rem] tracking-[0.1em] uppercase text-muted-foreground/60">
+                  Ecommerce platform
+                </p>
+                <h3 className="mt-1.5 flex items-center gap-2 text-base font-semibold tracking-tight">
+                  <ShoppingBag className="h-4 w-4 text-muted-foreground/70" />
+                  Shopify
+                </h3>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <span
+                  className={cn(
+                    "rounded-md border px-2 py-1 font-mono text-[0.62rem] uppercase",
+                    getSystemRelevanceClass(shopifyRelevance)
+                  )}
+                >
+                  {getSystemRelevanceLabel(shopifyRelevance)}
+                </span>
+                <SourceStatusBadge status={connectData.shopifySourceState.status} />
+              </div>
+            </div>
+            <p className="mt-2.5 text-sm leading-[1.72] text-muted-foreground">
+              Adds checkout and catalog depth when the primary source is a webshop or routes buyers into Shopify.
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {hasEcommerceSignal
+                ? "Ecommerce or checkout signals were detected on the primary source."
+                : "No strong ecommerce signal yet. Keep this optional unless Shopify is part of the revenue path."}
+            </p>
+            <div className="my-4 h-px bg-border/40" />
+            {showShopifyInlineSetup ? (
+              <form method="GET" action="/api/integrations/shopify/install" className="space-y-3">
+                <input type="hidden" name="orgId" value={connectData.organization.id} />
+                <div className="space-y-2">
+                  <label
+                    className="block font-mono text-[0.68rem] tracking-[0.08em] uppercase text-muted-foreground/60"
+                    htmlFor="shop"
+                  >
+                    Shopify shop domain
+                  </label>
+                  <input
+                    id="shop"
+                    name="shop"
+                    defaultValue={
+                      shopFromParams ??
+                      connectData.shopifySourceState.shopDomain ??
+                      inferredShopDomain ??
+                      ""
+                    }
+                    placeholder="your-store.myshopify.com"
+                    className="vault-input w-full rounded-lg px-3.5 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/40"
+                    required
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    inputMode="url"
+                    pattern="[a-z0-9-]+\.myshopify\.com"
+                    title="Use format: your-store.myshopify.com"
+                  />
+                </div>
+                <ShopifyConnectSubmitButton
+                  disabled={!connectData.shopifyConfigured}
+                  label={connectData.shopifyConfigured ? shopifyButtonLabel : "Shopify setup required"}
+                />
+              </form>
+            ) : (
+              <details className="rounded-lg border border-border/60 bg-background/30 p-3">
+                <summary className="cursor-pointer text-sm text-muted-foreground">
+                  Connect Shopify only if this source uses a Shopify shop
+                </summary>
+                <form method="GET" action="/api/integrations/shopify/install" className="mt-3 space-y-3">
+                  <input type="hidden" name="orgId" value={connectData.organization.id} />
+                  <input
+                    id="shop"
+                    name="shop"
+                    defaultValue={shopFromParams ?? ""}
+                    placeholder="your-store.myshopify.com"
+                    className="vault-input w-full rounded-lg px-3.5 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/40"
+                    required
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    inputMode="url"
+                    pattern="[a-z0-9-]+\.myshopify\.com"
+                    title="Use format: your-store.myshopify.com"
+                  />
+                  <ShopifyConnectSubmitButton
+                    disabled={!connectData.shopifyConfigured}
+                    label={connectData.shopifyConfigured ? shopifyButtonLabel : "Shopify setup required"}
+                  />
+                </form>
+              </details>
+            )}
+            {connectData.shopifySourceState.status !== "not_connected" ? (
+              <div className="mt-2">
+                <DisconnectButton
+                  label="Disconnect Shopify"
+                  action="/api/integrations/shopify/disconnect"
+                  next="/app/stores?provider=shopify&status=disconnected"
+                />
+              </div>
+            ) : null}
+            {shopifySetupMessage ? (
+              <p className="mt-2 text-xs text-amber-300">{shopifySetupMessage}</p>
+            ) : null}
+          </article>
+
+          <article className="rounded-xl border border-border/70 bg-background/35 p-4 sm:p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-mono text-[0.68rem] tracking-[0.1em] uppercase text-muted-foreground/60">
+                  Billing and payments
+                </p>
+                <h3 className="mt-1.5 flex items-center gap-2 text-base font-semibold tracking-tight">
+                  <CreditCard className="h-4 w-4 text-muted-foreground/70" />
+                  Stripe
+                </h3>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <span
+                  className={cn(
+                    "rounded-md border px-2 py-1 font-mono text-[0.62rem] uppercase",
+                    getSystemRelevanceClass(stripeRelevance)
+                  )}
+                >
+                  {getSystemRelevanceLabel(stripeRelevance)}
+                </span>
+                <SourceStatusBadge status={connectData.stripeSourceState.status} />
+              </div>
+            </div>
+            <p className="mt-2.5 text-sm leading-[1.72] text-muted-foreground">
+              Adds billing recovery and payment failure evidence when the source sells plans, subscriptions, services, or checkout flows.
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {hasSaasSignal
+                ? "Pricing or signup signals make billing depth a strong next enrichment."
+                : hasEcommerceSignal
+                  ? "Useful when payment and recovery signals live in Stripe."
+                  : "Optional until the revenue path shows billing or payment recovery risk."}
+            </p>
+            <div className="my-4 h-px bg-border/40" />
             {isPendingStripe ? (
               <div className="inline-flex items-center gap-2 rounded-lg border border-border/60 bg-card/50 px-4 py-3 text-sm text-foreground">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-foreground/50" />
-                First billing scan running
+                Billing scan running
               </div>
             ) : connectData.stripeConfigured ? (
               <form method="GET" action="/api/integrations/stripe/connect">
@@ -626,13 +770,22 @@ export default async function SourcesPage({
                 </p>
               </div>
             )}
-          </div>
-          {connectData.stripeSourceState.accountId ? (
-            <p className="mt-3 font-mono text-[0.65rem] tracking-[0.06em] text-muted-foreground/45">
-              {connectData.stripeSourceState.accountId}
-            </p>
-          ) : null}
-        </article>
+            {connectData.stripeSourceState.accountId ? (
+              <p className="mt-3 font-mono text-[0.65rem] tracking-[0.06em] text-muted-foreground/45">
+                {connectData.stripeSourceState.accountId}
+              </p>
+            ) : null}
+          </article>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-dashed border-border/60 bg-background/20 p-4">
+          <p className="font-mono text-[0.68rem] uppercase tracking-[0.08em] text-muted-foreground/60">
+            Future system lanes
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Booking, CRM, lifecycle, ecommerce, and payment systems can fit here later. The primary URL remains the source of truth.
+          </p>
+        </div>
       </section>
 
       <section className="surface-card p-4 sm:p-5 lg:p-6">
@@ -787,7 +940,7 @@ export default async function SourcesPage({
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-border/70 p-8 text-center text-sm text-muted-foreground">
-            <p>No sources connected yet. Set a live source URL and connect Shopify or Stripe to begin monitoring.</p>
+            <p>No sources connected yet. Set a primary URL to begin revenue-surface monitoring.</p>
           </div>
         )}
       </section>

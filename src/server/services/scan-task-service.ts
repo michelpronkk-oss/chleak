@@ -1,6 +1,7 @@
 import { tasks } from "@trigger.dev/sdk/v3"
 
 import { createSupabaseAdminClient } from "@/lib/supabase/shared"
+import { sendScanCompletionNotification } from "@/server/services/scan-completion-notification-service"
 
 type ScanTaskProvider = "checkoutleak_connector" | "shopify" | "stripe"
 
@@ -66,6 +67,17 @@ export async function triggerQueuedScanTask(input: TriggerQueuedScanTaskInput) {
       })
       .eq("id", input.scanId)
       .eq("status", "queued")
+
+    await sendScanCompletionNotification({
+      scanId: input.scanId,
+      organizationId: input.organizationId,
+      storeId: input.storeId,
+      outcome: null,
+      status: "failed",
+      detectedIssuesCount: 0,
+      estimatedMonthlyLeakage: 0,
+      scanFamily: null,
+    })
 
     return { ok: false as const, reason: "trigger_failed", taskId }
   }

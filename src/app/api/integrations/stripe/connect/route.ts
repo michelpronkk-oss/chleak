@@ -62,6 +62,7 @@ export async function GET(request: Request) {
       serializeStripeOauthState({
         nonce: payload.stateNonce,
         organizationId: payload.organizationId,
+        userEmail: user.email ?? null,
       }),
       {
         httpOnly: true,

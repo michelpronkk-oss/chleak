@@ -137,6 +137,7 @@ interface UrlSourceAnalysisLastRunView {
   entryUrl: string | null
   finalUrl: string | null
   completedAt: string | null
+  businessType: string | null
   surfaceClassification: string | null
   revenuePathClarity: string | null
   noClearRevenuePath: boolean | null
@@ -812,6 +813,9 @@ function readUrlSourceAnalysisLastRunView(input: {
     completedAt:
       readStringFromRecord(summary, "completedAt") ??
       readStringFromRecord(metadata, "url_source_analysis_last_run_at"),
+    businessType:
+      readStringFromRecord(summary, "businessType") ??
+      readStringFromRecord(metadata, "url_source_business_type"),
     surfaceClassification:
       readStringFromRecord(summary, "surfaceClassification") ??
       readStringFromRecord(metadata, "url_source_surface_classification"),

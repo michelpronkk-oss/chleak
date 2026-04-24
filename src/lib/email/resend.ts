@@ -5,11 +5,13 @@ import {
   buildAccessRejectionTemplate,
   buildIssueDetectedTemplate,
   buildRequestReceivedTemplate,
+  buildScanCompletionTemplate,
   buildWeeklySummaryTemplate,
   type AccessApprovalTemplateInput,
   type AccessRejectionTemplateInput,
   type IssueDetectedTemplateInput,
   type RequestReceivedTemplateInput,
+  type ScanCompletionTemplateInput,
   type WeeklySummaryTemplateInput,
 } from "./templates"
 
@@ -98,6 +100,19 @@ export async function sendTransactionalIssueDetectedEmail(
   input: SendTransactionalIssueEmailInput
 ) {
   const template = buildIssueDetectedTemplate(input)
+  return sendEmail({
+    to: input.to,
+    subject: template.subject,
+    html: template.html,
+  })
+}
+
+interface SendScanCompletionEmailInput
+  extends SendEmailBaseInput,
+    ScanCompletionTemplateInput {}
+
+export async function sendScanCompletionEmail(input: SendScanCompletionEmailInput) {
+  const template = buildScanCompletionTemplate(input)
   return sendEmail({
     to: input.to,
     subject: template.subject,

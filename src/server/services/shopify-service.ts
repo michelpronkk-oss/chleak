@@ -17,6 +17,7 @@ interface ShopifyOauthStatePayload {
   nonce: string
   organizationId: string
   shopDomain: string
+  userEmail?: string | null
 }
 
 export class ShopifyConfigurationError extends Error {
@@ -125,6 +126,10 @@ export function parseShopifyOauthState(raw: string | undefined) {
       nonce: parsed.nonce,
       organizationId: parsed.organizationId,
       shopDomain: parsed.shopDomain,
+      userEmail:
+        typeof parsed.userEmail === "string" && parsed.userEmail.trim()
+          ? parsed.userEmail.trim().toLowerCase()
+          : null,
     }
   } catch {
     return null

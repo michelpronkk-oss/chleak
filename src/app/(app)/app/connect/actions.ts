@@ -282,6 +282,9 @@ export async function triggerPrimaryUrlSourceAnalysis() {
       scanned_at: new Date().toISOString(),
       detected_issues_count: 0,
       estimated_monthly_leakage: 0,
+      notification_requested: true,
+      notification_reason: "manual_url_source_analysis",
+      notification_recipient_email: session.user.email,
     })
     .select("id")
     .single()

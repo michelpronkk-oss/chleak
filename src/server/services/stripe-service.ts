@@ -17,6 +17,7 @@ export const STRIPE_OAUTH_STATE_COOKIE = "checkoutleak_stripe_oauth_state"
 interface StripeOauthStatePayload {
   nonce: string
   organizationId: string
+  userEmail?: string | null
 }
 
 interface StripeWebhookSignature {
@@ -147,6 +148,10 @@ export function parseStripeOauthState(raw: string | undefined) {
     return {
       nonce: parsed.nonce,
       organizationId: parsed.organizationId,
+      userEmail:
+        typeof parsed.userEmail === "string" && parsed.userEmail.trim()
+          ? parsed.userEmail.trim().toLowerCase()
+          : null,
     }
   } catch {
     return null

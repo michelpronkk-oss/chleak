@@ -113,6 +113,7 @@ export async function GET(request: Request) {
       livemode: token.livemode,
       accessToken: token.accessToken,
       refreshToken: token.refreshToken,
+      notificationRecipientEmail: storedState.userEmail,
     })
 
     if (persistence.scanId) {

@@ -89,6 +89,7 @@ export async function persistStripeIntegration(input: {
   livemode: boolean
   accessToken: string
   refreshToken: string | null
+  notificationRecipientEmail?: string | null
 }) {
   const supabase = createSupabaseAdminClient()
   const storeId = await ensureStripeStore({
@@ -147,6 +148,9 @@ export async function persistStripeIntegration(input: {
     scanned_at: new Date().toISOString(),
     detected_issues_count: 0,
     estimated_monthly_leakage: 0,
+    notification_requested: true,
+    notification_reason: "stripe_oauth_first_scan",
+    notification_recipient_email: input.notificationRecipientEmail ?? null,
   }
 
   const scanResult = await supabase.from("scans").insert(scanInsert).select("id").single()

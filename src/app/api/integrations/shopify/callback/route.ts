@@ -148,6 +148,7 @@ export async function GET(request: Request) {
       shopName: shopMeta.name,
       scopes: token.scopes,
       accessToken: token.accessToken,
+      notificationRecipientEmail: storedState.userEmail,
       signalSnapshot,
     })
     console.info(`[shopify] persist integration success: organization=${storedState.organizationId}; shop=${shopMeta.myshopifyDomain}`)
@@ -160,6 +161,7 @@ export async function GET(request: Request) {
       const fallbackScanId = await enqueueShopifyQueuedScan({
         organizationId: storedState.organizationId,
         storeId: persistence.storeId,
+        notificationRecipientEmail: storedState.userEmail,
       })
       if (!fallbackScanId) {
         console.error(

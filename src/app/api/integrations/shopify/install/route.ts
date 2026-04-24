@@ -106,6 +106,7 @@ export async function GET(request: Request) {
       nonce: payload.stateNonce,
       organizationId: payload.organizationId,
       shopDomain: payload.shopDomain,
+      userEmail: user.email ?? null,
     })
 
     const response = NextResponse.redirect(payload.installUrl)

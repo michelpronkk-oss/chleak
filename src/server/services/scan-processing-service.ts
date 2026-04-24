@@ -22,6 +22,7 @@ import {
   runUrlSourceBrowserInspectionV1,
   type UrlSourceBrowserInspectionResultV1,
 } from "@/server/services/url-source-browser-inspector"
+import { sendScanCompletionNotification } from "@/server/services/scan-completion-notification-service"
 
 type IssueInsert = Database["public"]["Tables"]["issues"]["Insert"]
 
@@ -1705,7 +1706,20 @@ export async function processQueuedScanV1(input?: {
     console.error(
       `[scan-runner] completion failed: scan_id=${queuedScan.id}; reason=${reason}`
     )
-    await admin.from("scans").update({ status: "failed" }).eq("id", queuedScan.id)
+    await admin
+      .from("scans")
+      .update({ status: "failed", completed_at: new Date().toISOString() })
+      .eq("id", queuedScan.id)
+    await sendScanCompletionNotification({
+      scanId: queuedScan.id,
+      organizationId: queuedScan.organization_id,
+      storeId: queuedScan.store_id,
+      outcome: null,
+      status: "failed",
+      detectedIssuesCount: 0,
+      estimatedMonthlyLeakage: 0,
+      scanFamily,
+    })
     return {
       processed: false,
       reason: "completion_failed",
@@ -1858,6 +1872,21 @@ export async function processQueuedScanV1(input?: {
       `[scan-runner] outcome metadata update failed: scan_id=${queuedScan.id}; integration_id=${integrationResult.data.id}; reason=${integrationUpdate.error.message}`
     )
   }
+
+  const notificationResult = await sendScanCompletionNotification({
+    scanId: queuedScan.id,
+    organizationId: queuedScan.organization_id,
+    storeId: queuedScan.store_id,
+    outcome,
+    status: "completed",
+    detectedIssuesCount: completionResult.data.detected_issues_count,
+    estimatedMonthlyLeakage: completionResult.data.estimated_monthly_leakage,
+    scanFamily,
+  })
+
+  console.info(
+    `[scan-runner] completion notification ${notificationResult.status}: scan_id=${queuedScan.id}`
+  )
 
   console.info(
     `[scan-runner] outcome classified: scan_id=${queuedScan.id}; outcome=${outcome}; completed_count=${completedCount}; meaningful_signal=${meaningfulCommercialSignal}; findings=${insertedFindings}; simulation_outcome=${simulationOutcome ?? "none"}`
