@@ -2,12 +2,11 @@ import { logger, schedules } from "@trigger.dev/sdk/v3"
 
 import { queueScheduledWebsiteMonitoringScans } from "@/server/services/scheduled-monitoring-service"
 
-// Weekly website monitoring pass.
-// Monday 09:00 UTC, easy to adjust as monitoring cadence becomes plan-aware.
+// Hourly cadence gate. The service enforces plan-aware monitoring intervals.
 export const websiteMonitoringSchedule = schedules.task({
   id: "website-monitoring-schedule",
   cron: {
-    pattern: "0 9 * * 1",
+    pattern: "0 * * * *",
     timezone: "UTC",
   },
   maxDuration: 300,
@@ -21,9 +20,12 @@ export const websiteMonitoringSchedule = schedules.task({
 
     logger.info("Website monitoring schedule completed", {
       considered: result.considered,
+      due: result.due,
       queued: result.queued,
       triggered: result.triggered,
-      skipped: result.skipped.length,
+      skipped_not_due: result.skipped_not_due,
+      skipped_plan_limit: result.skipped_plan_limit,
+      skipped_already_running: result.skipped_already_running,
       failed: result.failed.length,
     })
 

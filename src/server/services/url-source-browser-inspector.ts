@@ -44,6 +44,7 @@ export interface UrlSourceBrowserInspectionResultV1 {
   desktopScreenshotBytes: number | null
   // Rendered body text sample for copy quality analysis
   mobileVisibleText: string
+  visibleLinks: Array<{ href: string; label: string }>
   errorMessage: string | null
 }
 
@@ -60,6 +61,7 @@ interface DomMetrics {
   formCount: number
   viewportOverflow: boolean
   aboveFoldCtaLabels: string[]
+  visibleLinks: Array<{ href: string; label: string }>
   visibleBodyText: string
   loadTimeMs: number | null
 }
@@ -116,6 +118,14 @@ async function evaluateDom(
         .filter((t) => t.length > 1 && t.length < 80)
         .slice(0, 20)
 
+      const visibleLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>("a[href]"))
+        .map((el) => ({
+          href: el.href || el.getAttribute("href") || "",
+          label: (el.textContent ?? "").replace(/\s+/g, " ").trim(),
+        }))
+        .filter((link) => link.href && link.label.length > 0 && link.label.length < 100)
+        .slice(0, 120)
+
       // Capture a compact sample of visible body text for copy quality checks
       const visibleBodyText = (document.body?.innerText ?? "")
         .replace(/\s+/g, " ")
@@ -139,6 +149,7 @@ async function evaluateDom(
         formCount,
         viewportOverflow,
         aboveFoldCtaLabels,
+        visibleLinks,
         visibleBodyText,
         loadTimeMs,
       }
@@ -153,6 +164,7 @@ async function evaluateDom(
       formCount: 0,
       viewportOverflow: false,
       aboveFoldCtaLabels: [],
+      visibleLinks: [],
       visibleBodyText: "",
       loadTimeMs: null,
     }
@@ -229,6 +241,7 @@ export async function runUrlSourceBrowserInspectionV1(input: {
     desktopScreenshotRef: null,
     desktopScreenshotSha256: null,
     desktopScreenshotBytes: null,
+    visibleLinks: [],
     errorMessage: message,
   })
 
@@ -328,6 +341,7 @@ export async function runUrlSourceBrowserInspectionV1(input: {
       desktopScreenshotSha256: desktopScreenshot?.sha256 ?? null,
       desktopScreenshotBytes: desktopScreenshot?.bytes ?? null,
       mobileVisibleText: mobileMetrics?.visibleBodyText ?? "",
+      visibleLinks: mobileMetrics?.visibleLinks ?? desktopMetrics?.visibleLinks ?? [],
       errorMessage: null,
     }
   } catch (err) {

@@ -444,6 +444,26 @@ export default async function SourcesPage({
           sha256: urlSourceAnalysis.desktopScreenshotSha256,
           bytes: urlSourceAnalysis.desktopScreenshotBytes,
         },
+        ...(urlSourceAnalysis.funnelPages ?? []).flatMap((page) => [
+          {
+            label: `${page.role ?? "Funnel"} mobile`,
+            src: page.mobileScreenshotRef,
+            viewport: "375px mobile",
+            capturedUrl: page.capturedUrl,
+            capturedAt: urlSourceAnalysis.completedAt,
+            sha256: page.mobileScreenshotSha256,
+            bytes: page.mobileScreenshotBytes,
+          },
+          {
+            label: `${page.role ?? "Funnel"} desktop`,
+            src: page.desktopScreenshotRef,
+            viewport: "1280px desktop",
+            capturedUrl: page.capturedUrl,
+            capturedAt: urlSourceAnalysis.completedAt,
+            sha256: page.desktopScreenshotSha256,
+            bytes: page.desktopScreenshotBytes,
+          },
+        ]),
       ]
     : []
   const opportunitySignal = getDirectionalOpportunityEstimate({
@@ -736,6 +756,28 @@ export default async function SourcesPage({
                 <p className="mt-1 text-xs text-amber-300">
                   {urlSourceAnalysis.errorMessage}
                 </p>
+              ) : null}
+              {urlSourceAnalysis.funnelSummary ? (
+                <div className="mt-3 rounded-md border border-border/50 bg-background/40 p-3">
+                  <p className="data-mono text-[0.65rem] text-muted-foreground">
+                    Funnel pages
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-foreground">
+                    {urlSourceAnalysis.funnelSummary}
+                  </p>
+                  {urlSourceAnalysis.funnelPages.length ? (
+                    <div className="mt-2 flex flex-wrap gap-2 text-[0.65rem] text-muted-foreground">
+                      {urlSourceAnalysis.funnelPages.slice(0, 5).map((page) => (
+                        <span
+                          key={`${page.role}-${page.url}`}
+                          className="rounded-full border border-border/60 px-2 py-1"
+                        >
+                          {(page.role ?? "page").replaceAll("_", " ")}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
               ) : null}
             </div>
           ) : null}

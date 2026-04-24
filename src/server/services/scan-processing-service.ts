@@ -14,8 +14,13 @@ import {
 } from "@/server/services/flow-scan-family-service"
 import {
   URL_SOURCE_ANALYSIS_RUNNER_DETECTOR_VERSION,
+  buildUrlSourceDiscoveredInternalLinksV1,
   runUrlSourceAnalysisV1,
+  selectUrlSourceFunnelTargetsV1,
+  type UrlSourceDiscoveredLinkV1,
   type UrlSourceAnalysisResultV1,
+  type UrlSourceFunnelPageRoleV1,
+  type UrlSourceFunnelTargetV1,
 } from "@/server/services/url-source-analysis-runner"
 import {
   runUrlSourceBrowserInspectionV1,
@@ -138,6 +143,33 @@ interface FindingDraft {
   evidence?: Record<string, string | number | boolean | null>
 }
 
+interface UrlSourceFunnelPageInspection {
+  target: UrlSourceFunnelTargetV1
+  inspection: UrlSourceBrowserInspectionResultV1 | null
+  status: "completed" | "failed" | "skipped"
+  errorMessage: string | null
+}
+
+interface UrlSourceFunnelAnalysis {
+  detectorVersion: string
+  pagesInspected: number
+  targets: UrlSourceFunnelTargetV1[]
+  pageRoles: UrlSourceFunnelPageRoleV1[]
+  hasInquiryPath: boolean
+  hasTrustProofPath: boolean
+  hasPricingPath: boolean
+  hasSignupPath: boolean
+  hasDemoPath: boolean
+  hasProductPath: boolean
+  hasCartPath: boolean
+  hasCheckoutPath: boolean
+  mobilePagesWithoutAboveFoldCta: string[]
+  slowPages: Array<{ url: string; role: UrlSourceFunnelPageRoleV1; loadTimeMs: number }>
+  pages: UrlSourceFunnelPageInspection[]
+  summary: string
+  recommendedNextAction: string
+}
+
 function parseMerchantPlatform(input: string): MerchantPlatform {
   if (input === "stripe") {
     return "stripe"
@@ -229,6 +261,253 @@ function estimateUrlSourceOpportunityImpact(input: {
           : 1200
 
   return Math.round((base * severityBase * speedMultiplier) / 100) * 100
+}
+
+function roleIsOneOf(
+  role: UrlSourceFunnelPageRoleV1,
+  roles: UrlSourceFunnelPageRoleV1[]
+) {
+  return roles.includes(role)
+}
+
+function mergeDiscoveredLinks(
+  left: UrlSourceDiscoveredLinkV1[],
+  right: UrlSourceDiscoveredLinkV1[]
+) {
+  const byUrl = new Map<string, UrlSourceDiscoveredLinkV1>()
+  for (const link of [...left, ...right]) {
+    const current = byUrl.get(link.url)
+    if (!current || link.score > current.score) {
+      byUrl.set(link.url, link)
+    }
+  }
+  return Array.from(byUrl.values()).sort((a, b) => b.score - a.score)
+}
+
+function summarizeFunnel(input: {
+  businessType: string | null
+  targetCount: number
+  hasInquiryPath: boolean
+  hasTrustProofPath: boolean
+  hasPricingPath: boolean
+  hasSignupPath: boolean
+  hasDemoPath: boolean
+  hasProductPath: boolean
+  hasCartPath: boolean
+  hasCheckoutPath: boolean
+}) {
+  if (input.businessType === "agency" || input.businessType === "service_business") {
+    if (input.hasInquiryPath && input.hasTrustProofPath) {
+      return "Lead-generation funnel inspected. Inquiry and proof paths are discoverable."
+    }
+    if (input.hasInquiryPath) {
+      return "Lead-generation funnel inspected. Inquiry path is discoverable, but proof path is thin."
+    }
+    return "Lead-generation funnel inspected. Inquiry path still needs verification."
+  }
+
+  if (input.businessType === "saas") {
+    if (input.hasPricingPath && (input.hasSignupPath || input.hasDemoPath)) {
+      return "SaaS funnel inspected. Pricing and acquisition paths are discoverable."
+    }
+    if (input.hasPricingPath) {
+      return "SaaS funnel inspected. Pricing is discoverable, but the next conversion step needs verification."
+    }
+    return "SaaS funnel inspected. Pricing or acquisition path still needs verification."
+  }
+
+  if (input.businessType === "ecommerce") {
+    if (input.hasProductPath && (input.hasCartPath || input.hasCheckoutPath)) {
+      return "Commerce funnel inspected. Product and purchase paths are discoverable."
+    }
+    if (input.hasProductPath) {
+      return "Commerce funnel inspected. Product path is discoverable, but purchase handoff needs verification."
+    }
+    return "Commerce funnel inspected. Product and purchase paths still need verification."
+  }
+
+  return `Funnel inspection checked ${input.targetCount} high-intent page${input.targetCount === 1 ? "" : "s"}.`
+}
+
+function recommendFunnelNextAction(input: {
+  businessType: string | null
+  hasInquiryPath: boolean
+  hasTrustProofPath: boolean
+  hasPricingPath: boolean
+  hasSignupPath: boolean
+  hasDemoPath: boolean
+  hasProductPath: boolean
+  hasCartPath: boolean
+  hasCheckoutPath: boolean
+}) {
+  if (input.businessType === "agency" || input.businessType === "service_business") {
+    if (!input.hasInquiryPath) {
+      return "Expose a direct contact, booking, quote, or project inquiry path from the primary surface."
+    }
+    if (!input.hasTrustProofPath) {
+      return "Make work, case studies, testimonials, or client proof easy to reach before the inquiry step."
+    }
+    return "Verify the primary CTA lands on the shortest viable inquiry or booking flow."
+  }
+
+  if (input.businessType === "saas") {
+    if (!input.hasPricingPath) {
+      return "Make pricing or plan evaluation reachable from the primary surface."
+    }
+    if (!input.hasSignupPath && !input.hasDemoPath) {
+      return "Add a clear signup, trial, demo, or sales handoff from pricing."
+    }
+    return "Verify the pricing page hands visitors directly to signup, trial, or demo."
+  }
+
+  if (input.businessType === "ecommerce") {
+    if (!input.hasProductPath) {
+      return "Make a product or collection path reachable from the primary surface."
+    }
+    if (!input.hasCartPath && !input.hasCheckoutPath) {
+      return "Verify product pages expose a safe add-to-cart or checkout path."
+    }
+    return "Verify mobile product-to-cart and cart-to-checkout handoffs."
+  }
+
+  return "Confirm the primary source links to the highest-intent conversion page for this business."
+}
+
+async function runUrlSourceFunnelInspection(input: {
+  runId: string
+  analysis: UrlSourceAnalysisResultV1 | null
+  homepageInspection: UrlSourceBrowserInspectionResultV1 | null
+}): Promise<UrlSourceFunnelAnalysis | null> {
+  if (!input.analysis || input.analysis.status !== "completed") {
+    return null
+  }
+
+  const homepageUrl = input.homepageInspection?.finalUrl ?? input.analysis.summary.finalUrl ?? input.analysis.summary.entryUrl
+  let browserLinks: UrlSourceDiscoveredLinkV1[] = []
+  try {
+    const homepageOrigin = new URL(homepageUrl).origin
+    browserLinks = buildUrlSourceDiscoveredInternalLinksV1({
+      navLinks: input.homepageInspection?.visibleLinks ?? [],
+      baseUrl: homepageUrl,
+      allowedOrigin: homepageOrigin,
+      businessType: input.analysis.summary.businessType,
+    })
+  } catch {}
+
+  const targets = selectUrlSourceFunnelTargetsV1({
+    entryUrl: input.analysis.summary.entryUrl,
+    finalUrl: homepageUrl,
+    businessType: input.analysis.summary.businessType,
+    links: mergeDiscoveredLinks(input.analysis.summary.discoveredLinks, browserLinks),
+    maxTargets: 5,
+  })
+  if (!targets.length) {
+    return null
+  }
+
+  const pages: UrlSourceFunnelPageInspection[] = []
+  for (const [index, target] of targets.entries()) {
+    if (index === 0 && target.role === "homepage") {
+      pages.push({
+        target,
+        inspection: input.homepageInspection,
+        status: input.homepageInspection?.status ?? "skipped",
+        errorMessage: input.homepageInspection?.errorMessage ?? null,
+      })
+      continue
+    }
+
+    try {
+      const inspection = await runUrlSourceBrowserInspectionV1({
+        runId: `${input.runId}-${target.role}-${index}`,
+        entryUrl: target.url,
+      })
+      pages.push({
+        target,
+        inspection,
+        status: inspection.status,
+        errorMessage: inspection.errorMessage,
+      })
+    } catch (error) {
+      pages.push({
+        target,
+        inspection: null,
+        status: "failed",
+        errorMessage: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
+
+  const roles = targets.map((target) => target.role)
+  const hasInquiryPath =
+    input.analysis.summary.hasContactOrBookingPath ||
+    roles.some((role) => roleIsOneOf(role, ["contact", "booking", "quote", "demo"]))
+  const hasTrustProofPath = roles.some((role) => role === "case_studies")
+  const hasPricingPath =
+    input.analysis.summary.hasPricingPath || roles.some((role) => role === "pricing")
+  const hasSignupPath =
+    input.analysis.summary.hasSignupPath || roles.some((role) => role === "signup")
+  const hasDemoPath = roles.some((role) => role === "demo")
+  const hasProductPath = roles.some((role) => roleIsOneOf(role, ["product", "collection"]))
+  const hasCartPath = roles.some((role) => role === "cart")
+  const hasCheckoutPath =
+    input.analysis.summary.hasCheckoutSignal || roles.some((role) => role === "checkout")
+  const mobilePagesWithoutAboveFoldCta = pages
+    .filter((page) => page.inspection?.status === "completed")
+    .filter((page) => page.inspection?.mobileHasAboveFoldCta === false)
+    .map((page) => page.target.url)
+  const slowPages = pages
+    .filter((page) => page.inspection?.status === "completed")
+    .map((page) => ({
+      url: page.target.url,
+      role: page.target.role,
+      loadTimeMs: page.inspection?.loadTimeMs ?? null,
+    }))
+    .filter(
+      (page): page is { url: string; role: UrlSourceFunnelPageRoleV1; loadTimeMs: number } =>
+        page.loadTimeMs !== null && page.loadTimeMs > 3500
+    )
+
+  return {
+    detectorVersion: "url_source_funnel_analysis_v1",
+    pagesInspected: pages.filter((page) => page.status === "completed").length,
+    targets,
+    pageRoles: roles,
+    hasInquiryPath,
+    hasTrustProofPath,
+    hasPricingPath,
+    hasSignupPath,
+    hasDemoPath,
+    hasProductPath,
+    hasCartPath,
+    hasCheckoutPath,
+    mobilePagesWithoutAboveFoldCta,
+    slowPages,
+    pages,
+    summary: summarizeFunnel({
+      businessType: input.analysis.summary.businessType,
+      targetCount: targets.length,
+      hasInquiryPath,
+      hasTrustProofPath,
+      hasPricingPath,
+      hasSignupPath,
+      hasDemoPath,
+      hasProductPath,
+      hasCartPath,
+      hasCheckoutPath,
+    }),
+    recommendedNextAction: recommendFunnelNextAction({
+      businessType: input.analysis.summary.businessType,
+      hasInquiryPath,
+      hasTrustProofPath,
+      hasPricingPath,
+      hasSignupPath,
+      hasDemoPath,
+      hasProductPath,
+      hasCartPath,
+      hasCheckoutPath,
+    }),
+  }
 }
 
 function toRoundedRate(value: number) {
@@ -1109,6 +1388,7 @@ function resolveEffectiveBusinessType(
 function buildUrlSourcePathFindings(input: {
   run: UrlSourceAnalysisResultV1 | null
   browserInspection: UrlSourceBrowserInspectionResultV1 | null
+  funnelAnalysis: UrlSourceFunnelAnalysis | null
 }): FindingDraft[] {
   if (!input.run || input.run.status !== "completed") {
     return []
@@ -1122,6 +1402,7 @@ function buildUrlSourcePathFindings(input: {
     input.browserInspection ?? null
   )
   const bi = input.browserInspection?.status === "completed" ? input.browserInspection : null
+  const funnel = input.funnelAnalysis
   const findings: FindingDraft[] = []
 
   // Shared evidence base attached to every URL-source finding
@@ -1162,6 +1443,30 @@ function buildUrlSourcePathFindings(input: {
     browser_desktop_screenshot_ref: bi?.desktopScreenshotRef ?? null,
     browser_desktop_screenshot_sha256: bi?.desktopScreenshotSha256 ?? null,
     browser_desktop_screenshot_bytes: bi?.desktopScreenshotBytes ?? null,
+    funnel_detector_version: funnel?.detectorVersion ?? null,
+    funnel_pages_inspected: funnel?.pagesInspected ?? null,
+    funnel_page_roles: funnel?.pageRoles.join(", ") ?? null,
+    funnel_summary: funnel?.summary ?? null,
+    funnel_recommended_next_action: funnel?.recommendedNextAction ?? null,
+    funnel_has_inquiry_path: funnel?.hasInquiryPath ?? null,
+    funnel_has_trust_proof_path: funnel?.hasTrustProofPath ?? null,
+    funnel_has_pricing_path: funnel?.hasPricingPath ?? null,
+    funnel_has_signup_path: funnel?.hasSignupPath ?? null,
+    funnel_has_demo_path: funnel?.hasDemoPath ?? null,
+    funnel_has_product_path: funnel?.hasProductPath ?? null,
+    funnel_has_cart_path: funnel?.hasCartPath ?? null,
+    funnel_has_checkout_path: funnel?.hasCheckoutPath ?? null,
+    funnel_targets: funnel?.targets
+      .map((target) => `${target.role}: ${target.url}`)
+      .join(" | ") ?? null,
+    funnel_mobile_screenshot_refs: funnel?.pages
+      .map((page) => `${page.target.role}: ${page.inspection?.mobileScreenshotRef ?? ""}`)
+      .filter((item) => !item.endsWith(": "))
+      .join(" | ") ?? null,
+    funnel_desktop_screenshot_refs: funnel?.pages
+      .map((page) => `${page.target.role}: ${page.inspection?.desktopScreenshotRef ?? ""}`)
+      .filter((item) => !item.endsWith(": "))
+      .join(" | ") ?? null,
   }
 
   // -------------------------------------------------------------------------
@@ -1170,14 +1475,16 @@ function buildUrlSourcePathFindings(input: {
   if (effectiveBusinessType === "saas" || effectiveBusinessType === "mixed") {
 
     // Signup path is the growth entry point. If it is absent, the funnel is broken.
-    if (!s.hasSignupPath) {
+    const funnelHasSignupOrDemo =
+      funnel?.hasSignupPath === true || funnel?.hasDemoPath === true
+    if (!s.hasSignupPath && !funnelHasSignupOrDemo) {
       findings.push({
         key: "url_source_saas_signup_path_missing_v1",
         type: "signup_form_abandonment",
         severity: "high",
         title: "Signup path not detected on primary surface",
         summary:
-          "Surface analysis found no clear signup, registration, or account creation path on the primary URL. Prospective users who arrive at this surface have no visible entry point into the product.",
+          "Funnel analysis found no clear signup, trial, demo, or account creation path across the selected high-intent pages. Prospective users have no visible entry point into the product.",
         whyItMatters:
           "For a SaaS product, the signup path is the first commercial conversion step. A missing or invisible signup path means acquisition spend does not convert.",
         recommendedAction:
@@ -1191,14 +1498,15 @@ function buildUrlSourcePathFindings(input: {
     }
 
     // Pricing exists but leads nowhere — no signup or checkout to complete the funnel.
-    if (s.hasPricingPath && !s.hasSignupPath && !s.hasCheckoutSignal) {
+    const funnelHasPricing = funnel?.hasPricingPath === true || s.hasPricingPath
+    if (funnelHasPricing && !s.hasSignupPath && !funnelHasSignupOrDemo && !s.hasCheckoutSignal) {
       findings.push({
         key: "url_source_saas_pricing_no_conversion_v1",
         type: "pricing_page_to_checkout_dropoff",
         severity: "medium",
         title: "Pricing path detected but conversion next step is missing",
         summary:
-          "A pricing or plans page is detectable, but no clear path from pricing to signup or checkout was found. Visitors who reach pricing have no visible way to start.",
+          "A pricing or plans path is detectable, but no clear path from pricing to signup, demo, or checkout was found across the selected funnel pages.",
         whyItMatters:
           "Pricing page visitors are high-intent. A broken or absent handoff from pricing to the next conversion step is a direct revenue leak.",
         recommendedAction:
@@ -1271,7 +1579,10 @@ function buildUrlSourcePathFindings(input: {
     const isAgency = effectiveBusinessType === "agency"
 
     // No contact or booking path — the primary revenue conversion is unavailable.
-    if (!s.hasContactOrBookingPath) {
+    const funnelHasInquiryPath = funnel?.hasInquiryPath === true || s.hasContactOrBookingPath
+    const funnelHasTrustProofPath = funnel?.hasTrustProofPath === true
+
+    if (!funnelHasInquiryPath) {
       const businessLabel = isAgency ? "agency" : "service business"
       findings.push({
         key: "url_source_service_no_inquiry_path_v1",
@@ -1279,7 +1590,7 @@ function buildUrlSourcePathFindings(input: {
         severity: "high",
         title: "No clear inquiry or booking path detected",
         summary:
-          `Surface analysis found no contact form, booking link, quote request, or inquiry path on the primary URL. For a ${businessLabel}, this is the primary conversion mechanism.`,
+          `Funnel analysis found no contact form, booking link, quote request, or inquiry path across the selected pages. For a ${businessLabel}, this is the primary conversion mechanism.`,
         whyItMatters:
           "Lead capture is the revenue handoff for service businesses and agencies. A missing or unclear inquiry path wastes high-intent visitors before a sales conversation can start.",
         recommendedAction:
@@ -1292,7 +1603,7 @@ function buildUrlSourcePathFindings(input: {
       })
     }
 
-    if (s.hasContactOrBookingPath && !s.hasPrimaryCta) {
+    if (funnelHasInquiryPath && !s.hasPrimaryCta) {
       const weakCaptureTitle = isAgency
         ? "Project inquiry path exists but primary CTA is not visible"
         : "Service conversion path is incomplete"
@@ -1302,7 +1613,7 @@ function buildUrlSourcePathFindings(input: {
         severity: "medium",
         title: weakCaptureTitle,
         summary:
-          "A contact or booking route exists, but the primary surface does not expose a clear lead action. Visitors may need to search before they can start an inquiry.",
+          "An inquiry route exists in the funnel, but the primary surface does not expose a clear lead action. Visitors may need to search before they can start an inquiry.",
         whyItMatters:
           "Service revenue depends on reducing friction between visitor intent and the first conversation. Hidden or weak lead actions lower qualified inquiry volume.",
         recommendedAction:
@@ -1320,7 +1631,33 @@ function buildUrlSourcePathFindings(input: {
     // Healthy path optimization opportunity — fires only when the core lead-gen
     // path IS present (contact + primary CTA both detected). This gives the
     // operator a concrete next step and explains the pipeline opportunity estimate.
-    if (s.hasContactOrBookingPath && s.hasPrimaryCta) {
+    if (funnelHasInquiryPath && s.hasPrimaryCta && !funnelHasTrustProofPath) {
+      findings.push({
+        key: "url_source_service_trust_proof_not_discoverable_v1",
+        type: "setup_gap",
+        severity: "low",
+        title: isAgency
+          ? "Case proof is not discoverable before project inquiry"
+          : "Trust proof is not discoverable before inquiry",
+        summary:
+          "The inquiry path is visible, but no work, case-study, portfolio, client, or proof page was selected from the primary surface. Prospects may need more confidence before starting a conversation.",
+        whyItMatters:
+          "Lead-generation funnels convert better when proof is reachable before the inquiry step. Service buyers often need evidence of fit before booking or requesting a quote.",
+        recommendedAction:
+          "Expose one proof path near the primary CTA, such as Work, Case studies, Results, Testimonials, or Clients, then route back to the inquiry action.",
+        estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({
+          businessType: effectiveBusinessType,
+          severity: "low",
+        }),
+        evidence: {
+          ...baseEvidence,
+          path_evaluated: "trust_proof_path",
+          effective_business_type: effectiveBusinessType,
+        },
+      })
+    }
+
+    if (funnelHasInquiryPath && s.hasPrimaryCta && funnelHasTrustProofPath) {
       const optimizationTitle = isAgency
         ? "Optimization: strengthen the project inquiry path"
         : "Optimization: tighten the primary lead capture path"
@@ -1331,8 +1668,8 @@ function buildUrlSourcePathFindings(input: {
         title: optimizationTitle,
         summary:
           isAgency
-            ? "Lead generation path is healthy. Primary CTA and contact route are both detected. Pipeline improvement is available by making the project request flow more direct and reducing steps to first inquiry."
-            : "Service conversion path is healthy. Contact and primary CTA are both present. Lead capture quality can improve by shortening the path from interest to inquiry.",
+            ? "Lead generation path is healthy. Primary CTA, inquiry route, and proof path are detected. Pipeline improvement is available by making the project request flow more direct and reducing steps to first inquiry."
+            : "Service conversion path is healthy. Inquiry and proof paths are present. Lead capture quality can improve by shortening the path from interest to inquiry.",
         whyItMatters:
           "For agencies and service businesses, each additional step between visitor arrival and first inquiry reduces qualified lead volume. Small improvements compound across all acquisition channels.",
         recommendedAction:
@@ -1358,14 +1695,20 @@ function buildUrlSourcePathFindings(input: {
   if (effectiveBusinessType === "ecommerce" || effectiveBusinessType === "mixed") {
 
     // No clear checkout or cart path — the transaction path is broken.
-    if (!s.hasCheckoutSignal) {
+    const funnelHasPurchasePath =
+      funnel?.hasCheckoutPath === true || funnel?.hasCartPath === true || s.hasCheckoutSignal
+    const funnelHasProductPath = funnel?.hasProductPath === true
+
+    if (!funnelHasPurchasePath) {
       findings.push({
         key: "url_source_ecommerce_no_checkout_v1",
         type: "checkout_friction",
         severity: "high",
         title: "No clear checkout or cart path detected on primary surface",
         summary:
-          "Surface analysis found no cart link, checkout path, or purchase CTA on the primary URL. For an ecommerce site, this is the core conversion mechanism.",
+          funnelHasProductPath
+            ? "Funnel analysis found a product or collection path, but no cart, checkout, or purchase handoff across the selected pages."
+            : "Funnel analysis found no cart link, checkout path, purchase CTA, or product path across the selected pages. For an ecommerce site, this is the core conversion mechanism.",
         whyItMatters:
           "A missing or invisible checkout path means customers who arrive at the primary surface cannot easily find a way to purchase. This is a direct transaction barrier.",
         recommendedAction:
@@ -1379,7 +1722,7 @@ function buildUrlSourcePathFindings(input: {
     }
 
     // Healthy checkout optimization — fires when checkout signal IS detected.
-    if (s.hasCheckoutSignal) {
+    if (funnelHasPurchasePath) {
       findings.push({
         key: "url_source_ecommerce_checkout_optimization_v1",
         type: "checkout_friction",
@@ -1756,6 +2099,7 @@ export async function processQueuedScanV1(input?: {
   let stripeBillingSnapshot: StripeBillingSignalSnapshot | null = null
   let urlSourceAnalysisRun: UrlSourceAnalysisResultV1 | null = null
   let urlSourceBrowserInspection: UrlSourceBrowserInspectionResultV1 | null = null
+  let urlSourceFunnelAnalysis: UrlSourceFunnelAnalysis | null = null
   if (
     !simulationOutcome &&
     integrationProvider === "stripe" &&
@@ -1817,6 +2161,24 @@ export async function processQueuedScanV1(input?: {
           `[scan-runner] browser inspection failed: scan_id=${queuedScan.id}; reason=${message}`
         )
       }
+
+      try {
+        urlSourceFunnelAnalysis = await runUrlSourceFunnelInspection({
+          runId: queuedScan.id,
+          analysis: urlSourceAnalysisRun,
+          homepageInspection: urlSourceBrowserInspection,
+        })
+        if (urlSourceFunnelAnalysis) {
+          console.info(
+            `[scan-runner] url source funnel inspection completed: scan_id=${queuedScan.id}; pages=${urlSourceFunnelAnalysis.pagesInspected}; roles=${urlSourceFunnelAnalysis.pageRoles.join(",")}`
+          )
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        console.error(
+          `[scan-runner] url source funnel inspection failed: scan_id=${queuedScan.id}; reason=${message}`
+        )
+      }
     }
   }
   const meaningfulCommercialSignal = simulationOutcome
@@ -1829,7 +2191,10 @@ export async function processQueuedScanV1(input?: {
           ? Boolean(
               urlSourceAnalysisRun &&
                 urlSourceAnalysisRun.status === "completed" &&
-                urlSourceAnalysisRun.summary.revenuePathClarity !== "none"
+                (urlSourceAnalysisRun.summary.revenuePathClarity !== "none" ||
+                  urlSourceFunnelAnalysis?.hasInquiryPath ||
+                  urlSourceFunnelAnalysis?.hasPricingPath ||
+                  urlSourceFunnelAnalysis?.hasProductPath)
             )
         : false
   const setupCoverageMissingScopes = getMissingScopes(
@@ -1917,6 +2282,7 @@ export async function processQueuedScanV1(input?: {
         ? buildUrlSourceSurfaceFindings({
             run: urlSourceAnalysisRun,
             browserInspection: urlSourceBrowserInspection,
+            funnelAnalysis: urlSourceFunnelAnalysis,
           })
       : []
 
@@ -2134,7 +2500,59 @@ export async function processQueuedScanV1(input?: {
                 desktop_screenshot_ref: urlSourceBrowserInspection.desktopScreenshotRef,
                 desktop_screenshot_sha256: urlSourceBrowserInspection.desktopScreenshotSha256,
                 desktop_screenshot_bytes: urlSourceBrowserInspection.desktopScreenshotBytes,
+                visible_links: urlSourceBrowserInspection.visibleLinks,
                 error_message: urlSourceBrowserInspection.errorMessage,
+              }
+            : null,
+          url_source_funnel_analysis_last_run: urlSourceFunnelAnalysis
+            ? {
+                detector_version: urlSourceFunnelAnalysis.detectorVersion,
+                pages_inspected: urlSourceFunnelAnalysis.pagesInspected,
+                targets: urlSourceFunnelAnalysis.targets,
+                page_roles: urlSourceFunnelAnalysis.pageRoles,
+                has_inquiry_path: urlSourceFunnelAnalysis.hasInquiryPath,
+                has_trust_proof_path: urlSourceFunnelAnalysis.hasTrustProofPath,
+                has_pricing_path: urlSourceFunnelAnalysis.hasPricingPath,
+                has_signup_path: urlSourceFunnelAnalysis.hasSignupPath,
+                has_demo_path: urlSourceFunnelAnalysis.hasDemoPath,
+                has_product_path: urlSourceFunnelAnalysis.hasProductPath,
+                has_cart_path: urlSourceFunnelAnalysis.hasCartPath,
+                has_checkout_path: urlSourceFunnelAnalysis.hasCheckoutPath,
+                mobile_pages_without_atf_cta:
+                  urlSourceFunnelAnalysis.mobilePagesWithoutAboveFoldCta,
+                slow_pages: urlSourceFunnelAnalysis.slowPages,
+                summary: urlSourceFunnelAnalysis.summary,
+                recommended_next_action:
+                  urlSourceFunnelAnalysis.recommendedNextAction,
+                pages: urlSourceFunnelAnalysis.pages.map((page) => ({
+                  url: page.target.url,
+                  label: page.target.label,
+                  role: page.target.role,
+                  status: page.status,
+                  final_url: page.inspection?.finalUrl ?? null,
+                  page_title: page.inspection?.pageTitle ?? null,
+                  load_time_ms: page.inspection?.loadTimeMs ?? null,
+                  form_count: page.inspection?.formCount ?? null,
+                  mobile_has_atf_cta:
+                    page.inspection?.mobileHasAboveFoldCta ?? null,
+                  mobile_atf_cta_labels:
+                    page.inspection?.mobileAboveFoldCtaLabels ?? [],
+                  mobile_viewport_overflow:
+                    page.inspection?.mobileViewportOverflow ?? null,
+                  mobile_screenshot_ref:
+                    page.inspection?.mobileScreenshotRef ?? null,
+                  mobile_screenshot_sha256:
+                    page.inspection?.mobileScreenshotSha256 ?? null,
+                  mobile_screenshot_bytes:
+                    page.inspection?.mobileScreenshotBytes ?? null,
+                  desktop_screenshot_ref:
+                    page.inspection?.desktopScreenshotRef ?? null,
+                  desktop_screenshot_sha256:
+                    page.inspection?.desktopScreenshotSha256 ?? null,
+                  desktop_screenshot_bytes:
+                    page.inspection?.desktopScreenshotBytes ?? null,
+                  error_message: page.errorMessage,
+                })),
               }
             : null,
         }

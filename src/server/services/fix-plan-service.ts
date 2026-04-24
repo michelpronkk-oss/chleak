@@ -190,6 +190,7 @@ function readFindingEvidenceForIssueType(input: {
       "url_source_service_no_inquiry_path_v1",
       "url_source_service_weak_lead_capture_v1",
       "url_source_service_inquiry_path_optimization_v1",
+      "url_source_service_trust_proof_not_discoverable_v1",
       "url_source_no_mobile_viewport_v1",
       "url_source_mobile_layout_overflow_v1",
       "url_source_no_atf_cta_mobile_v1",

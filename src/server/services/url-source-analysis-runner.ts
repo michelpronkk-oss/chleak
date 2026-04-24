@@ -30,6 +30,38 @@ export type UrlSourceRevenueModelV1 =
   | "hybrid"
   | "unknown"
 
+export type UrlSourceFunnelPageRoleV1 =
+  | "homepage"
+  | "pricing"
+  | "signup"
+  | "demo"
+  | "features"
+  | "login"
+  | "services"
+  | "case_studies"
+  | "contact"
+  | "booking"
+  | "quote"
+  | "product"
+  | "collection"
+  | "cart"
+  | "checkout"
+  | "unknown"
+
+export interface UrlSourceDiscoveredLinkV1 {
+  url: string
+  href: string
+  label: string
+  role: UrlSourceFunnelPageRoleV1
+  score: number
+}
+
+export interface UrlSourceFunnelTargetV1 {
+  url: string
+  label: string
+  role: UrlSourceFunnelPageRoleV1
+}
+
 export interface UrlSourceAnalysisSummaryV1 {
   runId: string
   startedAt: string
@@ -56,6 +88,8 @@ export interface UrlSourceAnalysisSummaryV1 {
   // Copy quality signals
   hasAiGenericCopy: boolean
   aiGenericCopyTokens: string[]
+  discoveredLinks: UrlSourceDiscoveredLinkV1[]
+  funnelTargets: UrlSourceFunnelTargetV1[]
 }
 
 export interface UrlSourceAnalysisResultV1 {
@@ -98,6 +132,43 @@ function normalizeHttpUrl(input: string): string | null {
     const parsed = new URL(withProtocol)
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null
     parsed.hash = ""
+    return parsed.toString()
+  } catch {
+    return null
+  }
+}
+
+function normalizeInternalUrl(input: {
+  href: string
+  baseUrl: string
+  allowedOrigin: string
+}): string | null {
+  if (!isNavigableHref(input.href)) {
+    return null
+  }
+
+  try {
+    const parsed = new URL(input.href, input.baseUrl)
+    if (parsed.origin !== input.allowedOrigin) {
+      return null
+    }
+
+    const path = parsed.pathname.toLowerCase()
+    if (
+      /\/(logout|signout|delete|remove|admin|wp-admin|account|dashboard|settings|billing)(\/|$)/i.test(path)
+    ) {
+      return null
+    }
+    if (
+      /(?:facebook|instagram|linkedin|twitter|x\.com|youtube|tiktok|github|dribbble|behance)\./i.test(
+        parsed.hostname
+      )
+    ) {
+      return null
+    }
+
+    parsed.hash = ""
+    parsed.search = ""
     return parsed.toString()
   } catch {
     return null
@@ -184,6 +255,149 @@ function detectPricingPath(paths: string[]): boolean {
 function detectPricingLabel(labels: string[]): boolean {
   const rx = /^(pricing|plans?|packages?|subscription\s+plans?|see\s+pricing|view\s+pricing|our\s+pricing|compare\s+plans?)$/i
   return labels.some((l) => rx.test(l.trim()))
+}
+
+function inferFunnelPageRole(input: {
+  href: string
+  label: string
+}): UrlSourceFunnelPageRoleV1 {
+  const path = input.href.toLowerCase()
+  const label = input.label.toLowerCase().trim()
+  const combined = `${path} ${label}`
+
+  if (/(^|\/)(checkout)(\/|$)/.test(path)) return "checkout"
+  if (/(^|\/)(cart|bag|basket)(\/|$)/.test(path)) return "cart"
+  if (/(^|\/)(products?|shop|store|catalog)(\/|$)/.test(path)) return "product"
+  if (/(^|\/)(collections?|categories?)(\/|$)/.test(path)) return "collection"
+  if (/(^|\/)(pricing|plans|packages|rates)(\/|$)/.test(path) || /\b(pricing|plans|packages)\b/.test(label)) return "pricing"
+  if (/(^|\/)(signup|sign-up|register|trial|free-trial|get-started|start)(\/|$)/.test(path) || /\b(sign up|free trial|get started|create account)\b/.test(label)) return "signup"
+  if (/(^|\/)(demo|contact-sales|sales)(\/|$)/.test(path) || /\b(book demo|request demo|contact sales|talk to sales)\b/.test(label)) return "demo"
+  if (/(^|\/)(login|log-in|signin|sign-in|app)(\/|$)/.test(path) || /\b(log in|sign in|dashboard)\b/.test(label)) return "login"
+  if (/(^|\/)(services?|solutions?)(\/|$)/.test(path) || /\b(services|solutions)\b/.test(label)) return "services"
+  if (/(^|\/)(work|case-studies|case-study|portfolio|clients|results)(\/|$)/.test(path) || /\b(work|case studies|portfolio|clients|results)\b/.test(label)) return "case_studies"
+  if (/(^|\/)(book|book-a-call|schedule|calendar|appointment)(\/|$)/.test(path) || /\b(book|schedule|appointment)\b/.test(label)) return "booking"
+  if (/(^|\/)(quote|request-quote|proposal|start-project|start-a-project|intake)(\/|$)/.test(path) || /\b(quote|proposal|start a project|intake)\b/.test(label)) return "quote"
+  if (/(^|\/)(contact|contact-us|get-in-touch|lets-talk|inquiry|enquiry)(\/|$)/.test(path) || /\b(contact|get in touch|let'?s talk|inquiry)\b/.test(label)) return "contact"
+  if (/(^|\/)(features?|product|platform)(\/|$)/.test(path) || /\b(features|product|platform)\b/.test(label)) return "features"
+  if (combined.includes("/")) return "unknown"
+  return "unknown"
+}
+
+function rolePriorityForBusinessType(
+  role: UrlSourceFunnelPageRoleV1,
+  businessType: UrlSourceBusinessTypeV1
+) {
+  const leadRoles: Partial<Record<UrlSourceFunnelPageRoleV1, number>> = {
+    contact: 95,
+    quote: 92,
+    booking: 90,
+    services: 84,
+    case_studies: 78,
+    demo: 60,
+  }
+  const saasRoles: Partial<Record<UrlSourceFunnelPageRoleV1, number>> = {
+    pricing: 96,
+    signup: 92,
+    demo: 88,
+    features: 78,
+    login: 45,
+    contact: 40,
+  }
+  const ecommerceRoles: Partial<Record<UrlSourceFunnelPageRoleV1, number>> = {
+    product: 96,
+    collection: 92,
+    cart: 88,
+    checkout: 82,
+    pricing: 35,
+  }
+  const unknownRoles: Partial<Record<UrlSourceFunnelPageRoleV1, number>> = {
+    pricing: 75,
+    contact: 70,
+    product: 68,
+    signup: 66,
+    services: 58,
+  }
+
+  const table =
+    businessType === "agency" || businessType === "service_business"
+      ? leadRoles
+      : businessType === "saas"
+        ? saasRoles
+        : businessType === "ecommerce"
+          ? ecommerceRoles
+          : businessType === "mixed"
+            ? { ...leadRoles, ...saasRoles, ...ecommerceRoles }
+            : unknownRoles
+
+  return table[role] ?? (role === "unknown" ? 5 : 30)
+}
+
+export function buildUrlSourceDiscoveredInternalLinksV1(input: {
+  navLinks: Array<{ href: string; label: string }>
+  baseUrl: string
+  allowedOrigin: string
+  businessType: UrlSourceBusinessTypeV1
+}): UrlSourceDiscoveredLinkV1[] {
+  const byUrl = new Map<string, UrlSourceDiscoveredLinkV1>()
+
+  input.navLinks.forEach((link, index) => {
+    const url = normalizeInternalUrl({
+      href: link.href,
+      baseUrl: input.baseUrl,
+      allowedOrigin: input.allowedOrigin,
+    })
+    if (!url || url === input.baseUrl) {
+      return
+    }
+
+    const role = inferFunnelPageRole({ href: link.href, label: link.label })
+    const roleScore = rolePriorityForBusinessType(role, input.businessType)
+    const labelScore = link.label.trim() ? Math.min(link.label.trim().length, 30) / 10 : 0
+    const positionScore = Math.max(0, 20 - index / 4)
+    const score = Math.round(roleScore + labelScore + positionScore)
+    const current = byUrl.get(url)
+    if (!current || score > current.score) {
+      byUrl.set(url, {
+        url,
+        href: link.href,
+        label: link.label || role.replaceAll("_", " "),
+        role,
+        score,
+      })
+    }
+  })
+
+  return Array.from(byUrl.values()).sort((a, b) => b.score - a.score)
+}
+
+export function selectUrlSourceFunnelTargetsV1(input: {
+  entryUrl: string
+  finalUrl: string | null
+  businessType: UrlSourceBusinessTypeV1
+  links: UrlSourceDiscoveredLinkV1[]
+  maxTargets?: number
+}): UrlSourceFunnelTargetV1[] {
+  const homepageUrl = input.finalUrl ?? input.entryUrl
+  const maxTargets = input.maxTargets ?? 5
+  const targets: UrlSourceFunnelTargetV1[] = [
+    { url: homepageUrl, label: "Homepage", role: "homepage" },
+  ]
+  const seen = new Set(targets.map((target) => target.url))
+  const roleCounts = new Map<UrlSourceFunnelPageRoleV1, number>()
+
+  for (const link of input.links) {
+    if (targets.length >= maxTargets) break
+    if (seen.has(link.url)) continue
+    if (link.score < 35 && input.businessType !== "unknown") continue
+    const currentRoleCount = roleCounts.get(link.role) ?? 0
+    if (link.role !== "unknown" && currentRoleCount >= 1) continue
+    if (link.role === "unknown" && targets.length > 1) continue
+    targets.push({ url: link.url, label: link.label, role: link.role })
+    seen.add(link.url)
+    roleCounts.set(link.role, currentRoleCount + 1)
+  }
+
+  return targets
 }
 
 function detectSignupPath(paths: string[]): boolean {
@@ -364,6 +578,7 @@ const LEAD_GEN_CTA_RX =
 function classifyBusinessType(input: {
   surfaceClassification: UrlSourceSurfaceClassificationV1
   hasCheckoutSignal: boolean
+  hasProductCatalog: boolean
   hasSignupPath: boolean
   hasLoginPath: boolean
   hasPricingPath: boolean
@@ -402,6 +617,7 @@ function classifyBusinessType(input: {
   // Ecommerce: requires real transaction infrastructure
   if (input.surfaceClassification === "ecommerce") ecommerceScore += 5
   if (input.hasCheckoutSignal) ecommerceScore += 5
+  if (input.hasProductCatalog) ecommerceScore += 4
   if (input.hasContactOrBookingPath && !input.hasCheckoutSignal) ecommerceScore -= 3
 
   // SaaS: requires actual self-serve infrastructure — vocabulary alone is not enough.
@@ -414,6 +630,9 @@ function classifyBusinessType(input: {
   if (input.hasSubscriptionLanguage && hasSelfServeInfra) saasScore += 3
   // App/dashboard vocabulary is weak even with infra — it signals nothing by itself.
   if (input.hasAppDashboardLanguage && hasSelfServeInfra) saasScore += 1
+  if ((input.hasProductCatalog || input.hasCheckoutSignal) && !input.hasSubscriptionLanguage) {
+    saasScore = Math.min(saasScore - 5, 2)
+  }
 
   // Service / Agency: contact, project, portfolio signals
   if (input.hasContactOrBookingPath) serviceScore += 4
@@ -428,7 +647,20 @@ function classifyBusinessType(input: {
     saasScore = Math.min(saasScore, 2)
   }
 
-  const leadScore = Math.max(serviceScore, agencyScore)
+  let leadScore = Math.max(serviceScore, agencyScore)
+  if ((input.hasProductCatalog || input.hasCheckoutSignal) && ecommerceScore >= 4) {
+    leadScore = Math.min(leadScore, 2)
+  }
+
+  if (
+    ecommerceScore >= 5 &&
+    (input.hasProductCatalog || input.hasCheckoutSignal)
+  ) {
+    return "ecommerce"
+  }
+  if (input.hasProductCatalog && !input.hasPricingPath) {
+    return "ecommerce"
+  }
 
   // Mixed: two different strong models both score >= 4
   const strongModels = [ecommerceScore, saasScore, leadScore].filter((s) => s >= 4)
@@ -670,6 +902,8 @@ function buildFailedResult(input: {
       responseTimeMs: null,
       hasAiGenericCopy: false,
       aiGenericCopyTokens: [],
+      discoveredLinks: [],
+      funnelTargets: [],
     },
     evidenceRows: [
       { label: "Runner status", value: "failed" },
@@ -815,6 +1049,7 @@ export async function runUrlSourceAnalysisV1(input: {
   const businessType = classifyBusinessType({
     surfaceClassification,
     hasCheckoutSignal,
+    hasProductCatalog,
     hasSignupPath,
     hasLoginPath,
     hasPricingPath,
@@ -844,6 +1079,18 @@ export async function runUrlSourceAnalysisV1(input: {
   })
 
   const noClearRevenuePath = revenuePathClarity === "none"
+  const discoveredLinks = buildUrlSourceDiscoveredInternalLinksV1({
+    navLinks,
+    baseUrl: finalUrl,
+    allowedOrigin: baseOrigin,
+    businessType,
+  })
+  const funnelTargets = selectUrlSourceFunnelTargetsV1({
+    entryUrl: normalizedEntryUrl,
+    finalUrl,
+    businessType,
+    links: discoveredLinks,
+  })
   const completedAt = new Date().toISOString()
   const evidenceRows = buildEvidenceRows({
     classification: surfaceClassification,
@@ -889,6 +1136,8 @@ export async function runUrlSourceAnalysisV1(input: {
       responseTimeMs,
       hasAiGenericCopy: aiCopyCheck.detected,
       aiGenericCopyTokens: aiCopyCheck.tokens,
+      discoveredLinks,
+      funnelTargets,
     },
     evidenceRows,
     errorMessage: null,

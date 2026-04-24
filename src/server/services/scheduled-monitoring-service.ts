@@ -1,5 +1,11 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/shared"
+import {
+  getMonitoringEntitlementForOrganization,
+  type MonitoringEntitlement,
+} from "@/server/services/monitoring-entitlement-service"
 import { triggerQueuedScanTask } from "@/server/services/scan-task-service"
+
+const SCHEDULED_MONITORING_REASON = "scheduled_website_monitoring"
 
 function asRecord(input: unknown): Record<string, unknown> | null {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
@@ -39,27 +45,59 @@ function isValidHttpUrl(input: string) {
 
 interface ScheduledMonitoringResult {
   considered: number
+  due: number
   queued: number
   triggered: number
+  skipped_not_due: number
+  skipped_plan_limit: number
+  skipped_already_running: number
   skipped: Array<{ storeId: string | null; reason: string }>
   failed: Array<{ storeId: string | null; reason: string }>
 }
 
+function isDueForScheduledMonitoring(input: {
+  latestScheduledScanAt: string | null
+  entitlement: MonitoringEntitlement
+  now: Date
+}) {
+  if (!input.latestScheduledScanAt) {
+    return true
+  }
+
+  const latestScanTime = new Date(input.latestScheduledScanAt).getTime()
+  if (!Number.isFinite(latestScanTime)) {
+    return true
+  }
+
+  const elapsedMs = input.now.getTime() - latestScanTime
+  return elapsedMs >= input.entitlement.intervalHours * 60 * 60 * 1000
+}
+
 export async function queueScheduledWebsiteMonitoringScans(): Promise<ScheduledMonitoringResult> {
   const admin = createSupabaseAdminClient()
+  const now = new Date()
+  const entitlementByOrg = new Map<string, MonitoringEntitlement>()
+  const eligibleSourceCountByOrg = new Map<string, number>()
   const result: ScheduledMonitoringResult = {
     considered: 0,
+    due: 0,
     queued: 0,
     triggered: 0,
+    skipped_not_due: 0,
+    skipped_plan_limit: 0,
+    skipped_already_running: 0,
     skipped: [],
     failed: [],
   }
 
   const integrationsResult = await admin
     .from("store_integrations")
-    .select("id, organization_id, store_id, provider, status, metadata")
+    .select("id, organization_id, store_id, provider, status, metadata, created_at")
     .eq("provider", "checkoutleak_connector")
     .neq("status", "disconnected")
+    .order("organization_id", { ascending: true })
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true })
 
   if (integrationsResult.error) {
     result.failed.push({
@@ -104,6 +142,38 @@ export async function queueScheduledWebsiteMonitoringScans(): Promise<ScheduledM
       continue
     }
 
+    let entitlement = entitlementByOrg.get(integration.organization_id)
+    if (!entitlement) {
+      try {
+        entitlement = await getMonitoringEntitlementForOrganization(
+          integration.organization_id
+        )
+        entitlementByOrg.set(integration.organization_id, entitlement)
+      } catch (error) {
+        result.failed.push({
+          storeId: integration.store_id,
+          reason: error instanceof Error ? error.message : "entitlement_lookup_failed",
+        })
+        continue
+      }
+    }
+
+    const eligibleSourceCount =
+      (eligibleSourceCountByOrg.get(integration.organization_id) ?? 0) + 1
+    eligibleSourceCountByOrg.set(integration.organization_id, eligibleSourceCount)
+
+    if (
+      entitlement.maxSources !== null &&
+      eligibleSourceCount > entitlement.maxSources
+    ) {
+      result.skipped_plan_limit += 1
+      result.skipped.push({
+        storeId: integration.store_id,
+        reason: "plan_source_limit",
+      })
+      continue
+    }
+
     const activeScanResult = await admin
       .from("scans")
       .select("id")
@@ -122,6 +192,7 @@ export async function queueScheduledWebsiteMonitoringScans(): Promise<ScheduledM
     }
 
     if (activeScanResult.data) {
+      result.skipped_already_running += 1
       result.skipped.push({
         storeId: integration.store_id,
         reason: "scan_already_active",
@@ -129,17 +200,52 @@ export async function queueScheduledWebsiteMonitoringScans(): Promise<ScheduledM
       continue
     }
 
+    const latestScheduledScanResult = await admin
+      .from("scans")
+      .select("scanned_at")
+      .eq("organization_id", integration.organization_id)
+      .eq("store_id", integration.store_id)
+      .eq("notification_reason", SCHEDULED_MONITORING_REASON)
+      .order("scanned_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (latestScheduledScanResult.error) {
+      result.failed.push({
+        storeId: integration.store_id,
+        reason: latestScheduledScanResult.error.message,
+      })
+      continue
+    }
+
+    const due = isDueForScheduledMonitoring({
+      latestScheduledScanAt: latestScheduledScanResult.data?.scanned_at ?? null,
+      entitlement,
+      now,
+    })
+
+    if (!due) {
+      result.skipped_not_due += 1
+      result.skipped.push({
+        storeId: integration.store_id,
+        reason: "not_due",
+      })
+      continue
+    }
+
+    result.due += 1
+
     const scanInsert = await admin
       .from("scans")
       .insert({
         organization_id: integration.organization_id,
         store_id: integration.store_id,
         status: "queued",
-        scanned_at: new Date().toISOString(),
+        scanned_at: now.toISOString(),
         detected_issues_count: 0,
         estimated_monthly_leakage: 0,
         notification_requested: true,
-        notification_reason: "scheduled_website_monitoring",
+        notification_reason: SCHEDULED_MONITORING_REASON,
         notification_status: null,
         notification_recipient_email: null,
       })

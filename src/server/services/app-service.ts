@@ -165,6 +165,23 @@ interface UrlSourceAnalysisLastRunView {
   desktopScreenshotRef: string | null
   desktopScreenshotSha256: string | null
   desktopScreenshotBytes: number | null
+  funnelSummary: string | null
+  funnelRecommendedNextAction: string | null
+  funnelPagesInspected: number | null
+  funnelPageRoles: string[]
+  funnelPages: Array<{
+    url: string | null
+    label: string | null
+    role: string | null
+    status: string | null
+    capturedUrl: string | null
+    mobileScreenshotRef: string | null
+    mobileScreenshotSha256: string | null
+    mobileScreenshotBytes: number | null
+    desktopScreenshotRef: string | null
+    desktopScreenshotSha256: string | null
+    desktopScreenshotBytes: number | null
+  }>
   httpStatus: number | null
   evidenceRows: Array<{ label: string; value: string }>
   errorMessage: string | null
@@ -625,6 +642,38 @@ function readStringArrayFromRecord(source: unknown, key: string): string[] {
   return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
 }
 
+function readUrlSourceFunnelPages(source: unknown) {
+  if (!source || typeof source !== "object" || Array.isArray(source)) {
+    return []
+  }
+  const value = (source as Record<string, unknown>).pages
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
+        return null
+      }
+      const record = item as Record<string, unknown>
+      return {
+        url: readStringFromRecord(record, "url"),
+        label: readStringFromRecord(record, "label"),
+        role: readStringFromRecord(record, "role"),
+        status: readStringFromRecord(record, "status"),
+        capturedUrl: readStringFromRecord(record, "final_url") ?? readStringFromRecord(record, "url"),
+        mobileScreenshotRef: readStringFromRecord(record, "mobile_screenshot_ref"),
+        mobileScreenshotSha256: readStringFromRecord(record, "mobile_screenshot_sha256"),
+        mobileScreenshotBytes: readNumberFromRecord(record, "mobile_screenshot_bytes"),
+        desktopScreenshotRef: readStringFromRecord(record, "desktop_screenshot_ref"),
+        desktopScreenshotSha256: readStringFromRecord(record, "desktop_screenshot_sha256"),
+        desktopScreenshotBytes: readNumberFromRecord(record, "desktop_screenshot_bytes"),
+      }
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item))
+}
+
 function readActivationFlowHintsView(source: unknown): ActivationFlowHintsView {
   const hintsSource =
     source && typeof source === "object" && !Array.isArray(source)
@@ -836,6 +885,12 @@ function readUrlSourceAnalysisLastRunView(input: {
     !Array.isArray(metadata.url_source_browser_inspection_last_run)
       ? (metadata.url_source_browser_inspection_last_run as Record<string, unknown>)
       : null
+  const funnelRecord =
+    metadata.url_source_funnel_analysis_last_run &&
+    typeof metadata.url_source_funnel_analysis_last_run === "object" &&
+    !Array.isArray(metadata.url_source_funnel_analysis_last_run)
+      ? (metadata.url_source_funnel_analysis_last_run as Record<string, unknown>)
+      : null
 
   return {
     detectorVersion:
@@ -886,6 +941,11 @@ function readUrlSourceAnalysisLastRunView(input: {
     desktopScreenshotRef: readStringFromRecord(browserRecord, "desktop_screenshot_ref"),
     desktopScreenshotSha256: readStringFromRecord(browserRecord, "desktop_screenshot_sha256"),
     desktopScreenshotBytes: readNumberFromRecord(browserRecord, "desktop_screenshot_bytes"),
+    funnelSummary: readStringFromRecord(funnelRecord, "summary"),
+    funnelRecommendedNextAction: readStringFromRecord(funnelRecord, "recommended_next_action"),
+    funnelPagesInspected: readNumberFromRecord(funnelRecord, "pages_inspected"),
+    funnelPageRoles: readStringArrayFromRecord(funnelRecord, "page_roles"),
+    funnelPages: readUrlSourceFunnelPages(funnelRecord),
     httpStatus: readNumberFromRecord(summary, "httpStatus"),
     evidenceRows,
     errorMessage: readStringFromRecord(runRecord, "error_message"),
