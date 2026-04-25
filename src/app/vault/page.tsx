@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 
 export const metadata: Metadata = {
-  title: "Vault — CheckoutLeak Design System",
+  title: "Vault — SilentLeak Design System",
   robots: { index: false, follow: false },
 }
 
@@ -347,7 +347,7 @@ export default function VaultOverviewPage() {
         <div className="vault-chrome-inner">
           <div className="vault-brand">
             <div className="vault-brand-mark" />
-            <span>CheckoutLeak</span>
+            <span>SilentLeak</span>
             <span style={{ color: "var(--text-quaternary)", margin: "0 2px" }}>/</span>
             <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>Vault \u2014 Design System</span>
           </div>
@@ -381,7 +381,7 @@ export default function VaultOverviewPage() {
               <span className="sans">for loud <span className="sig">money.</span></span>
             </h1>
             <p style={{ marginTop: 24, fontSize: 18, lineHeight: 1.5, color: "var(--text-secondary)", maxWidth: "48ch" }}>
-              Vault is the design direction for CheckoutLeak \u2014 a private, operator-grade
+              Vault is the design direction for SilentLeak \u2014 a private, operator-grade
               revenue intelligence system. It is built around calm surfaces, tabular
               numbers, and a single signal color reserved for money at risk.
             </p>

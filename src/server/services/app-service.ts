@@ -1184,17 +1184,17 @@ function buildDisplayName(input: { email: string | null; fullName: string | null
   }
 
   if (!input.email) {
-    return "CheckoutLeak Operator"
+    return "SilentLeak Operator"
   }
 
   const [localPart] = input.email.split("@")
   if (!localPart) {
-    return "CheckoutLeak Operator"
+    return "SilentLeak Operator"
   }
 
   const cleaned = localPart.replaceAll(/[._-]+/g, " ").trim()
   if (!cleaned) {
-    return "CheckoutLeak Operator"
+    return "SilentLeak Operator"
   }
 
   return cleaned

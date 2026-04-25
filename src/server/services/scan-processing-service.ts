@@ -1281,7 +1281,7 @@ function buildShopifyFindings(input: {
       severity: "high",
       title: "Webhook registration incomplete",
       summary:
-        "Shopify event delivery is not fully confirmed, so CheckoutLeak cannot guarantee reliable leakage signal intake.",
+        "Shopify event delivery is not fully confirmed, so SilentLeak cannot guarantee reliable leakage signal intake.",
       whyItMatters:
         "Missing webhook continuity lowers confidence in leakage detection and can delay issue surfacing.",
       recommendedAction:
@@ -1301,7 +1301,7 @@ function buildShopifyFindings(input: {
       summary:
         "Commercial activity is present, but required Shopify data scopes are missing for full leakage analysis.",
       whyItMatters:
-        "When key read scopes are missing, high-value checkout leakage can remain undetected.",
+        "When key read scopes are missing, high-value Checkout leakage can remain undetected.",
       recommendedAction:
         `Reconnect Shopify and approve full monitoring scopes: ${missingScopes.join(", ")}.`,
       estimatedMonthlyRevenueImpact: 0,
@@ -1804,7 +1804,7 @@ function buildUrlSourcePathFindings(input: {
       summary:
         "Surface analysis could not identify a pricing, signup, checkout, or contact path on the primary URL. The surface does not provide enough commercial signal for path evaluation.",
       whyItMatters:
-        "Without a detectable revenue path, CheckoutLeak cannot evaluate activation, conversion, or recovery gaps for this source. The primary URL may not be the right entry surface.",
+        "Without a detectable revenue path, SilentLeak cannot evaluate activation, conversion, or recovery gaps for this source. The primary URL may not be the right entry surface.",
       recommendedAction:
         "Verify that the primary URL reflects the live commercial entry point for this business. The URL should be the page where prospective customers or users first encounter the offer.",
       estimatedMonthlyRevenueImpact: estimateUrlSourceOpportunityImpact({

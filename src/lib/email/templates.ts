@@ -3,7 +3,7 @@ export interface RequestReceivedTemplateInput {
 }
 
 export function buildRequestReceivedTemplate(input: RequestReceivedTemplateInput) {
-  const subject = "Your CheckoutLeak request has been received."
+  const subject = "Your SilentLeak request has been received."
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -26,7 +26,7 @@ export function buildRequestReceivedTemplate(input: RequestReceivedTemplateInput
         <!-- Wordmark -->
         <tr>
           <td style="padding:0 0 20px 0;">
-            <p style="margin:0;font-family:monospace;font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#4a5a7a;">CHECKOUTLEAK</p>
+            <p style="margin:0;font-family:monospace;font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#4a5a7a;">SilentLeak</p>
           </td>
         </tr>
 
@@ -76,7 +76,7 @@ export function buildRequestReceivedTemplate(input: RequestReceivedTemplateInput
         <!-- Footer -->
         <tr>
           <td style="padding:18px 4px 0;">
-            <p style="margin:0;font-family:monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#2e3d58;">Reviewed manually &middot; invite-only &middot; checkoutleak.com</p>
+            <p style="margin:0;font-family:monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#2e3d58;">Reviewed manually &middot; invite-only &middot; SilentLeak</p>
           </td>
         </tr>
 
@@ -96,7 +96,7 @@ export interface AccessApprovalTemplateInput {
 }
 
 export function buildAccessApprovalTemplate(input: AccessApprovalTemplateInput) {
-  const subject = "Your CheckoutLeak access has been approved."
+  const subject = "Your SilentLeak access has been approved."
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -111,7 +111,7 @@ export function buildAccessApprovalTemplate(input: AccessApprovalTemplateInput) 
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;">
         <tr>
           <td style="background-color:#111624;border:1px solid #1e2640;border-radius:16px;padding:36px 40px;">
-            <p style="margin:0 0 28px 0;font-family:monospace;font-size:11px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:#2e3a54;">CHECKOUTLEAK</p>
+            <p style="margin:0 0 28px 0;font-family:monospace;font-size:11px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:#2e3a54;">SilentLeak</p>
             <p style="margin:0 0 10px 0;font-family:monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#4a5a7a;">Access granted</p>
             <h1 style="margin:0 0 14px 0;font-size:22px;font-weight:600;letter-spacing:-0.025em;line-height:1.2;color:#e8ecf4;">Your workspace is ready.</h1>
             <p style="margin:0 0 20px 0;font-size:14px;line-height:1.75;color:#6c7898;">Hi ${input.fullName}, your request has been reviewed and access has been granted. Sign in with your approved email address to enter the workspace.</p>
@@ -138,7 +138,7 @@ export function buildAccessApprovalTemplate(input: AccessApprovalTemplateInput) 
         </tr>
         <tr>
           <td style="padding:20px 40px 0;">
-            <p style="margin:0;font-family:monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#222d44;">Private access system / checkoutleak.com</p>
+            <p style="margin:0;font-family:monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#222d44;">Private access system / SilentLeak</p>
           </td>
         </tr>
       </table>
@@ -155,7 +155,7 @@ export interface AccessRejectionTemplateInput {
 }
 
 export function buildAccessRejectionTemplate(input: AccessRejectionTemplateInput) {
-  const subject = "Your CheckoutLeak access request."
+  const subject = "Your SilentLeak access request."
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -170,7 +170,7 @@ export function buildAccessRejectionTemplate(input: AccessRejectionTemplateInput
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;">
         <tr>
           <td style="background-color:#111624;border:1px solid #1e2640;border-radius:16px;padding:36px 40px;">
-            <p style="margin:0 0 28px 0;font-family:monospace;font-size:11px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:#2e3a54;">CHECKOUTLEAK</p>
+            <p style="margin:0 0 28px 0;font-family:monospace;font-size:11px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:#2e3a54;">SilentLeak</p>
             <p style="margin:0 0 10px 0;font-family:monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#4a5a7a;">Access review complete</p>
             <h1 style="margin:0 0 14px 0;font-size:22px;font-weight:600;letter-spacing:-0.025em;line-height:1.2;color:#e8ecf4;">We're not moving forward.</h1>
             <p style="margin:0 0 16px 0;font-size:14px;line-height:1.75;color:#6c7898;">Hi ${input.fullName},</p>
@@ -184,7 +184,7 @@ export function buildAccessRejectionTemplate(input: AccessRejectionTemplateInput
         </tr>
         <tr>
           <td style="padding:20px 40px 0;">
-            <p style="margin:0;font-family:monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#222d44;">Private access system / checkoutleak.com</p>
+            <p style="margin:0;font-family:monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#222d44;">Private access system / SilentLeak</p>
           </td>
         </tr>
       </table>
@@ -205,7 +205,7 @@ export interface IssueDetectedTemplateInput {
 }
 
 export function buildIssueDetectedTemplate(input: IssueDetectedTemplateInput) {
-  const subject = `CheckoutLeak issue detected: ${input.issueTitle}`
+  const subject = `SilentLeak issue detected: ${input.issueTitle}`
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -220,7 +220,7 @@ export function buildIssueDetectedTemplate(input: IssueDetectedTemplateInput) {
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;">
         <tr>
           <td style="background-color:#111624;border:1px solid #1e2640;border-radius:16px;padding:36px 40px;">
-            <p style="margin:0 0 28px 0;font-family:monospace;font-size:11px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:#2e3a54;">CHECKOUTLEAK</p>
+            <p style="margin:0 0 28px 0;font-family:monospace;font-size:11px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:#2e3a54;">SilentLeak</p>
             <p style="margin:0 0 10px 0;font-family:monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#4a5a7a;">Issue detected</p>
             <h1 style="margin:0 0 20px 0;font-size:22px;font-weight:600;letter-spacing:-0.025em;line-height:1.2;color:#e8ecf4;">${input.issueTitle}</h1>
             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
@@ -246,7 +246,7 @@ export function buildIssueDetectedTemplate(input: IssueDetectedTemplateInput) {
         </tr>
         <tr>
           <td style="padding:20px 40px 0;">
-            <p style="margin:0;font-family:monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#222d44;">Private access system / checkoutleak.com</p>
+            <p style="margin:0;font-family:monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#222d44;">Private access system / SilentLeak</p>
           </td>
         </tr>
       </table>
@@ -297,10 +297,10 @@ export function buildScanCompletionTemplate(input: ScanCompletionTemplateInput) 
       : null
   const subject =
     input.resultKind === "issues_found"
-      ? `CheckoutLeak found ${input.detectedIssuesCount} ${input.detectedIssuesCount === 1 ? "issue" : "issues"} on ${input.sourceLabel}`
+      ? `SilentLeak found ${input.detectedIssuesCount} ${input.detectedIssuesCount === 1 ? "issue" : "issues"} on ${input.sourceLabel}`
       : input.resultKind === "failed"
-        ? `Scan needs attention for ${input.sourceLabel}`
-        : `No critical issues found for ${input.sourceLabel}`
+        ? `SilentLeak scan needs attention for ${input.sourceLabel}`
+        : `Your SilentLeak analysis is ready`
   const eyebrow =
     input.resultKind === "issues_found"
       ? "Scan complete"
@@ -316,11 +316,11 @@ export function buildScanCompletionTemplate(input: ScanCompletionTemplateInput) 
   const body =
     input.resultKind === "issues_found"
       ? input.isScheduledMonitoring
-        ? `CheckoutLeak is monitoring ${sourceLabel} automatically and found ${input.detectedIssuesCount} ${input.detectedIssuesCount === 1 ? "issue" : "issues"}. Review the evidence and ranked next step in the source detail.`
-        : `CheckoutLeak found ${input.detectedIssuesCount} ${input.detectedIssuesCount === 1 ? "issue" : "issues"} on ${sourceLabel}. Review the evidence and ranked next step in the source detail.`
+        ? `SilentLeak is monitoring ${sourceLabel} automatically and found ${input.detectedIssuesCount} ${input.detectedIssuesCount === 1 ? "issue" : "issues"}. Review the evidence and ranked next step in the source detail.`
+        : `SilentLeak found ${input.detectedIssuesCount} ${input.detectedIssuesCount === 1 ? "issue" : "issues"} on ${sourceLabel}. Review the evidence and ranked next step in the source detail.`
       : input.resultKind === "failed"
-        ? `CheckoutLeak could not complete the latest scan for ${sourceLabel}. The source detail is ready for a retry when you are.`
-        : `CheckoutLeak completed the latest scan for ${sourceLabel}. No critical issues were found, and the source remains in monitoring.`
+        ? `SilentLeak could not complete the latest scan for ${sourceLabel}. The source detail is ready for a retry when you are.`
+        : `SilentLeak completed the latest scan for ${sourceLabel}. No critical issues were found, and the source remains in monitoring.`
   const impactLabel =
     input.resultKind === "issues_found"
       ? formatMoney(input.estimatedMonthlyLeakage)
@@ -342,7 +342,7 @@ export function buildScanCompletionTemplate(input: ScanCompletionTemplateInput) 
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:500px;">
         <tr>
           <td style="background-color:#111624;border:1px solid #1e2640;border-radius:16px;padding:36px 40px;">
-            <p style="margin:0 0 28px 0;font-family:monospace;font-size:11px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:#2e3a54;">CHECKOUTLEAK</p>
+            <p style="margin:0 0 28px 0;font-family:monospace;font-size:11px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:#2e3a54;">SilentLeak</p>
             <p style="margin:0 0 10px 0;font-family:monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#c89a10;">${eyebrow}</p>
             <h1 style="margin:0 0 14px 0;font-size:22px;font-weight:600;letter-spacing:-0.025em;line-height:1.2;color:#e8ecf4;">${headline}</h1>
             <p style="margin:0 0 22px 0;font-size:14px;line-height:1.75;color:#7f8dab;">${body}</p>
@@ -391,7 +391,7 @@ export function buildScanCompletionTemplate(input: ScanCompletionTemplateInput) 
         </tr>
         <tr>
           <td style="padding:20px 40px 0;">
-            <p style="margin:0;font-family:monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#222d44;">Monitoring signal / checkoutleak.com</p>
+            <p style="margin:0;font-family:monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#222d44;">Monitoring signal / SilentLeak</p>
           </td>
         </tr>
       </table>
@@ -414,7 +414,7 @@ export interface WeeklySummaryTemplateInput {
 }
 
 export function buildWeeklySummaryTemplate(input: WeeklySummaryTemplateInput) {
-  const subject = `CheckoutLeak weekly summary: ${input.organizationName}`
+  const subject = `SilentLeak weekly summary: ${input.organizationName}`
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -429,7 +429,7 @@ export function buildWeeklySummaryTemplate(input: WeeklySummaryTemplateInput) {
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;">
         <tr>
           <td style="background-color:#111624;border:1px solid #1e2640;border-radius:16px;padding:36px 40px;">
-            <p style="margin:0 0 28px 0;font-family:monospace;font-size:11px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:#2e3a54;">CHECKOUTLEAK</p>
+            <p style="margin:0 0 28px 0;font-family:monospace;font-size:11px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:#2e3a54;">SilentLeak</p>
             <p style="margin:0 0 10px 0;font-family:monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#4a5a7a;">Weekly summary</p>
             <h1 style="margin:0 0 20px 0;font-size:22px;font-weight:600;letter-spacing:-0.025em;line-height:1.2;color:#e8ecf4;">${input.organizationName}</h1>
             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
@@ -461,7 +461,7 @@ export function buildWeeklySummaryTemplate(input: WeeklySummaryTemplateInput) {
         </tr>
         <tr>
           <td style="padding:20px 40px 0;">
-            <p style="margin:0;font-family:monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#222d44;">Private access system / checkoutleak.com</p>
+            <p style="margin:0;font-family:monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#222d44;">Private access system / SilentLeak</p>
           </td>
         </tr>
       </table>

@@ -2,19 +2,26 @@ import type { Metadata } from "next"
 
 import { MarketingPageLayout, PageSection } from "@/components/marketing/page-layout"
 
+const termsDescription =
+  "Terms of use governing access to SilentLeak, including subscriptions, billing, acceptable use, integrations, and service conditions."
+const ogImage = "/brand/silentleak/silentleak-og-1200x630.png"
+
 export const metadata: Metadata = {
   title: "Terms of Use",
-  description:
-    "Terms of use governing access to CheckoutLeak, including subscriptions, billing, acceptable use, integrations, and service conditions.",
+  description: termsDescription,
   openGraph: {
-    title: "Terms of Use | CheckoutLeak",
-    description: "Terms of use governing access to CheckoutLeak, including subscriptions, billing, acceptable use, integrations, and service conditions.",
+    title: "Terms of Use | SilentLeak",
+    description: termsDescription,
     url: "/terms",
     type: "website",
+    siteName: "SilentLeak",
+    images: [ogImage],
   },
   twitter: {
-    title: "Terms of Use | CheckoutLeak",
-    description: "Terms of use governing access to CheckoutLeak, including subscriptions, billing, acceptable use, integrations, and service conditions.",
+    card: "summary_large_image",
+    title: "Terms of Use | SilentLeak",
+    description: termsDescription,
+    images: [ogImage],
   },
   alternates: {
     canonical: "/terms",
@@ -26,12 +33,12 @@ export default function TermsPage() {
     <MarketingPageLayout
       eyebrow="Legal"
       title="Terms of Use"
-      description="These terms govern access to CheckoutLeak for teams running operator-grade revenue leak detection across activation, checkout, setup, and billing recovery workflows."
+      description="These terms govern access to SilentLeak for teams running operator-grade revenue leak monitoring across websites, SaaS funnels, checkout paths, and billing recovery workflows."
     >
       <PageSection title="Acceptance of terms">
         <p>
           By creating an account, purchasing a subscription, or otherwise using
-          CheckoutLeak, you agree to these Terms of Use, Privacy Policy, and
+          SilentLeak, you agree to these Terms of Use, Privacy Policy, and
           {" "}
           <a
             href="/cookies"
@@ -42,7 +49,7 @@ export default function TermsPage() {
           . If you do not agree, do not use the service.
         </p>
         <p>
-          If you use CheckoutLeak on behalf of an organization, you confirm you
+          If you use SilentLeak on behalf of an organization, you confirm you
           are authorized to bind that organization to these terms.
         </p>
       </PageSection>
@@ -82,7 +89,7 @@ export default function TermsPage() {
       <PageSection title="Acceptable use">
         <p>You agree not to:</p>
         <ul className="ml-5 list-disc space-y-2">
-          <li>Use CheckoutLeak for unlawful, fraudulent, or abusive activity.</li>
+          <li>Use SilentLeak for unlawful, fraudulent, or abusive activity.</li>
           <li>
             Attempt unauthorized access, reverse engineer protected systems, or
             bypass security controls.
@@ -99,7 +106,7 @@ export default function TermsPage() {
 
       <PageSection title="Integrations and third-party services">
         <p>
-          CheckoutLeak may connect to third-party services used in revenue
+          SilentLeak may connect to third-party services used in revenue
           operations, including commerce, payments, billing, authentication,
           messaging, and infrastructure providers such as Shopify, Stripe,
           Supabase, Dodo Payments, and Resend. Your use of those services is
@@ -113,9 +120,9 @@ export default function TermsPage() {
 
       <PageSection title="Product outputs and operator responsibility">
         <p>
-          CheckoutLeak produces evidence-backed findings, impact estimates, and
-          recommended next actions across activation, checkout, setup, and
-          billing recovery surfaces.
+          SilentLeak produces evidence-backed findings, impact estimates, and
+          recommended next actions across websites, signup paths, pricing
+          handoffs, checkout paths, and billing recovery surfaces.
         </p>
         <p>
           These outputs are decision-support signals. They do not constitute
@@ -130,7 +137,7 @@ export default function TermsPage() {
 
       <PageSection title="Service availability and disclaimer">
         <p>
-          CheckoutLeak is provided on an as-is and as-available basis. We work
+          SilentLeak is provided on an as-is and as-available basis. We work
           to maintain reliable service, but do not guarantee uninterrupted
           availability or error-free operation.
         </p>
@@ -142,8 +149,8 @@ export default function TermsPage() {
 
       <PageSection title="Intellectual property">
         <p>
-          CheckoutLeak, including software, design, content, models, and
-          platform marks, is owned by CheckoutLeak and protected by applicable
+          SilentLeak, including software, design, content, models, and
+          platform marks, is owned by SilentLeak and protected by applicable
           intellectual property laws.
         </p>
         <p>Your organization retains ownership of its data and business records.</p>
@@ -151,13 +158,13 @@ export default function TermsPage() {
 
       <PageSection title="Limitation of liability">
         <p>
-          To the maximum extent permitted by law, CheckoutLeak is not liable
+          To the maximum extent permitted by law, SilentLeak is not liable
           for indirect, incidental, consequential, special, punitive, or
           exemplary damages.
         </p>
         <p>
           Our aggregate liability for claims relating to the service will not
-          exceed the amount paid by your organization to CheckoutLeak during the
+          exceed the amount paid by your organization to SilentLeak during the
           twelve months preceding the event giving rise to the claim.
         </p>
       </PageSection>
@@ -177,7 +184,7 @@ export default function TermsPage() {
       <PageSection title="Governing law">
         <p>
           These terms are governed by the laws of the jurisdiction in which
-          CheckoutLeak is operated, without regard to conflict of law rules,
+          SilentLeak is operated, without regard to conflict of law rules,
           unless otherwise required by applicable consumer law.
         </p>
       </PageSection>

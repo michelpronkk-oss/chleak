@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og"
 
 export const runtime = "edge"
-export const alt = "Contact CheckoutLeak - Request Access or Guided Setup"
+export const alt = "Contact SilentLeak - Request Access or Guided Setup"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
@@ -36,7 +36,7 @@ export default async function Image() {
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <div style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#d4943a", flexShrink: 0 }} />
           <span style={{ color: "#94a3b8", fontSize: "13px", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 500 }}>
-            CheckoutLeak
+            SilentLeak
           </span>
         </div>
 
@@ -49,13 +49,13 @@ export default async function Image() {
             Request access or guided setup.
           </div>
           <div style={{ color: "#64748b", fontSize: "19px", lineHeight: 1.6, marginTop: "24px", maxWidth: "560px" }}>
-            Private access intake for operator teams running activation, checkout, and billing recovery monitoring. Reviewed manually, no automated response.
+            Private access intake for operator teams monitoring websites, SaaS funnels, checkout paths, and billing recovery. Reviewed manually, no automated response.
           </div>
         </div>
 
-        {/* Domain */}
+        {/* Brand */}
         <div style={{ position: "absolute", bottom: "44px", right: "80px", color: "#334155", fontSize: "13px", letterSpacing: "0.07em" }}>
-          checkoutleak.com
+          SilentLeak
         </div>
       </div>
     ),

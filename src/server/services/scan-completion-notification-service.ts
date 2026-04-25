@@ -198,7 +198,7 @@ export async function sendScanCompletionNotification(
     emailResult = await sendScanCompletionEmail({
       to: recipient,
       sourceLabel,
-      workspaceName: organizationResult.data?.name ?? "CheckoutLeak workspace",
+      workspaceName: organizationResult.data?.name ?? "SilentLeak workspace",
       resultKind,
       detectedIssuesCount: input.detectedIssuesCount,
       criticalIssuesCount: criticalIssuesResult.count ?? 0,

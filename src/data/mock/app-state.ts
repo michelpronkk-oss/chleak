@@ -84,7 +84,7 @@ export const mockPlanCatalog: Record<
     id: "starter",
     name: "Starter",
     monthlyPrice: 149,
-    summary: "Entry coverage for activation, checkout, and billing leakage with weekly scans.",
+    summary: "Entry coverage for website, signup, checkout, and billing leakage with weekly scans.",
     highlight: "1 monitored source included",
   },
   growth: {

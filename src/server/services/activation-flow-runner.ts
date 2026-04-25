@@ -978,7 +978,7 @@ export async function runActivationFlowV1(
     const context = await browser.newContext({
       viewport: { width: 1440, height: 900 },
       userAgent:
-        "CheckoutLeakActivationRunner/1.0 (+https://checkoutleak.com)",
+        "SilentLeakActivationRunner/1.0 (+https://checkoutleak.com)",
     })
     const page = await context.newPage()
 

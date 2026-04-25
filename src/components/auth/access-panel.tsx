@@ -50,7 +50,7 @@ export function AccessPanel({
 
         <div className="relative">
           <p className="font-mono text-[0.65rem] tracking-[0.14em] uppercase text-primary/55">
-            CheckoutLeak
+            SilentLeak
           </p>
 
           <div className="mt-4 flex items-center gap-6 border-b border-border/40">

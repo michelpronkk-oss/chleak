@@ -2,21 +2,26 @@ import type { Metadata } from "next"
 
 import { MarketingPageLayout, PageSection } from "@/components/marketing/page-layout"
 
+const cookiesDescription =
+  "Cookie policy for SilentLeak: how cookies are used for authentication, onboarding state, integrations, and service security."
+const ogImage = "/brand/silentleak/silentleak-og-1200x630.png"
+
 export const metadata: Metadata = {
   title: "Cookie Policy",
-  description:
-    "Cookie policy for CheckoutLeak: how cookies are used for authentication, onboarding state, integrations, and service security.",
+  description: cookiesDescription,
   openGraph: {
-    title: "Cookie Policy | CheckoutLeak",
-    description:
-      "Cookie policy for CheckoutLeak: how cookies are used for authentication, onboarding state, integrations, and service security.",
+    title: "Cookie Policy | SilentLeak",
+    description: cookiesDescription,
     url: "/cookies",
     type: "website",
+    siteName: "SilentLeak",
+    images: [ogImage],
   },
   twitter: {
-    title: "Cookie Policy | CheckoutLeak",
-    description:
-      "Cookie policy for CheckoutLeak: how cookies are used for authentication, onboarding state, integrations, and service security.",
+    card: "summary_large_image",
+    title: "Cookie Policy | SilentLeak",
+    description: cookiesDescription,
+    images: [ogImage],
   },
   alternates: {
     canonical: "/cookies",
@@ -28,11 +33,11 @@ export default function CookiePolicyPage() {
     <MarketingPageLayout
       eyebrow="Legal"
       title="Cookie Policy"
-      description="This policy explains what cookies CheckoutLeak uses, why they are used, and how you can manage cookie behavior."
+      description="This policy explains what cookies SilentLeak uses, why they are used, and how you can manage cookie behavior."
     >
       <PageSection title="Overview">
         <p>
-          CheckoutLeak uses cookies and similar browser storage to run core
+          SilentLeak uses cookies and similar browser storage to run core
           account, onboarding, and security workflows.
         </p>
         <p>
@@ -64,7 +69,7 @@ export default function CookiePolicyPage() {
       </PageSection>
 
       <PageSection title="Examples of functional cookies">
-        <p>Examples of first-party cookies used by CheckoutLeak include:</p>
+        <p>Examples of first-party cookies used by SilentLeak include:</p>
         <ul className="ml-5 list-disc space-y-2">
           <li>
             <code>checkoutleak_onboarding_state</code> for onboarding and

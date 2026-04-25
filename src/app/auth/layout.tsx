@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 
-import { CheckoutLeakLogo } from "@/components/brand/logo"
+import { SilentLeakLogo } from "@/components/brand/logo"
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -38,7 +38,7 @@ export default function AuthLayout({
       />
       <header className="relative z-10 border-b border-border/40">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-5 sm:h-16 sm:px-8">
-          <CheckoutLeakLogo />
+          <SilentLeakLogo />
           <Link
             href="/"
             className="text-xs text-muted-foreground transition-colors hover:text-foreground"

@@ -12,13 +12,13 @@ import type { PublicAccessState } from "@/lib/auth/public-access"
 const signals = [
   {
     label: "Activation funnel dropout",
-    finding: "New operators stall before first checkout completion",
+    finding: "New users stall before first value",
     impact: "High priority",
     severity: "high" as const,
   },
   {
-    label: "Checkout completion variance",
-    finding: "Shipping step friction on mobile checkout traffic",
+    label: "Pricing handoff gap",
+    finding: "High-intent visitors reach pricing without a clear next step",
     impact: "Coverage gap",
     severity: "medium" as const,
   },
@@ -39,13 +39,13 @@ const signals = [
 const detectionCategories = [
   {
     index: "01",
-    title: "Activation leakage",
-    body: "Operators entering the product but stalling before first value.",
+    title: "Website leakage",
+    body: "Primary surfaces where visitors cannot find the next revenue step.",
   },
   {
     index: "02",
-    title: "Checkout leakage",
-    body: "Conversion breaks by step and traffic segment, ranked by exposure.",
+    title: "Signup and pricing leaks",
+    body: "SaaS entry paths, pricing handoffs, and activation routes that stall.",
   },
   {
     index: "03",
@@ -159,16 +159,16 @@ export default async function MarketingHomePage({ accessState, isAuthenticated }
 
           <FadeIn delay={0.08}>
             <h1 className="text-[2rem] font-semibold leading-[1.06] tracking-[-0.04em] text-foreground sm:text-[3.2rem] sm:leading-[1.02] lg:text-[4.35rem]">
-              <span className="font-display text-[1.04em] font-normal italic">Revenue leaks,</span>
+              <span className="font-display text-[1.04em] font-normal italic">Find what silently</span>
               <br />
-              <span className="font-normal">ranked by </span>
-              <span className="font-normal text-signal">recovery.</span>
+              <span className="font-normal">kills </span>
+              <span className="font-normal text-signal">revenue.</span>
             </h1>
           </FadeIn>
 
           <FadeIn delay={0.12}>
             <p className="mx-auto mt-6 max-w-[32ch] text-[0.92rem] leading-[1.7] text-muted-foreground sm:mt-5 sm:max-w-[44ch] sm:text-[1.04rem] sm:leading-[1.86]">
-              Activation, checkout setup, and billing recovery leaks ranked by monthly revenue exposure. Each finding includes root cause, impact estimate, and fix path with operator-grade next actions.
+              SilentLeak monitors the revenue paths where leads, signups, pricing handoffs, checkouts, activation, and billing quietly lose money.
             </p>
           </FadeIn>
 
@@ -238,7 +238,7 @@ export default async function MarketingHomePage({ accessState, isAuthenticated }
               Sample ranked signals.
             </h2>
             <p className="mt-2.5 max-w-[40ch] text-[0.88rem] leading-[1.72] text-muted-foreground sm:mt-3 sm:max-w-[50ch] sm:text-[0.95rem] sm:leading-[1.8]">
-              Illustrative output showing how issues are prioritized for operator action.
+              Illustrative output showing evidence-backed findings, confidence, and recovery priority for operator action.
             </p>
           </div>
         </FadeIn>
@@ -260,7 +260,7 @@ export default async function MarketingHomePage({ accessState, isAuthenticated }
               What gets detected first.
             </h2>
             <p className="mt-3 max-w-[34ch] text-[0.9rem] leading-[1.72] text-muted-foreground sm:mt-4 sm:max-w-[40ch] sm:text-[0.97rem] sm:leading-[1.85]">
-              Activation, checkout, billing recovery, and setup gaps with root cause, impact level, and the next action. Ranked by recovery opportunity.
+              Website revenue leaks, SaaS funnel leaks, lead capture gaps, pricing handoff breaks, checkout leaks, activation stalls, and billing recovery gaps with root cause, impact level, and the next action.
             </p>
           </div>
 
@@ -316,7 +316,7 @@ export default async function MarketingHomePage({ accessState, isAuthenticated }
               Plans by operating maturity.
             </h2>
             <p className="mt-3 max-w-[32ch] text-[0.9rem] leading-[1.75] text-muted-foreground sm:mt-4 sm:max-w-[38ch] sm:text-[0.97rem] sm:leading-[1.85]">
-              Start with core coverage, then scale monitoring cadence, prioritization, and operator workflow as revenue complexity grows.
+              Start with core coverage, then scale scheduled monitoring cadence, prioritization, and operator workflow as revenue complexity grows.
             </p>
           </div>
 

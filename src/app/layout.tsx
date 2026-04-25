@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Instrument_Serif, Inter_Tight, JetBrains_Mono } from "next/font/google";
+import { getPublicSiteUrl } from "@/lib/site-url";
 import "./globals.css";
 
 const interTight = Inter_Tight({
@@ -27,7 +28,11 @@ const instrumentSerif = Instrument_Serif({
   style: ["normal", "italic"],
 });
 
-const siteUrl = "https://checkoutleak.com";
+const siteUrl = getPublicSiteUrl();
+const defaultDescription =
+  "Revenue leak monitoring for websites, SaaS funnels, checkout flows, and billing recovery.";
+const socialDescription = "Revenue leak monitoring for websites, SaaS funnels, and conversion flows.";
+const ogImage = "/brand/silentleak/silentleak-og-1200x630.png";
 
 export const viewport: Viewport = {
   viewportFit: "cover",
@@ -36,18 +41,39 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "CheckoutLeak",
-    template: "%s | CheckoutLeak",
+    default: "SilentLeak",
+    template: "%s | SilentLeak",
   },
-  description:
-    "CheckoutLeak detects revenue leakage across activation, checkout and setup, and billing recovery, with findings ranked by monthly impact.",
+  description: defaultDescription,
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/brand/silentleak/silentleak-favicon.svg", type: "image/svg+xml" },
+      { url: "/brand/silentleak/silentleak-favicon-32.png", sizes: "32x32", type: "image/png" },
+    ],
+    shortcut: "/brand/silentleak/silentleak-favicon.svg",
+    apple: "/brand/silentleak/silentleak-app-icon-512.png",
+  },
   openGraph: {
-    siteName: "CheckoutLeak",
+    title: "SilentLeak",
+    description: socialDescription,
+    siteName: "SilentLeak",
     type: "website",
     locale: "en_US",
+    images: [
+      {
+        url: ogImage,
+        width: 1200,
+        height: 630,
+        alt: "SilentLeak",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
+    title: "SilentLeak",
+    description: socialDescription,
+    images: [ogImage],
   },
   robots: {
     index: true,
@@ -59,18 +85,16 @@ export const metadata: Metadata = {
   },
 };
 
-const organizationSchema = {
+const webApplicationSchema = {
   "@context": "https://schema.org",
-  "@type": "Organization",
-  name: "CheckoutLeak",
+  "@type": "WebApplication",
+  name: "SilentLeak",
   url: siteUrl,
-  logo: `${siteUrl}/logo.png`,
-  description: "Operator-grade revenue leak detection across activation, checkout and setup, and billing recovery.",
-  contactPoint: {
-    "@type": "ContactPoint",
-    email: "support@checkoutleak.com",
-    contactType: "customer support",
-  },
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  image: `${siteUrl}${ogImage}`,
+  logo: `${siteUrl}/brand/silentleak/silentleak-app-icon-512.png`,
+  description: defaultDescription,
 };
 
 export default function RootLayout({
@@ -87,7 +111,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-background text-foreground antialiased">
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(webApplicationSchema) }}
         />
         {children}
       </body>

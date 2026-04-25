@@ -556,7 +556,7 @@ export default async function SourcesPage({
           Revenue Source and Signal Coverage
         </h1>
         <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-          Set the primary URL first. CheckoutLeak analyzes the revenue surface, then recommends optional systems that can deepen signal quality.
+          Set the primary URL first. SilentLeak analyzes the revenue surface, then recommends optional systems that can deepen signal quality.
         </p>
         {isDemoMode ? (
           <p className="text-sm text-amber-300">

@@ -7,22 +7,29 @@ import { getServerSession } from "@/lib/auth/session"
 import { FadeIn } from "@/components/motion/fade-in"
 import { InViewReveal } from "@/components/motion/in-view-reveal"
 import { LiveIntelligencePanel } from "@/components/marketing/live-intelligence-panel"
+import { getPublicSiteUrl } from "@/lib/site-url"
+
+const siteUrl = getPublicSiteUrl()
+const productDescription =
+  "See how SilentLeak detects revenue leaks across websites, lead paths, signup flows, pricing handoffs, checkout journeys, and billing recovery."
+const ogImage = "/brand/silentleak/silentleak-og-1200x630.png"
 
 export const metadata: Metadata = {
-  title: "Revenue Leak Detection for Activation, Checkout, and Billing Recovery",
-  description:
-    "CheckoutLeak detects revenue leakage across activation, checkout setup, and billing recovery, and ranks each issue by monthly dollar impact. Current live integrations include Shopify and Stripe.",
+  title: "Product",
+  description: productDescription,
   openGraph: {
-    title: "Revenue Leak Detection for Activation, Checkout, and Billing Recovery | CheckoutLeak",
-    description:
-      "CheckoutLeak detects revenue leakage across activation, checkout setup, and billing recovery, and ranks each issue by monthly dollar impact. Current live integrations include Shopify and Stripe.",
+    title: "Product | SilentLeak",
+    description: productDescription,
     url: "/product",
     type: "website",
+    siteName: "SilentLeak",
+    images: [ogImage],
   },
   twitter: {
-    title: "Revenue Leak Detection for Activation, Checkout, and Billing Recovery | CheckoutLeak",
-    description:
-      "Detect revenue leakage across activation, checkout setup, and billing recovery. Ranked by monthly impact.",
+    card: "summary_large_image",
+    title: "Product | SilentLeak",
+    description: productDescription,
+    images: [ogImage],
   },
   alternates: {
     canonical: "/product",
@@ -33,34 +40,35 @@ const breadcrumbSchema = {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
   itemListElement: [
-    { "@type": "ListItem", position: 1, name: "Home", item: "https://checkoutleak.com" },
-    { "@type": "ListItem", position: 2, name: "Product", item: "https://checkoutleak.com/product" },
+    { "@type": "ListItem", position: 1, name: "Home", item: siteUrl },
+    { "@type": "ListItem", position: 2, name: "Product", item: `${siteUrl}/product` },
   ],
 }
 
 const softwareSchema = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "CheckoutLeak",
+  name: "SilentLeak",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   description:
-    "Revenue leak detection platform for activation, checkout setup, and billing recovery.",
-  url: "https://checkoutleak.com/product",
+    "Revenue leak monitoring across websites, lead capture, signup paths, pricing handoffs, checkout flows, and billing recovery.",
+  url: `${siteUrl}/product`,
+  image: `${siteUrl}${ogImage}`,
 }
 
 const detectionSurfaces = [
   {
-    title: "Activation leakage",
+    title: "Website and lead leakage",
     description:
-      "Dropout between first entry and first value surfaced with clear evidence and monthly exposure, so stalled activation is treated as revenue leakage.",
-    signal: "First-value activation stall",
+      "Primary surfaces, inquiry routes, and booking paths inspected for missing or weak revenue handoffs.",
+    signal: "Lead path gap",
   },
   {
-    title: "Checkout leakage",
+    title: "Signup and pricing leakage",
     description:
-      "Checkout friction, payment coverage, and setup confidence gaps resolved to the step and segment where intent is lost, then ranked by impact.",
-    signal: "Shipping step drop-off variance",
+      "Self-serve signup paths, pricing handoffs, demo routes, and activation entry points ranked by impact.",
+    signal: "Pricing handoff gap",
   },
   {
     title: "Billing recovery",
@@ -73,11 +81,11 @@ const detectionSurfaces = [
 const workflow = [
   {
     step: "Connect sources",
-    body: "Connect your revenue surfaces to establish activation, checkout, and billing visibility.",
+    body: "Connect your revenue surfaces to establish website, signup, checkout, and billing visibility.",
   },
   {
     step: "Scan and quantify",
-    body: "Continuously evaluate activation progression, checkout execution, and billing recovery behavior with monthly impact estimates.",
+    body: "Continuously evaluate lead capture, signup paths, pricing handoffs, checkout execution, and billing recovery behavior.",
   },
   {
     step: "Prioritize fixes",
@@ -85,7 +93,7 @@ const workflow = [
   },
   {
     step: "Execute and verify",
-    body: "Run fix plans and monitor the success signals CheckoutLeak tracks after release.",
+    body: "Run fix plans and monitor the success signals SilentLeak tracks after release.",
   },
 ]
 
@@ -170,12 +178,12 @@ export default async function ProductPage() {
               </FadeIn>
               <FadeIn delay={0.07}>
                 <h1 className="mt-5 text-[2rem] font-semibold leading-[1.06] tracking-[-0.04em] sm:text-[2.8rem] sm:leading-[1.03] lg:text-[3.4rem] lg:leading-[1.02]">
-                  Revenue leak detection for activation, checkout, and billing.
+                  Revenue leak monitoring across the paths where money goes quiet.
                 </h1>
               </FadeIn>
               <FadeIn delay={0.12}>
                 <p className="mt-5 max-w-[40ch] text-[0.92rem] leading-[1.78] text-muted-foreground sm:text-[1rem] sm:leading-[1.86]">
-                  CheckoutLeak detects revenue leakage across activation, checkout setup, and billing recovery, then ranks each issue by monthly dollar impact with clear operator-grade next actions.
+                  SilentLeak monitors websites, lead capture paths, signup paths, pricing handoffs, checkout flows, activation paths, and billing recovery with operator-grade next actions.
                 </p>
               </FadeIn>
               <FadeIn delay={0.17}>
@@ -215,12 +223,12 @@ export default async function ProductPage() {
         {/* Detection surfaces */}
         <section className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-8 sm:py-16 lg:py-20">
           <InViewReveal>
-            <p className="vault-eyebrow mb-3">Recovery signal families</p>
+            <p className="vault-eyebrow mb-3">Revenue signal families</p>
             <h2 className="text-[1.55rem] font-semibold leading-[1.13] tracking-[-0.03em] sm:text-[2.05rem] lg:text-[2.35rem]">
-              Activation, checkout, and billing recovery. Every finding ranked by exposure.
+              Websites, signups, pricing, checkout, and billing. Every finding ranked by exposure.
             </h2>
             <p className="mt-3 max-w-[44ch] text-[0.9rem] leading-[1.75] text-muted-foreground sm:mt-4 sm:text-[0.97rem]">
-              CheckoutLeak analyzes activation progression, checkout execution, and billing recovery as one money-first system. Each finding carries a monthly impact estimate and a next action.
+              SilentLeak analyzes the full revenue path as one money-first system. Each finding carries a monthly impact estimate and a next action.
             </p>
           </InViewReveal>
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -359,7 +367,7 @@ export default async function ProductPage() {
                 Turn leakage into recovery.
               </h2>
               <p className="mx-auto mt-4 max-w-[36ch] text-[0.9rem] leading-[1.75] text-muted-foreground sm:text-[0.97rem]">
-                Activate a plan, connect sources, and let CheckoutLeak rank where your next dollar of recovery should come from.
+                Activate a plan, connect sources, and let SilentLeak rank where your next dollar of recovery should come from.
               </p>
               <div className="mt-7 flex flex-col items-center gap-2.5 sm:flex-row sm:justify-center sm:gap-3">
                 <Link

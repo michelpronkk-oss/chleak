@@ -2,19 +2,26 @@ import type { Metadata } from "next"
 
 import { MarketingPageLayout, PageSection } from "@/components/marketing/page-layout"
 
+const privacyDescription =
+  "SilentLeak privacy policy: what information is collected, how it is used, how cookies are used, and how data is protected."
+const ogImage = "/brand/silentleak/silentleak-og-1200x630.png"
+
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description:
-    "CheckoutLeak privacy policy: what information is collected, how it is used, how cookies are used, and how data is protected.",
+  description: privacyDescription,
   openGraph: {
-    title: "Privacy Policy | CheckoutLeak",
-    description: "CheckoutLeak privacy policy: what information is collected, how it is used, how cookies are used, and how data is protected.",
+    title: "Privacy Policy | SilentLeak",
+    description: privacyDescription,
     url: "/privacy",
     type: "website",
+    siteName: "SilentLeak",
+    images: [ogImage],
   },
   twitter: {
-    title: "Privacy Policy | CheckoutLeak",
-    description: "CheckoutLeak privacy policy: what information is collected, how it is used, how cookies are used, and how data is protected.",
+    card: "summary_large_image",
+    title: "Privacy Policy | SilentLeak",
+    description: privacyDescription,
+    images: [ogImage],
   },
   alternates: {
     canonical: "/privacy",
@@ -26,13 +33,13 @@ export default function PrivacyPage() {
     <MarketingPageLayout
       eyebrow="Legal"
       title="Privacy Policy"
-      description="This policy describes what information CheckoutLeak collects, how it is used, how cookies are applied, and how information is protected."
+      description="This policy describes what information SilentLeak collects, how it is used, how cookies are applied, and how information is protected."
     >
       <PageSection title="Overview">
         <p>
-          CheckoutLeak is built for high-trust revenue operations. We collect
-          and process information needed to operate leak detection across
-          activation, checkout and setup, and billing recovery workflows, along
+          SilentLeak is built for high-trust revenue operations. We collect
+          and process information needed to operate leak monitoring across
+          websites, signup paths, pricing handoffs, checkout paths, and billing recovery workflows, along
           with account management and customer support.
         </p>
       </PageSection>
@@ -60,7 +67,7 @@ export default function PrivacyPage() {
           and payment status through our billing providers.
         </p>
         <p>
-          CheckoutLeak does not store full payment card numbers. Card handling
+          SilentLeak does not store full payment card numbers. Card handling
           is performed by payment processors operating under their own
           compliance frameworks.
         </p>
@@ -68,7 +75,7 @@ export default function PrivacyPage() {
 
       <PageSection title="Integration-related information">
         <p>
-          When you connect revenue sources and external platforms, CheckoutLeak
+          When you connect revenue sources and external platforms, SilentLeak
           may process operational signals needed to detect leakage patterns and
           prioritize action.
         </p>
@@ -83,7 +90,7 @@ export default function PrivacyPage() {
 
       <PageSection title="Product findings and evidence">
         <p>
-          CheckoutLeak generates detection outputs from connected source
+          SilentLeak generates detection outputs from connected source
           signals, including issue summaries, severity labels, status, and
           recommended operator actions.
         </p>
@@ -134,7 +141,7 @@ export default function PrivacyPage() {
           </li>
         </ul>
         <p>
-          CheckoutLeak does not currently use third-party advertising cookies.
+          SilentLeak does not currently use third-party advertising cookies.
           Cookie details are documented in our{" "}
           <a
             href="/cookies"
@@ -149,7 +156,7 @@ export default function PrivacyPage() {
       <PageSection title="Sharing with service providers">
         <p>
           We share data with trusted service providers only where needed to
-          operate CheckoutLeak. This may include hosting, database, billing,
+          operate SilentLeak. This may include hosting, database, billing,
           email delivery, analytics, and infrastructure security providers.
         </p>
         <p>

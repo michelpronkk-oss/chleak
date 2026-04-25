@@ -1,6 +1,6 @@
 import Link from "next/link"
 
-import { CheckoutLeakLogo } from "@/components/brand/logo"
+import { SilentLeakLogo } from "@/components/brand/logo"
 import { getPublicAccessState, type PublicAccessState } from "@/lib/auth/public-access"
 import { getServerSession } from "@/lib/auth/session"
 import { cn } from "@/lib/utils"
@@ -51,7 +51,7 @@ export async function MarketingHeader({ className, accessState }: MarketingHeade
       )}
     >
       <div className="mx-auto flex h-[3.35rem] w-full max-w-6xl items-center justify-between px-4 sm:h-14 sm:px-8">
-        <CheckoutLeakLogo />
+        <SilentLeakLogo />
 
         <nav className="hidden items-center gap-1 md:flex">
           {navLinks.map((link) => (

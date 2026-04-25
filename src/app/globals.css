@@ -103,34 +103,34 @@
 /* ── VAULT DESIGN SYSTEM TOKENS ─────────────────────────────────────────── */
 :root {
   /* Surface ladder */
-  --ink-000: oklch(0.13 0.006 250);
-  --ink-050: oklch(0.17 0.008 250);
-  --ink-100: oklch(0.19 0.008 250);
-  --ink-150: oklch(0.22 0.009 250);
-  --ink-200: oklch(0.26 0.010 250);
-  --ink-300: oklch(0.32 0.010 250);
-  --ink-400: oklch(0.42 0.010 250);
+  --ink-000: #060708;
+  --ink-050: #060708;
+  --ink-100: #0B0F12;
+  --ink-150: #11161A;
+  --ink-200: #151B20;
+  --ink-300: #1B2024;
+  --ink-400: #2B333A;
 
   /* Text hierarchy */
-  --text-primary: oklch(0.96 0.003 250);
-  --text-secondary: oklch(0.72 0.006 250);
-  --text-tertiary: oklch(0.55 0.008 250);
-  --text-quaternary: oklch(0.42 0.010 250);
-  --text-inverse: oklch(0.17 0.008 250);
+  --text-primary: #F5F2EA;
+  --text-secondary: #8B949E;
+  --text-tertiary: #69727C;
+  --text-quaternary: #4A525A;
+  --text-inverse: #060708;
 
   /* Hairlines */
-  --line-subtle: oklch(1 0 0 / 0.04);
-  --line-default: oklch(1 0 0 / 0.07);
-  --line-strong: oklch(1 0 0 / 0.12);
-  --line-focus: oklch(0.78 0.13 75 / 0.6);
+  --line-subtle: color-mix(in oklab, #1B2024 68%, transparent);
+  --line-default: #1B2024;
+  --line-strong: color-mix(in oklab, #8B949E 24%, #1B2024);
+  --line-focus: color-mix(in oklab, #D99235 60%, transparent);
 
   /* Fonts */
   --font-ui: var(--font-sans);
 
   /* Signal — amber, reserved for revenue at risk only */
-  --signal: oklch(0.78 0.13 75);
-  --signal-dim: oklch(0.78 0.13 75 / 0.14);
-  --signal-line: oklch(0.78 0.13 75 / 0.3);
+  --signal: #D99235;
+  --signal-dim: color-mix(in oklab, #D99235 14%, transparent);
+  --signal-line: color-mix(in oklab, #D99235 30%, transparent);
 
   /* Severity */
   --sev-low: oklch(0.70 0.08 200);

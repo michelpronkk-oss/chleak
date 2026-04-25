@@ -1,21 +1,29 @@
 import type { Metadata } from "next"
 
 import { MarketingPageLayout, PageSection } from "@/components/marketing/page-layout"
+import { getPublicSiteUrl } from "@/lib/site-url"
+
+const siteUrl = getPublicSiteUrl()
+const contactDescription =
+  "Contact SilentLeak for support, implementation guidance, or a focused demo of revenue leak monitoring."
+const ogImage = "/brand/silentleak/silentleak-og-1200x630.png"
 
 export const metadata: Metadata = {
   title: "Contact",
-  description:
-    "Contact CheckoutLeak for support, implementation guidance, or a focused demo of activation, checkout, and billing recovery leak detection.",
+  description: contactDescription,
   openGraph: {
-    title: "Contact | CheckoutLeak",
-    description:
-      "Contact CheckoutLeak for support, implementation guidance, or a focused demo of activation, checkout, and billing recovery leak detection.",
+    title: "Contact | SilentLeak",
+    description: contactDescription,
     url: "/contact",
     type: "website",
+    siteName: "SilentLeak",
+    images: [ogImage],
   },
   twitter: {
-    title: "Contact | CheckoutLeak",
-    description: "Contact CheckoutLeak for support, integration guidance, or a product demo.",
+    card: "summary_large_image",
+    title: "Contact | SilentLeak",
+    description: contactDescription,
+    images: [ogImage],
   },
   alternates: {
     canonical: "/contact",
@@ -26,8 +34,8 @@ const breadcrumbSchema = {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
   itemListElement: [
-    { "@type": "ListItem", position: 1, name: "Home", item: "https://checkoutleak.com" },
-    { "@type": "ListItem", position: 2, name: "Contact", item: "https://checkoutleak.com/contact" },
+    { "@type": "ListItem", position: 1, name: "Home", item: siteUrl },
+    { "@type": "ListItem", position: 2, name: "Contact", item: `${siteUrl}/contact` },
   ],
 }
 
@@ -40,8 +48,8 @@ export default function ContactPage() {
       />
       <MarketingPageLayout
         eyebrow="Contact"
-        title="Contact CheckoutLeak"
-        description="Reach us for support, product questions, or a focused demo tailored to activation, checkout, and billing recovery workflows."
+        title="Contact SilentLeak"
+        description="Reach us for support, product questions, or a focused demo tailored to websites, SaaS funnels, checkout paths, and billing recovery workflows."
       >
         <PageSection title="Support">
           <p>
@@ -74,8 +82,8 @@ export default function ContactPage() {
           </p>
           <p>
             We can tailor demos around activation leakage, checkout and setup
-            leakage, billing recovery leakage, and your current revenue
-            operations process.
+            leakage, lead capture leaks, pricing handoff gaps, billing recovery
+            leakage, and your current revenue operations process.
           </p>
         </PageSection>
 

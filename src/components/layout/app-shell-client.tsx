@@ -16,7 +16,7 @@ import {
   User,
 } from "lucide-react"
 
-import { CheckoutLeakLogo } from "@/components/brand/logo"
+import { SilentLeakLogo } from "@/components/brand/logo"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -96,7 +96,7 @@ export function AppShellClient({
       {/* Desktop sidebar */}
       <aside className="hidden w-64 flex-col border-r border-border/60 bg-sidebar/60 px-4 py-5 backdrop-blur lg:fixed lg:inset-y-0 lg:flex xl:w-72">
         <div className="px-1">
-          <CheckoutLeakLogo />
+          <SilentLeakLogo />
         </div>
 
         <p className="mt-6 px-3 font-mono text-[0.62rem] tracking-[0.08em] uppercase text-muted-foreground/70">
@@ -161,7 +161,7 @@ export function AppShellClient({
         <header className="sticky top-0 z-20 border-b border-border/60 bg-background/80 backdrop-blur">
           <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:h-16 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3 lg:hidden">
-              <CheckoutLeakLogo />
+              <SilentLeakLogo />
             </div>
 
             <div className="flex items-center gap-2 text-xs text-muted-foreground sm:gap-2.5">

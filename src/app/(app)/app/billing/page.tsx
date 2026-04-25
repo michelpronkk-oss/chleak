@@ -75,7 +75,7 @@ export default async function BillingPage({
             Activate your workspace plan
           </h1>
           <p className="vault-page-intro-copy">
-            Select the plan that matches your source footprint. CheckoutLeak unlocks onboarding after Dodo confirms subscription state.
+            Select the plan that matches your source footprint. SilentLeak unlocks onboarding after Dodo confirms subscription state.
           </p>
           {intentMessage ? (
             <p className="text-sm text-muted-foreground">

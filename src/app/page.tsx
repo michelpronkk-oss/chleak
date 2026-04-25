@@ -6,24 +6,31 @@ import { MarketingHeader } from "@/components/layout/marketing-header"
 import MarketingHomePage from "@/components/marketing/home-page"
 import { getPublicAccessState } from "@/lib/auth/public-access"
 import { getServerSession } from "@/lib/auth/session"
+import { getPublicSiteUrl } from "@/lib/site-url"
+
+const siteUrl = getPublicSiteUrl()
+const homeDescription =
+  "Monitor the revenue paths where leads, signups, pricing handoffs, checkouts, and billing silently leak."
+const ogImage = "/brand/silentleak/silentleak-og-1200x630.png"
 
 export const metadata: Metadata = {
   title: {
-    absolute: "CheckoutLeak - Revenue Leak Detection for Activation, Checkout, and Billing",
+    absolute: "SilentLeak | Find what silently kills revenue",
   },
-  description:
-    "Detect revenue leaks across activation, checkout setup, and billing recovery. CheckoutLeak ranks findings by monthly impact and next action.",
+  description: homeDescription,
   openGraph: {
-    title: "CheckoutLeak - Revenue Leak Detection for Activation, Checkout, and Billing",
-    description:
-      "Detect revenue leaks across activation, checkout setup, and billing recovery. CheckoutLeak ranks findings by monthly impact and next action.",
+    title: "SilentLeak | Find what silently kills revenue",
+    description: homeDescription,
     url: "/",
     type: "website",
+    siteName: "SilentLeak",
+    images: [ogImage],
   },
   twitter: {
-    title: "CheckoutLeak - Revenue Leak Detection for Activation, Checkout, and Billing",
-    description:
-      "Detect activation, checkout setup, and billing recovery leaks. Ranked recovery actions by monthly impact.",
+    card: "summary_large_image",
+    title: "SilentLeak | Find what silently kills revenue",
+    description: homeDescription,
+    images: [ogImage],
   },
   alternates: {
     canonical: "/",
@@ -33,9 +40,9 @@ export const metadata: Metadata = {
 const websiteSchema = {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  name: "CheckoutLeak",
-  url: "https://checkoutleak.com",
-  description: "Revenue leak detection across activation, checkout setup, and billing recovery.",
+  name: "SilentLeak",
+  url: siteUrl,
+  description: homeDescription,
 }
 
 export default async function HomePage({

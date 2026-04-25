@@ -13,12 +13,12 @@ function toWorkspaceName(email: string | null, fullName: string | null) {
   }
 
   if (!email) {
-    return "CheckoutLeak Workspace"
+    return "SilentLeak Workspace"
   }
 
   const [localPart] = email.split("@")
   if (!localPart) {
-    return "CheckoutLeak Workspace"
+    return "SilentLeak Workspace"
   }
 
   const cleaned = localPart
@@ -33,7 +33,7 @@ function toWorkspaceName(email: string | null, fullName: string | null) {
             part.length > 0 ? `${part[0].toUpperCase()}${part.slice(1)}` : part
           )
           .join(" ")
-      : "CheckoutLeak"
+      : "SilentLeak"
 
   return `${normalized} Workspace`
 }

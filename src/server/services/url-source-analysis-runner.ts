@@ -1077,7 +1077,7 @@ export async function runUrlSourceAnalysisV1(input: {
       signal: controller.signal,
       headers: {
         "user-agent":
-          "CheckoutLeakUrlSourceRunner/2.0 (+https://checkoutleak.com)",
+          "SilentLeakUrlSourceRunner/2.0 (+https://checkoutleak.com)",
         "accept": "text/html,application/xhtml+xml",
         "accept-language": "en-US,en;q=0.9",
       },

@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og"
 
 export const runtime = "edge"
-export const alt = "CheckoutLeak - Revenue Leak Detection for Activation, Checkout, and Billing"
+export const alt = "SilentLeak - Revenue Leak Monitoring"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
@@ -52,7 +52,7 @@ export default async function Image() {
               fontWeight: 500,
             }}
           >
-            CheckoutLeak
+            SilentLeak
           </span>
         </div>
 
@@ -68,7 +68,7 @@ export default async function Image() {
               marginBottom: "20px",
             }}
           >
-            Revenue leak detection
+            Revenue leak monitoring
           </div>
           <div
             style={{
@@ -80,8 +80,8 @@ export default async function Image() {
               maxWidth: "820px",
             }}
           >
-            Revenue leaks,{" "}
-            <span style={{ color: "#d4943a" }}>ranked by recovery.</span>
+            Find what silently{" "}
+            <span style={{ color: "#d4943a" }}>kills revenue.</span>
           </div>
           <div
             style={{
@@ -92,11 +92,11 @@ export default async function Image() {
               maxWidth: "620px",
             }}
           >
-            Activation, checkout setup, and billing recovery leaks ranked by monthly revenue exposure and clear next action.
+            Monitoring for websites, SaaS funnels, checkout paths, and billing flows.
           </div>
         </div>
 
-        {/* Bottom domain */}
+        {/* Bottom brand */}
         <div
           style={{
             position: "absolute",
@@ -108,7 +108,7 @@ export default async function Image() {
             textTransform: "lowercase",
           }}
         >
-          checkoutleak.com
+          SilentLeak
         </div>
 
         {/* Subtle right-side depth element */}
