@@ -15,6 +15,7 @@ import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
 import { getDirectionalOpportunityEstimate } from "@/lib/opportunity-estimate"
 import { SubmitButton } from "@/components/ui/submit-button"
 import { getStoreDetailData, getStoresIndexData } from "@/server/services/app-service"
+import { createShareableReport } from "./share-actions"
 import {
   saveActivationFlowHints,
   stopMonitoringWebsiteSource,
@@ -192,6 +193,11 @@ export default async function StoreDetailPage({
   const scanStatus = Array.isArray(scanStatusRaw) ? scanStatusRaw[0] : scanStatusRaw
   const activeHintStatus = hintStatus ? hintStatusMessage[hintStatus] ?? null : null
   const activeScanStatus = scanStatus ? scanStatusMessage[scanStatus] ?? null : null
+  const shareStatusRaw = query.share_status
+  const shareStatus = Array.isArray(shareStatusRaw) ? shareStatusRaw[0] : shareStatusRaw
+  const reportUrlRaw = query.report_url
+  const reportUrl = Array.isArray(reportUrlRaw) ? reportUrlRaw[0] : reportUrlRaw
+  const createShareAction = createShareableReport.bind(null, data.store.id)
   const saveHintsAction = saveActivationFlowHints.bind(null, data.store.id)
   const runTestScanAction = triggerActivationTestRun.bind(null, data.store.id)
   const runSurfaceAnalysisAction = triggerUrlSourceAnalysisForStore.bind(null, data.store.id)
@@ -495,6 +501,24 @@ export default async function StoreDetailPage({
           <p className="text-sm text-amber-300">
             Demo source detail. Findings, scan history, and opportunities are simulated.
           </p>
+        ) : null}
+        {shareStatus === "created" && reportUrl ? (
+          <div className="rounded-lg border border-emerald-400/30 bg-emerald-400/[0.06] px-4 py-3">
+            <p className="text-sm font-medium text-emerald-300">Report link created</p>
+            <p className="mt-1 break-all font-mono text-xs text-emerald-400/80">{decodeURIComponent(reportUrl)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Valid for 30 days. Anyone with this link can view the report.</p>
+          </div>
+        ) : shareStatus === "create_failed" ? (
+          <p className="text-sm text-amber-300">Could not create report link. Retry in a moment.</p>
+        ) : null}
+        {isWebsiteSource && !isDemoMode && data.latestScan?.status === "completed" ? (
+          <form action={createShareAction} className="mt-1">
+            <SubmitButton
+              label="Share report"
+              pendingLabel="Creating link..."
+              className="rounded-lg border border-border/60 px-3.5 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            />
+          </form>
         ) : null}
       </section>
 
