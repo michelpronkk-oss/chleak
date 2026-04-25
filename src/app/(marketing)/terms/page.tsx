@@ -208,10 +208,10 @@ export default function TermsPage() {
         <p>
           Questions about these terms can be sent to{" "}
           <a
-            href="mailto:legal@checkoutleak.com"
+            href="mailto:hello@silentleak.com"
             className="vault-link"
           >
-            legal@checkoutleak.com
+            hello@silentleak.com
           </a>
           . For support questions, contact{" "}
           <a

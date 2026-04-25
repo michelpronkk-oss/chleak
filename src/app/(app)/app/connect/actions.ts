@@ -224,9 +224,50 @@ export async function setLiveSourceContext(formData: FormData) {
     redirect("/app/stores?provider=source_url&status=context_save_failed")
   }
 
+  const scanInsert = await admin
+    .from("scans")
+    .insert({
+      organization_id: membershipResult.data.organization_id,
+      store_id: upsertPrimarySourceLane.storeId,
+      status: "queued",
+      scanned_at: new Date().toISOString(),
+      detected_issues_count: 0,
+      estimated_monthly_leakage: 0,
+      notification_requested: true,
+      notification_reason: "manual_url_source_analysis",
+      notification_recipient_email: session.user.email,
+    })
+    .select("id")
+    .single()
+
+  if (scanInsert.error || !scanInsert.data) {
+    redirect(
+      `/app/stores/${upsertPrimarySourceLane.storeId}?scan_status=queue_failed#surface-analysis`
+    )
+  }
+
+  const triggerResult = await triggerQueuedScanTask({
+    scanId: scanInsert.data.id,
+    organizationId: membershipResult.data.organization_id,
+    storeId: upsertPrimarySourceLane.storeId,
+    provider: "checkoutleak_connector",
+  })
+
   revalidatePath("/app/connect")
   revalidatePath("/app/stores")
-  redirect("/app/stores?provider=source_url&status=context_saved")
+  revalidatePath(`/app/stores/${upsertPrimarySourceLane.storeId}`)
+
+  if (triggerResult.ok) {
+    redirect(
+      `/app/stores/${upsertPrimarySourceLane.storeId}?scan_status=queued#surface-analysis`
+    )
+  }
+
+  redirect(
+    `/app/stores/${upsertPrimarySourceLane.storeId}?scan_status=${encodeURIComponent(
+      triggerResult.reason
+    )}#surface-analysis`
+  )
 }
 
 export async function triggerPrimaryUrlSourceAnalysis() {

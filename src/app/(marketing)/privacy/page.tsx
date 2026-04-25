@@ -206,10 +206,10 @@ export default function PrivacyPage() {
         <p>
           Privacy questions can be sent to{" "}
           <a
-            href="mailto:privacy@checkoutleak.com"
+            href="mailto:hello@silentleak.com"
             className="vault-link"
           >
-            privacy@checkoutleak.com
+            hello@silentleak.com
           </a>
           . For general support, contact{" "}
           <a

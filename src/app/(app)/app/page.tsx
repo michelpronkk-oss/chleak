@@ -50,10 +50,10 @@ export default async function DashboardOverviewPage() {
         <section className="space-y-2">
           <p className="data-mono text-muted-foreground">Revenue Workspace</p>
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
-            Start with a live source or explicit demo mode
+            Start with your primary revenue source
           </h1>
           <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
-            Set your live revenue URL or domain first, then connect Shopify or Stripe for deeper system evidence. Demo mode is opt-in and stays clearly labeled as simulated data.
+            Add the website, app, or revenue URL you want SilentLeak to monitor. The first surface scan starts from that source and optional systems can be connected after.
           </p>
         </section>
 

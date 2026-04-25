@@ -27,18 +27,18 @@ const hintStatusMessage: Record<string, string> = {
 const scanStatusMessage: Record<string, string> = {
   completed: "Scan completed. Results have been updated.",
   queued: "Scan queued. Results will appear here when the background run completes.",
-  queue_failed: "Could not queue a test scan. Retry in a moment.",
-  trigger_failed: "Scan was created, but the worker could not be started. Retry in a moment.",
-  unsupported_provider: "This source does not have a supported scan worker yet.",
+  queue_failed: "Could not queue a scan. Retry in a moment.",
+  trigger_failed: "Scan was created, but the background run could not start. Retry in a moment.",
+  unsupported_provider: "This source does not support scans yet.",
   unauthorized: "You are not authorized to trigger scans for this store.",
   not_found: "Store context was not found for this workspace.",
-  scan_not_queued_or_missing: "Queued test scan could not be processed.",
-  scan_not_queued_anymore: "Queued test scan was already picked by another runner.",
-  lookup_failed: "Scan processor lookup failed.",
-  store_missing: "Scan failed because store record was missing.",
-  integration_missing: "Scan failed because integration was missing.",
-  running_update_failed: "Scan failed before entering running state.",
-  completion_failed: "Scan failed during completion update.",
+  scan_not_queued_or_missing: "Queued scan could not be processed.",
+  scan_not_queued_anymore: "Queued scan is already running.",
+  lookup_failed: "Scan lookup failed.",
+  store_missing: "Scan failed because source context was missing.",
+  integration_missing: "Scan failed because connection context was missing.",
+  running_update_failed: "Scan could not start cleanly.",
+  completion_failed: "Scan could not finish cleanly.",
 }
 
 function formatOperatorValue(value: string | null) {
@@ -938,7 +938,7 @@ export default async function StoreDetailPage({
                   </div>
                 ) : (
                   <p className="px-5 py-6 text-sm text-muted-foreground">
-                    No activation flow run has been recorded for this source yet. Run a test scan to generate the first summary.
+                    No activation flow run has been recorded for this source yet. Run an activation scan to generate the first summary.
                   </p>
                 )
               ) : (
@@ -993,7 +993,7 @@ export default async function StoreDetailPage({
                 {showLiveShopifyActivationControls ? (
                   <>
                     <p className="text-sm text-muted-foreground">
-                      Trigger a fresh activation scan and review evidence in this source detail when the worker completes.
+                      Trigger a fresh activation scan and review evidence in this source detail when it completes.
                     </p>
                     {latestScanIsActive ? (
                       <div className="mt-3 rounded-md border border-primary/25 bg-primary/[0.06] px-3 py-2 text-xs text-muted-foreground">
@@ -1003,7 +1003,7 @@ export default async function StoreDetailPage({
                     ) : null}
                     <form action={runTestScanAction} className="mt-4">
                       <SubmitButton
-                        label="Run activation test scan"
+                        label="Run activation scan"
                         pendingLabel="Queueing scan..."
                       />
                     </form>
@@ -1015,7 +1015,7 @@ export default async function StoreDetailPage({
                   <p className="text-sm text-muted-foreground">
                     {isDemoMode
                       ? "Test scans run in live Shopify sources. Use Return to live workspace to validate real behavior."
-                      : "Activation test scans are available for Shopify sources."}
+                      : "Activation scans are available for Shopify sources."}
                   </p>
                 )}
               </div>

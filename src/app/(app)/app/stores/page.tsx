@@ -50,20 +50,20 @@ const statusMessage: Record<string, string> = {
   invalid_source_url: "Use a valid URL or domain for the live revenue surface.",
   context_saved: "Live source context saved.",
   context_save_failed: "Could not save live source context. Retry in a moment.",
-  source_not_set: "Set a primary live source URL before running URL-source analysis.",
-  queue_failed: "Could not queue URL-source analysis. Retry in a moment.",
-  completed: "URL-source analysis completed. Summary has been updated.",
-  queued: "URL-source analysis queued. The worker will update this source when results are ready.",
-  trigger_failed: "URL-source analysis was created, but the worker could not be started. Retry in a moment.",
-  unsupported_provider: "This source does not have a supported scan worker yet.",
-  unauthorized: "You are not authorized to run URL-source analysis for this workspace.",
-  lookup_failed: "URL-source analysis lookup failed. Retry in a moment.",
-  store_missing: "URL-source analysis store context is missing.",
-  integration_missing: "URL-source analysis integration context is missing.",
-  running_update_failed: "URL-source analysis could not enter running state.",
-  scan_not_queued_or_missing: "Queued URL-source analysis is no longer available.",
-  scan_not_queued_anymore: "Queued URL-source analysis was already picked by another runner.",
-  completion_failed: "URL-source analysis failed during completion.",
+  source_not_set: "Set a primary live source URL before running surface analysis.",
+  queue_failed: "Could not queue surface analysis. Retry in a moment.",
+  completed: "Surface analysis completed. Summary has been updated.",
+  queued: "Surface analysis queued. This source will update when results are ready.",
+  trigger_failed: "Surface analysis was created, but the background run could not start. Retry in a moment.",
+  unsupported_provider: "This source does not support surface analysis yet.",
+  unauthorized: "You are not authorized to run surface analysis for this workspace.",
+  lookup_failed: "Surface analysis lookup failed. Retry in a moment.",
+  store_missing: "Surface analysis source context is missing.",
+  integration_missing: "Surface analysis connection context is missing.",
+  running_update_failed: "Surface analysis could not start cleanly.",
+  scan_not_queued_or_missing: "Queued surface analysis is no longer available.",
+  scan_not_queued_anymore: "Queued surface analysis is already running.",
+  completion_failed: "Surface analysis could not finish cleanly.",
 }
 
 const errorStatuses = new Set([
@@ -530,7 +530,7 @@ export default async function SourcesPage({
     : latestUrlSourceScan?.status === "failed"
       ? "The latest analysis failed before completion. Queue another run when ready."
     : latestUrlSourceScan?.status === "queued"
-      ? "Analysis is queued in the worker. Results will appear in the source detail."
+      ? "Analysis is queued. Results will appear in the source detail."
     : latestUrlSourceScan?.status === "running"
       ? "Analysis is running in the background. Findings and evidence will update when it completes."
     : urlSourceAnalysis?.status === "completed"
@@ -853,7 +853,9 @@ export default async function SourcesPage({
                 Last run {formatRelativeTimestamp(latestUrlSourceScan.scannedAt)}
                 {latestUrlSourceScan.status === "completed"
                   ? ` | ${latestUrlSourceScan.detectedIssuesCount} findings`
-                  : " | results pending"}
+                  : latestUrlSourceScan.status === "failed"
+                    ? ` | ${latestUrlSourceScan.errorMessage ?? "analysis failed"}`
+                    : " | results pending"}
               </span>
             </div>
           ) : null}

@@ -127,10 +127,10 @@ export default function CookiePolicyPage() {
         <p>
           Cookie and privacy questions can be sent to{" "}
           <a
-            href="mailto:privacy@checkoutleak.com"
+            href="mailto:hello@silentleak.com"
             className="vault-link"
           >
-            privacy@checkoutleak.com
+            hello@silentleak.com
           </a>
           .
         </p>

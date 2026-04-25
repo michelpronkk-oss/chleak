@@ -73,10 +73,10 @@ export default function ContactPage() {
             For pricing guidance, implementation planning, or a live walkthrough,
             contact{" "}
             <a
-              href="mailto:sales@checkoutleak.com"
+              href="mailto:hello@silentleak.com"
               className="vault-link"
             >
-              sales@checkoutleak.com
+              hello@silentleak.com
             </a>
             .
           </p>
