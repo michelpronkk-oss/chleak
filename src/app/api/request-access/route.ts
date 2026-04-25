@@ -27,6 +27,43 @@ function setAccessCookie(response: NextResponse, email: string) {
   })
 }
 
+export async function GET(request: Request) {
+  const url = new URL(request.url)
+  const email = (url.searchParams.get("email") ?? "").trim().toLowerCase()
+
+  if (!email) {
+    return NextResponse.json({ error: "missing_email" }, { status: 400 })
+  }
+
+  if (!isValidEmail(email)) {
+    return NextResponse.json({ error: "invalid_email" }, { status: 400 })
+  }
+
+  try {
+    const admin = createSupabaseAdminClient()
+    const { data, error } = await admin
+      .from("access_requests")
+      .select("id, status")
+      .eq("email", email)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (error) {
+      console.error("[request-access] lookup error:", error.message)
+      return NextResponse.json({ error: "server_error" }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      existing: Boolean(data),
+      status: data?.status ?? null,
+    })
+  } catch (err) {
+    console.error("[request-access] lookup unexpected error:", err)
+    return NextResponse.json({ error: "server_error" }, { status: 500 })
+  }
+}
+
 export async function POST(request: Request) {
   let body: RequestBody
 

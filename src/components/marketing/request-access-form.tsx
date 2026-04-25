@@ -16,13 +16,36 @@ export function RequestAccessForm({
   showTrustLine = true,
 }: RequestAccessFormProps) {
   const [email, setEmail] = useState("")
+  const [isChecking, setIsChecking] = useState(false)
   const router = useRouter()
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const trimmed = email.trim()
+    const trimmed = email.trim().toLowerCase()
     if (!trimmed) return
-    router.push(`/request-access?email=${encodeURIComponent(trimmed)}`)
+
+    const encodedEmail = encodeURIComponent(trimmed)
+    const requestAccessHref = `/request-access?email=${encodedEmail}`
+    const signInHref = `/auth/sign-in?email=${encodedEmail}`
+
+    setIsChecking(true)
+
+    try {
+      const response = await fetch(`/api/request-access?email=${encodedEmail}`)
+
+      if (response.ok) {
+        const data = (await response.json()) as { existing?: boolean }
+
+        if (data.existing) {
+          router.push(signInHref)
+          return
+        }
+      }
+    } catch {
+      // If the duplicate check is unavailable, keep the request-access path usable.
+    }
+
+    router.push(requestAccessHref)
   }
 
   return (
@@ -40,9 +63,10 @@ export function RequestAccessForm({
           />
           <Button
             type="submit"
+            disabled={isChecking}
             className="h-auto w-full gap-2 rounded-md px-5 py-3 text-sm font-medium sm:w-auto sm:shrink-0 sm:py-2.5"
           >
-            Request Access
+            {isChecking ? "Checking..." : "Request Access"}
             <ArrowRight className="h-3.5 w-3.5" />
           </Button>
         </div>

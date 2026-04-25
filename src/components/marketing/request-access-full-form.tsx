@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -43,6 +44,7 @@ interface Props {
 }
 
 export function RequestAccessFullForm({ defaultEmail = "" }: Props) {
+  const router = useRouter()
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState(defaultEmail)
   const [storeUrl, setStoreUrl] = useState("")
@@ -50,7 +52,7 @@ export function RequestAccessFullForm({ defaultEmail = "" }: Props) {
   const [revenueBand, setRevenueBand] = useState("")
   const [painPrompt, setPainPrompt] = useState("")
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
-  const [state, setState] = useState<"idle" | "submitting" | "success" | "existing" | "error">("idle")
+  const [state, setState] = useState<"idle" | "submitting" | "success" | "error">("idle")
   const [submitError, setSubmitError] = useState("")
 
   function validate(): FieldErrors {
@@ -95,7 +97,8 @@ export function RequestAccessFullForm({ defaultEmail = "" }: Props) {
       const data = await res.json()
 
       if (data.success && data.existing) {
-        setState("existing")
+        const encodedEmail = encodeURIComponent(email.trim().toLowerCase())
+        router.push(`/auth/sign-in?email=${encodedEmail}`)
       } else if (data.success) {
         setState("success")
       } else {
@@ -106,44 +109,6 @@ export function RequestAccessFullForm({ defaultEmail = "" }: Props) {
       setState("error")
       setSubmitError("Could not submit. Check your connection and try again.")
     }
-  }
-
-  if (state === "existing") {
-    return (
-      <div className="py-4 text-center sm:py-6">
-        <div
-          className="mx-auto mb-5 flex h-9 w-9 items-center justify-center rounded-full border"
-          style={{
-            borderColor: "color-mix(in oklab, var(--signal-line) 45%, var(--line-default) 55%)",
-            background: "oklch(0.78 0.13 75 / 0.06)",
-          }}
-        >
-          <svg className="h-3.5 w-3.5 text-signal/80" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
-            <circle cx="12" cy="12" r="10" />
-            <path strokeLinecap="round" d="M12 6v6l3.5 3.5" />
-          </svg>
-        </div>
-
-        <h3 className="text-[1rem] font-semibold tracking-[-0.02em] text-foreground sm:text-[1.1rem]">
-          Already on file.
-        </h3>
-
-        <p className="mx-auto mt-2.5 max-w-[34ch] text-[0.84rem] leading-[1.72] text-muted-foreground sm:mt-3 sm:text-[0.9rem] sm:leading-[1.78]">
-          This email is already registered. Your request is under review and we will reach out directly.
-        </p>
-
-        <div className="mx-auto mt-5 h-px max-w-[120px] bg-border" />
-
-        <p className="mt-4 font-mono text-[0.6rem] tracking-[0.08em] uppercase text-muted-foreground/46">
-          Reviewed manually | no automated response
-        </p>
-        <div className="mt-4">
-          <Link href="/access-review" className="vault-link text-xs">
-            View request status
-          </Link>
-        </div>
-      </div>
-    )
   }
 
   if (state === "success") {
