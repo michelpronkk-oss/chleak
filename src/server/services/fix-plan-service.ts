@@ -10,6 +10,7 @@ import {
 } from "@/lib/revenue-flow-taxonomy"
 import { getServerSession } from "@/lib/auth/session"
 import { createSupabaseAdminClient } from "@/lib/supabase/shared"
+import { resolveStoreSourceVerification } from "@/server/services/source-verification-service"
 import type { Database } from "@/types/database"
 import type {
   FixPlan,
@@ -1259,6 +1260,56 @@ export async function getFixPlanById(id: string) {
     issueId: generatedIssueId,
     organizationId,
   })
+}
+
+export async function getFixPlanSourceAccess(id: string) {
+  const generatedIssueId = parseGeneratedFixPlanId(id)
+  if (!generatedIssueId) {
+    return {
+      verified: true,
+      storeId: null,
+      verification: null,
+    }
+  }
+
+  const session = await getServerSession()
+  const organizationId = session?.membership?.organizationId
+  if (!organizationId) {
+    return {
+      verified: false,
+      storeId: null,
+      verification: null,
+    }
+  }
+
+  const admin = createSupabaseAdminClient()
+  const issueResult = await admin
+    .from("issues")
+    .select("store_id")
+    .eq("id", generatedIssueId)
+    .eq("organization_id", organizationId)
+    .maybeSingle()
+
+  if (issueResult.error || !issueResult.data) {
+    return {
+      verified: false,
+      storeId: null,
+      verification: null,
+    }
+  }
+
+  const verification = await resolveStoreSourceVerification({
+    admin,
+    organizationId,
+    storeId: issueResult.data.store_id,
+    operatorEmail: session.user.email,
+  })
+
+  return {
+    verified: verification.state === "verified",
+    storeId: issueResult.data.store_id,
+    verification,
+  }
 }
 
 export function resolveFixPlanIdForIssue(issueId: string) {

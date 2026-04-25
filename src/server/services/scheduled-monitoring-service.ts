@@ -4,6 +4,7 @@ import {
   type MonitoringEntitlement,
 } from "@/server/services/monitoring-entitlement-service"
 import { triggerQueuedScanTask } from "@/server/services/scan-task-service"
+import { resolveStoreSourceVerification } from "@/server/services/source-verification-service"
 
 const SCHEDULED_MONITORING_REASON = "scheduled_website_monitoring"
 
@@ -51,6 +52,7 @@ interface ScheduledMonitoringResult {
   skipped_not_due: number
   skipped_plan_limit: number
   skipped_already_running: number
+  skipped_unverified: number
   skipped: Array<{ storeId: string | null; reason: string }>
   failed: Array<{ storeId: string | null; reason: string }>
 }
@@ -86,6 +88,7 @@ export async function queueScheduledWebsiteMonitoringScans(): Promise<ScheduledM
     skipped_not_due: 0,
     skipped_plan_limit: 0,
     skipped_already_running: 0,
+    skipped_unverified: 0,
     skipped: [],
     failed: [],
   }
@@ -138,6 +141,22 @@ export async function queueScheduledWebsiteMonitoringScans(): Promise<ScheduledM
       result.skipped.push({
         storeId: integration.store_id,
         reason: "primary_url_missing_or_invalid",
+      })
+      continue
+    }
+
+    const sourceVerification = await resolveStoreSourceVerification({
+      admin,
+      organizationId: integration.organization_id,
+      storeId: integration.store_id,
+      includeOrganizationOperators: true,
+    })
+
+    if (sourceVerification.state !== "verified") {
+      result.skipped_unverified += 1
+      result.skipped.push({
+        storeId: integration.store_id,
+        reason: "source_ownership_unverified",
       })
       continue
     }

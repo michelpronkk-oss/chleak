@@ -217,13 +217,24 @@ function formatSourceStatus(status: string) {
 }
 
 function formatVerificationReason(
-  reason: "email_domain_match" | "connected_system_domain_match" | "manual_unverified"
+  reason:
+    | "email_domain_match"
+    | "connected_system_domain_match"
+    | "manual_verified"
+    | "dns_txt_verified"
+    | "manual_unverified"
 ) {
   if (reason === "email_domain_match") {
     return "Verified by operator email domain"
   }
   if (reason === "connected_system_domain_match") {
     return "Verified by connected system domain match"
+  }
+  if (reason === "manual_verified") {
+    return "Verified manually"
+  }
+  if (reason === "dns_txt_verified") {
+    return "Verified by DNS TXT record"
   }
   return "Manual source context. Ownership is not verified yet."
 }
@@ -543,9 +554,12 @@ export default async function SourcesPage({
       ? "Connected systems are running first analysis. Primary source is attached as context."
       : "Connected systems exist. First analysis has not completed yet."
   const liveSourceVerification = connectData.liveSourceVerification
+  const primarySourceVerified = liveSourceVerification?.state === "verified"
   const verificationBadgeTone =
     liveSourceVerification?.state === "verified"
       ? "border-emerald-400/30 bg-emerald-400/[0.08] text-emerald-300"
+      : liveSourceVerification?.state === "pending"
+        ? "border-sky-300/35 bg-sky-300/[0.08] text-sky-200"
       : "border-amber-300/40 bg-amber-300/[0.08] text-amber-200"
 
   return (
@@ -782,13 +796,25 @@ export default async function SourcesPage({
             </div>
           ) : null}
 
-          {urlSourceAnalysis ? (
+              {urlSourceAnalysis && primarySourceVerified ? (
             <div className="mt-4">
               <EvidenceScreenshots screenshots={urlSourceScreenshots} />
             </div>
           ) : null}
 
-          {urlSourceTopIssue ? (
+          {primarySourceSaved && !primarySourceVerified ? (
+            <div className="mt-4 rounded-lg border border-amber-300/25 bg-amber-300/[0.06] p-3">
+              <p className="data-mono text-amber-200">Protected preview</p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Ownership not verified. Full evidence and monitoring require verification.
+              </p>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                Public preview is available. Detailed findings, screenshots, action briefs, and scheduled monitoring stay protected until this source is verified.
+              </p>
+            </div>
+          ) : null}
+
+          {urlSourceTopIssue && primarySourceVerified ? (
             <div className="mt-4 rounded-lg border border-[color:var(--signal-line)] bg-[color:var(--signal-dim)] p-3">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
@@ -1109,7 +1135,7 @@ export default async function SourcesPage({
                     {normalizedLiveSource?.hostname ?? "No URL saved"} | canonical source context
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {urlSourceTopIssue
+                    {urlSourceTopIssue && primarySourceVerified
                       ? `Top finding: ${urlSourceTopIssue.title}`
                       : urlSourceAnalysis
                         ? getSurfaceSummary({

@@ -26,6 +26,7 @@ export const websiteMonitoringSchedule = schedules.task({
       skipped_not_due: result.skipped_not_due,
       skipped_plan_limit: result.skipped_plan_limit,
       skipped_already_running: result.skipped_already_running,
+      skipped_unverified: result.skipped_unverified,
       failed: result.failed.length,
     })
 

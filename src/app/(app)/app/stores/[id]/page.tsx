@@ -126,6 +126,23 @@ function getBusinessSignalRows(input: {
   ]
 }
 
+function formatVerificationReason(
+  reason:
+    | "email_domain_match"
+    | "connected_system_domain_match"
+    | "manual_verified"
+    | "dns_txt_verified"
+    | "manual_unverified"
+) {
+  if (reason === "email_domain_match") return "Verified by operator email domain"
+  if (reason === "connected_system_domain_match") {
+    return "Verified by connected system domain match"
+  }
+  if (reason === "manual_verified") return "Verified manually"
+  if (reason === "dns_txt_verified") return "Verified by DNS TXT record"
+  return "Ownership is not verified yet"
+}
+
 function formatSelectorMatch(value: boolean | null) {
   if (value === true) {
     return "matched"
@@ -197,6 +214,8 @@ export default async function StoreDetailPage({
   const isWebsiteSource = data.store.platform === "website"
   const showLiveShopifyActivationControls = isShopifySource && !isDemoMode
   const showUrlSourceControls = isWebsiteSource && !isDemoMode
+  const sourceVerification = data.sourceVerification
+  const sourceVerified = isDemoMode || sourceVerification.state === "verified"
   const urlSourceAnalysis = data.urlSourceAnalysis ?? null
   const sourceTypeLabel = getBusinessTypeLabel(urlSourceAnalysis?.businessType)
   const urlSourceScreenshots = urlSourceAnalysis
@@ -290,6 +309,101 @@ export default async function StoreDetailPage({
   const primaryOpportunity = opportunityItems[0] ?? null
   const hasHardIssue = hardIssues.length > 0
   const hasOpportunity = opportunityItems.length > 0
+
+  if (!sourceVerified) {
+    return (
+      <div className="space-y-5 pb-24 lg:pb-4">
+        <section className="vault-page-intro space-y-3">
+          <Link
+            href="/app/stores"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back to sources
+          </Link>
+          <p className="data-mono text-muted-foreground">Source Detail</p>
+          <h1 className="vault-page-intro-title">{data.store.name}</h1>
+          <p className="vault-page-intro-copy">
+            Public preview available. Detailed findings are protected until ownership is verified.
+          </p>
+        </section>
+
+        <section className="surface-card-strong p-5 sm:p-6 lg:p-7">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="data-mono text-amber-200">Ownership not verified</p>
+              <h2 className="mt-2 text-lg font-semibold tracking-tight">
+                Verify this source to unlock evidence, monitoring, and action briefs.
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+                SilentLeak can keep a limited public-surface preview for this source. Full screenshots, issue detail, fix plans, scan history, monitoring, and alert emails require verification.
+              </p>
+            </div>
+            <span className="rounded-md border border-amber-300/35 bg-amber-300/[0.08] px-2.5 py-1 font-mono text-[0.65rem] uppercase text-amber-200">
+              {sourceVerification.state}
+            </span>
+          </div>
+
+          <dl className="mt-6 grid gap-3 text-sm sm:grid-cols-2">
+            <div className="rounded-lg border border-border/60 bg-background/30 p-3">
+              <dt className="data-mono text-muted-foreground">Source domain</dt>
+              <dd className="mt-1 break-all text-foreground">
+                {data.storeDisplayDomain ?? data.store.domain ?? "Unknown"}
+              </dd>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-background/30 p-3">
+              <dt className="data-mono text-muted-foreground">Verification</dt>
+              <dd className="mt-1 text-foreground">
+                {formatVerificationReason(sourceVerification.reason)}
+              </dd>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-background/30 p-3">
+              <dt className="data-mono text-muted-foreground">Detected model</dt>
+              <dd className="mt-1 text-foreground">
+                {urlSourceAnalysis ? sourceTypeLabel : "Pending analysis"}
+              </dd>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-background/30 p-3">
+              <dt className="data-mono text-muted-foreground">Latest attempted scan</dt>
+              <dd className="mt-1 text-foreground">
+                {data.latestScan ? formatRelativeTimestamp(data.latestScan.scannedAt) : "Pending"}
+              </dd>
+            </div>
+          </dl>
+
+          {urlSourceAnalysis ? (
+            <div className="mt-5 rounded-lg border border-border/60 bg-background/30 p-4">
+              <p className="data-mono text-muted-foreground">Surface preview</p>
+              <p className="mt-2 text-sm leading-6 text-foreground">
+                {getSurfaceSummary({
+                  businessType: urlSourceAnalysis.businessType,
+                  revenuePathClarity: urlSourceAnalysis.revenuePathClarity,
+                })}
+              </p>
+            </div>
+          ) : null}
+
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link
+              href="/app/stores"
+              className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
+            >
+              Review sources
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            {showUrlSourceControls ? (
+              <form action={runSurfaceAnalysisAction}>
+                <SubmitButton
+                  label={urlSourceAnalysis ? "Re-run surface analysis" : "Run surface analysis"}
+                  pendingLabel="Queueing scan..."
+                />
+              </form>
+            ) : null}
+          </div>
+        </section>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-5 pb-24 lg:pb-4">

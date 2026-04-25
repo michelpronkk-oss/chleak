@@ -38,6 +38,14 @@ import {
   LIVE_SOURCE_CONTEXT_COOKIE,
   parseLiveSourceContext,
 } from "./source-connection-state-service"
+import {
+  deriveSourceVerification,
+  loadConnectedSystemDomains,
+  resolveStoreSourceVerification,
+  type SourceVerificationReason,
+  type SourceVerificationState,
+  type SourceVerificationView,
+} from "./source-verification-service"
 import { getShopifySetupState } from "./shopify-service"
 import { getStripeSetupState } from "./stripe-service"
 
@@ -207,18 +215,9 @@ interface LiveSourceSurfaceView {
   connectedSystems: string[]
 }
 
-type LiveSourceVerificationState = "verified" | "unverified"
-type LiveSourceVerificationReason =
-  | "email_domain_match"
-  | "connected_system_domain_match"
-  | "manual_unverified"
-
-interface LiveSourceVerificationView {
-  state: LiveSourceVerificationState
-  reason: LiveSourceVerificationReason
-  matchedDomain: string | null
-  matchedSystem: "shopify" | "stripe" | null
-}
+type LiveSourceVerificationState = SourceVerificationState
+type LiveSourceVerificationReason = SourceVerificationReason
+type LiveSourceVerificationView = SourceVerificationView
 
 function isShopifySetupAttention(view: ShopifyDomainView | undefined) {
   if (!view) {
@@ -524,95 +523,6 @@ function readLiveSourceContextFromMetadata(source: unknown) {
   }
 
   return null
-}
-
-function normalizeDomainLike(input: string | null) {
-  if (!input) {
-    return null
-  }
-
-  const trimmed = input.trim().toLowerCase()
-  if (!trimmed) {
-    return null
-  }
-
-  const withoutWww = trimmed.startsWith("www.") ? trimmed.slice(4) : trimmed
-  return withoutWww || null
-}
-
-function extractEmailDomain(input: string | null) {
-  if (!input) {
-    return null
-  }
-
-  const atIndex = input.lastIndexOf("@")
-  if (atIndex < 0) {
-    return null
-  }
-
-  return normalizeDomainLike(input.slice(atIndex + 1))
-}
-
-function domainsMatch(left: string, right: string) {
-  return (
-    left === right ||
-    left.endsWith(`.${right}`) ||
-    right.endsWith(`.${left}`)
-  )
-}
-
-function deriveLiveSourceVerification(input: {
-  liveSourceContext:
-    | { url: string; domain: string; source: "integration_metadata.primary" | "integration_metadata.legacy" }
-    | { url: string; domain: string; updatedAt: string | null }
-  operatorEmail: string | null
-  connectedSystemDomains: Array<{
-    system: "shopify" | "stripe"
-    domain: string
-  }>
-}): LiveSourceVerificationView {
-  const sourceDomain = normalizeDomainLike(input.liveSourceContext.domain)
-
-  if (!sourceDomain) {
-    return {
-      state: "unverified",
-      reason: "manual_unverified",
-      matchedDomain: null,
-      matchedSystem: null,
-    }
-  }
-
-  const emailDomain = extractEmailDomain(input.operatorEmail)
-  if (emailDomain && domainsMatch(sourceDomain, emailDomain)) {
-    return {
-      state: "verified",
-      reason: "email_domain_match",
-      matchedDomain: emailDomain,
-      matchedSystem: null,
-    }
-  }
-
-  for (const candidate of input.connectedSystemDomains) {
-    const normalizedCandidate = normalizeDomainLike(candidate.domain)
-    if (!normalizedCandidate) {
-      continue
-    }
-    if (domainsMatch(sourceDomain, normalizedCandidate)) {
-      return {
-        state: "verified",
-        reason: "connected_system_domain_match",
-        matchedDomain: normalizedCandidate,
-        matchedSystem: candidate.system,
-      }
-    }
-  }
-
-  return {
-    state: "unverified",
-    reason: "manual_unverified",
-    matchedDomain: null,
-    matchedSystem: null,
-  }
 }
 
 function readBooleanFromRecord(source: unknown, key: string): boolean | null {
@@ -1917,40 +1827,21 @@ export async function getConnectJourneyData() {
     cookieStore.get(LIVE_SOURCE_CONTEXT_COOKIE)?.value
   )
   const liveSourceContext = integrationLiveSourceContext ?? cookieLiveSourceContext
-  const connectedSystemDomains: Array<{
-    system: "shopify" | "stripe"
-    domain: string
-  }> = []
-
-  for (const store of journey.snapshot.stores) {
-    if ((store.platform === "shopify" || store.platform === "stripe") && store.domain) {
-      connectedSystemDomains.push({
-        system: store.platform,
-        domain: store.domain,
-      })
-    }
-  }
-
-  for (const view of shopifyDomainViews.values()) {
-    if (view.canonicalDomain) {
-      connectedSystemDomains.push({
-        system: "shopify",
-        domain: view.canonicalDomain,
-      })
-    }
-    if (view.displayDomain) {
-      connectedSystemDomains.push({
-        system: "shopify",
-        domain: view.displayDomain,
-      })
-    }
-  }
+  const connectedSystemDomains = await loadConnectedSystemDomains({
+    admin: createSupabaseAdminClient(),
+    organizationId: journey.organizationId,
+  })
 
   const liveSourceVerification = liveSourceContext
-    ? deriveLiveSourceVerification({
-        liveSourceContext,
+    ? deriveSourceVerification({
+        sourceDomain: liveSourceContext.domain,
         operatorEmail: journey.shellUser.email,
         connectedSystemDomains,
+        metadataSources: [
+          !urlSourceIntegrationResult.error
+            ? urlSourceIntegrationResult.data?.metadata
+            : null,
+        ],
       })
     : null
   const urlSourceAnalysis =
@@ -2473,6 +2364,12 @@ export async function getStoreDetailData(storeId: string) {
           storeId: store.id,
         })
       : null
+  const sourceVerification = await resolveStoreSourceVerification({
+    admin,
+    organizationId: journey.organizationId,
+    storeId: store.id,
+    operatorEmail: journey.shellUser.email,
+  })
 
   const fixPlanLinks = issues
     .map((issue) => ({
@@ -2517,6 +2414,7 @@ export async function getStoreDetailData(storeId: string) {
     setupAttentionMessage,
     integration,
     urlSourceAnalysis,
+    sourceVerification,
   }
 }
 

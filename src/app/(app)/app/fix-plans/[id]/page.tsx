@@ -9,7 +9,10 @@ import { Badge } from "@/components/ui/badge"
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
 import { getDirectionalOpportunityEstimate } from "@/lib/opportunity-estimate"
 import { formatIssueTypeLabel } from "@/lib/revenue-flow-taxonomy"
-import { getFixPlanById } from "@/server/services/fix-plan-service"
+import {
+  getFixPlanById,
+  getFixPlanSourceAccess,
+} from "@/server/services/fix-plan-service"
 import { getBillingData } from "@/server/services/app-service"
 import { cn } from "@/lib/utils"
 import type { FixPlan } from "@/types/domain"
@@ -40,6 +43,10 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
+  const sourceAccess = await getFixPlanSourceAccess(id)
+  if (!sourceAccess.verified) {
+    return { title: "Action Brief" }
+  }
   const fixPlan = await getFixPlanById(id)
   if (!fixPlan) return { title: "Fix Plan" }
   return { title: fixPlan.title }
@@ -59,6 +66,45 @@ export default async function FixPlanPage({
 
   if (billing.onboardingState === "empty") {
     redirect("/app/stores")
+  }
+
+  const sourceAccess = await getFixPlanSourceAccess(id)
+
+  if (!sourceAccess.verified) {
+    return (
+      <div className="space-y-5 pb-24 lg:pb-4">
+        <section className="space-y-3">
+          <Link
+            href={sourceAccess.storeId ? `/app/stores/${sourceAccess.storeId}` : "/app/stores"}
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back to source
+          </Link>
+          <p className="data-mono text-muted-foreground">Action Brief</p>
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
+            Ownership verification required
+          </h1>
+          <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base sm:leading-7">
+            Verify this source to unlock evidence, monitoring, and action briefs.
+          </p>
+        </section>
+
+        <section className="surface-card-strong p-5 sm:p-6 lg:p-7">
+          <p className="data-mono text-amber-200">Protected detail</p>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+            Public preview is available on the source page. Detailed findings and fix plans stay protected until ownership is verified.
+          </p>
+          <Link
+            href={sourceAccess.storeId ? `/app/stores/${sourceAccess.storeId}` : "/app/stores"}
+            className="marketing-primary-cta mt-5 inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
+          >
+            Open source
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </section>
+      </div>
+    )
   }
 
   const fixPlan = await getFixPlanById(id)
