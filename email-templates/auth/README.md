@@ -28,6 +28,6 @@ Authentication > Email Templates > (select template)
 ## Notes
 
 - Do not attempt to auto-configure these via the Supabase API. Paste them manually.
-- The amber accent color (`#c89a10`) approximates the SilentLeak signal token (`oklch(0.78 0.13 75)`).
-- Dark backgrounds use `#0b0e16` (outer) and `#111624` (card) to match the app surface palette.
-- All colors are inline for maximum email client compatibility.
+- The templates use the SilentLeak production palette: `#060708`, `#0B0F12`, `#1B2024`, `#D99235`, `#F2B45A`, `#F5F2EA`, and `#8B949E`.
+- Layout is table-based with inline colors for Gmail, Outlook, Apple Mail, and clients that force light or dark mode.
+- Footer contact is `hello@silentleak.com`.

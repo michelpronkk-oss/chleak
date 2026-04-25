@@ -213,10 +213,10 @@ export default function PrivacyPage() {
           </a>
           . For general support, contact{" "}
           <a
-            href="mailto:support@checkoutleak.com"
+            href="mailto:hello@silentleak.com"
             className="vault-link"
           >
-            support@checkoutleak.com
+            hello@silentleak.com
           </a>
           .
         </p>

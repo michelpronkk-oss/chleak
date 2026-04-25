@@ -27,11 +27,11 @@ function ActiveDot() {
 
 function CyclingStatus({ activeIndex }: { activeIndex: number }) {
   return (
-    <div className="relative h-[1.1rem] min-w-0 flex-1 overflow-hidden">
+    <div className="relative h-[1.35rem] min-w-0 flex-1 overflow-hidden">
       <AnimatePresence mode="wait" initial={false}>
         <motion.span
           key={activeIndex}
-          className="absolute inset-0 flex items-center font-mono text-[0.64rem] tracking-[0.03em] text-muted-foreground/50"
+          className="absolute inset-0 flex items-center font-mono text-[0.64rem] leading-none tracking-[0.03em] text-muted-foreground/50"
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -4 }}
@@ -68,7 +68,7 @@ export function HeroSignalRail() {
       <div className="mb-3 h-px" style={{ background: "var(--line-subtle)" }} />
 
       {/* Mobile: dot + cycling text + trailing label — no "live" or divider */}
-      <div className="flex items-center gap-2.5 sm:hidden">
+      <div className="flex min-h-6 items-center gap-2.5 sm:hidden">
         <ActiveDot />
         <CyclingStatus activeIndex={activeIndex} />
         <span className="shrink-0 font-mono text-[0.53rem] tracking-[0.08em] uppercase text-muted-foreground/26">
@@ -77,7 +77,7 @@ export function HeroSignalRail() {
       </div>
 
       {/* Desktop: full composition with "live" label and divider */}
-      <div className="hidden sm:flex sm:items-center sm:gap-2.5">
+      <div className="hidden min-h-6 sm:flex sm:items-center sm:gap-2.5">
         <ActiveDot />
         <span className="font-mono text-[0.53rem] tracking-[0.1em] uppercase text-muted-foreground/32">
           live

@@ -51,10 +51,10 @@ export async function MarketingFooter() {
               Current live integrations include Shopify and Stripe. Findings are ranked by monthly impact.
             </p>
             <a
-              href="mailto:support@checkoutleak.com"
+              href="mailto:hello@silentleak.com"
               className="vault-link inline-flex font-mono text-[0.7rem] tracking-[0.05em] uppercase sm:text-[0.72rem]"
             >
-              support@checkoutleak.com
+              hello@silentleak.com
             </a>
           </div>
 

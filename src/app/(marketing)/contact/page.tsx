@@ -55,10 +55,10 @@ export default function ContactPage() {
           <p>
             For product support, integration guidance, or account help, email{" "}
             <a
-              href="mailto:support@checkoutleak.com"
+              href="mailto:hello@silentleak.com"
               className="vault-link"
             >
-              support@checkoutleak.com
+              hello@silentleak.com
             </a>
             .
           </p>
