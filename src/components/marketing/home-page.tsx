@@ -129,7 +129,7 @@ export default async function MarketingHomePage({ accessState, isAuthenticated }
         style={{
           backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px)",
           backgroundSize: "28px 28px",
-          opacity: 0.075,
+          opacity: 0.095,
           maskImage: "linear-gradient(to bottom, black 30%, transparent 88%)",
           WebkitMaskImage: "linear-gradient(to bottom, black 30%, transparent 88%)",
         }}
@@ -430,6 +430,12 @@ export default async function MarketingHomePage({ accessState, isAuthenticated }
               border: isPending
                 ? "1px solid var(--line-default)"
                 : "1px solid color-mix(in oklab, var(--signal-line) 55%, var(--line-default) 45%)",
+              background: isPending
+                ? "linear-gradient(180deg, var(--ink-100), var(--ink-050))"
+                : "linear-gradient(180deg, color-mix(in oklab, var(--signal) 5%, var(--ink-100) 95%), var(--ink-100) 58%, var(--ink-050))",
+              boxShadow: isPending
+                ? "var(--shadow-inset)"
+                : "var(--shadow-inset), 0 30px 90px -58px color-mix(in oklab, var(--signal) 54%, transparent)",
             }}
           >
             {!isPending ? (
@@ -444,10 +450,10 @@ export default async function MarketingHomePage({ accessState, isAuthenticated }
                 />
                 <div
                   aria-hidden
-                  className="pointer-events-none absolute inset-0 -z-10"
+                  className="pointer-events-none absolute inset-0"
                   style={{
                     background:
-                      "radial-gradient(ellipse at 50% 0%, oklch(0.78 0.13 75 / 0.045), transparent 65%)",
+                      "radial-gradient(ellipse at 50% 0%, oklch(0.78 0.13 75 / 0.06), transparent 62%)",
                   }}
                 />
               </>
