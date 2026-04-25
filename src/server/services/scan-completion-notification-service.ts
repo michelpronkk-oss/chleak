@@ -1,5 +1,6 @@
 import { sendScanCompletionEmail } from "@/lib/email/resend"
 import { createSupabaseAdminClient } from "@/lib/supabase/shared"
+import { getEntitlementsForOrganization } from "@/server/services/entitlement-service"
 import { resolveStoreSourceVerification } from "@/server/services/source-verification-service"
 
 type ScanNotificationOutcome = "issues_found" | "clean" | "no_signal" | null
@@ -129,6 +130,19 @@ export async function sendScanCompletionNotification(
       .eq("id", input.scanId)
 
     return { status: "skipped" as const, reason: "source_ownership_unverified" }
+  }
+
+  const entitlements = await getEntitlementsForOrganization(input.organizationId)
+  if (!entitlements.isActive || !entitlements.canUseEmailAlerts) {
+    await admin
+      .from("scans")
+      .update({
+        notification_status: "skipped",
+        notification_error: "Email alerts are not included for the current plan state.",
+      })
+      .eq("id", input.scanId)
+
+    return { status: "skipped" as const, reason: "email_alerts_not_included" }
   }
 
   if (

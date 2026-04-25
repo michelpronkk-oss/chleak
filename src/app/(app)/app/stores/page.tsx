@@ -27,6 +27,7 @@ import { getDirectionalOpportunityEstimate } from "@/lib/opportunity-estimate"
 import { getConnectJourneyData, getStoresIndexData } from "@/server/services/app-service"
 import type { IssueSeverity } from "@/types/domain"
 import {
+  addMonitoredSource,
   setLiveSourceContext,
   triggerPrimaryUrlSourceAnalysis,
 } from "../connect/actions"
@@ -54,7 +55,12 @@ const statusMessage: Record<string, string> = {
   queue_failed: "Could not queue surface analysis. Retry in a moment.",
   completed: "Surface analysis completed. Summary has been updated.",
   queued: "Surface analysis queued. This source will update when results are ready.",
+  source_limit_reached: "Your plan has reached its monitored source limit.",
+  plan_required: "Choose a plan to monitor sources and run analysis.",
+  plan_upgrade_required: "Upgrade to connect this enrichment for the current source.",
   trigger_failed: "Surface analysis was created, but the background run could not start. Retry in a moment.",
+  stopped: "Monitoring stopped. This source no longer counts toward your plan limit.",
+  stop_failed: "Could not stop monitoring this source. Retry in a moment.",
   unsupported_provider: "This source does not support surface analysis yet.",
   unauthorized: "You are not authorized to run surface analysis for this workspace.",
   lookup_failed: "Surface analysis lookup failed. Retry in a moment.",
@@ -80,7 +86,11 @@ const errorStatuses = new Set([
   "context_save_failed",
   "source_not_set",
   "queue_failed",
+  "source_limit_reached",
+  "plan_required",
+  "plan_upgrade_required",
   "trigger_failed",
+  "stop_failed",
   "unsupported_provider",
   "unauthorized",
   "lookup_failed",
@@ -561,6 +571,48 @@ export default async function SourcesPage({
       : liveSourceVerification?.state === "pending"
         ? "border-sky-300/35 bg-sky-300/[0.08] text-sky-200"
       : "border-amber-300/40 bg-amber-300/[0.08] text-amber-200"
+  const sourceUsage = storesData.sourceUsage ?? {
+    planKey: "unknown" as const,
+    isActive: false,
+    canUseScheduledMonitoring: false,
+    maxSources: 1,
+    intervalHours: 168,
+    cadenceLabel: "weekly monitoring",
+    sourceLimitLabel: "1 monitored source",
+    sources: [],
+    usedSources: 0,
+    remainingSources: 1,
+    isAtLimit: false,
+  }
+  const entitlements = storesData.entitlements ?? {
+    planKey: "unknown" as const,
+    isActive: false,
+    isTrialing: false,
+    maxSources: 1,
+    monitoringIntervalHours: 168,
+    canRunManualScan: false,
+    canUseScheduledMonitoring: false,
+    canViewFullEvidence: false,
+    canOpenActionBriefs: false,
+    canUseEmailAlerts: false,
+    canUseShopifyEnrichment: false,
+    canUseStripeEnrichment: false,
+    canExportReports: false,
+    supportLevel: "standard" as const,
+  }
+  const additionalWebsiteSources = (storesData.websiteSources ?? []).filter(
+    (source) => !source.isPrimary
+  )
+  const sourceUsageLabel =
+    sourceUsage.maxSources === null
+      ? "Unlimited sources"
+      : `${sourceUsage.usedSources} / ${sourceUsage.maxSources} source${sourceUsage.maxSources === 1 ? "" : "s"} used`
+  const sourceLimitCopy =
+    sourceUsage.maxSources === null
+      ? `${sourceUsage.cadenceLabel} is active for verified sources.`
+      : sourceUsage.isAtLimit
+        ? `Your current plan includes ${sourceUsage.maxSources} monitored source${sourceUsage.maxSources === 1 ? "" : "s"}. Upgrade to monitor more sources.`
+        : `${sourceUsage.remainingSources} monitored source${sourceUsage.remainingSources === 1 ? "" : "s"} remaining on this plan.`
 
   return (
     <div className="space-y-5 pb-24 lg:pb-4">
@@ -863,7 +915,7 @@ export default async function SourcesPage({
             </div>
           ) : null}
 
-          {primarySourceSaved ? (
+          {primarySourceSaved && entitlements.canRunManualScan ? (
             <form action={triggerPrimaryUrlSourceAnalysis} className="mt-4">
               <SubmitButton
                 label={urlSourceAnalysis ? "Re-run surface analysis" : "Run surface analysis"}
@@ -871,6 +923,10 @@ export default async function SourcesPage({
                 className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
               />
             </form>
+          ) : primarySourceSaved ? (
+            <div className="mt-4 rounded-md border border-amber-300/25 bg-amber-300/[0.06] px-3 py-2 text-xs text-amber-200">
+              Upgrade to run manual surface analysis.
+            </div>
           ) : null}
           {latestUrlSourceScan ? (
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -886,6 +942,113 @@ export default async function SourcesPage({
             </div>
           ) : null}
         </article>
+      </section>
+
+      <section id="monitored-sources" className="surface-card p-4 sm:p-5 lg:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="data-mono text-muted-foreground">Source usage</p>
+            <h2 className="mt-1.5 text-base font-semibold tracking-tight sm:text-lg">
+              Monitored sources
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+              {sourceLimitCopy}
+            </p>
+          </div>
+          <span className="rounded-md border border-border/70 px-2.5 py-1 font-mono text-[0.65rem] uppercase text-muted-foreground">
+            {sourceUsageLabel}
+          </span>
+        </div>
+
+        <form action={addMonitoredSource} className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
+          <input
+            name="monitored_source_url"
+            placeholder="https://example.com"
+            className="vault-input w-full rounded-lg px-3.5 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/40"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            inputMode="url"
+            disabled={sourceUsage.isAtLimit || !entitlements.isActive}
+          />
+          <SubmitButton
+            label="Add monitored source"
+            pendingLabel="Adding source..."
+            className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          />
+        </form>
+
+        {additionalWebsiteSources.length ? (
+          <div className="mt-5 divide-y divide-border/60">
+            {additionalWebsiteSources.map((source) => {
+              const verified = source.verification.state === "verified"
+              const latestScan = source.latestScan
+              const latestScanLabel = latestScan
+                ? latestScan.status === "completed"
+                  ? `${formatRelativeTimestamp(latestScan.scannedAt)} | ${latestScan.detectedIssuesCount} findings`
+                  : latestScan.status === "failed"
+                    ? `Failed | ${latestScan.errorMessage ?? "analysis failed"}`
+                    : `${latestScan.status} | results pending`
+                : "No scans yet"
+              return (
+                <article
+                  key={source.id}
+                  className="grid gap-3 py-4 sm:gap-4 sm:py-5 sm:grid-cols-[1.3fr_1fr_auto] sm:items-center"
+                >
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-base font-semibold tracking-tight sm:text-lg">
+                        {source.domain ?? source.name}
+                      </h3>
+                      <span className="rounded-md border border-border/70 px-2 py-0.5 text-[11px] uppercase text-muted-foreground">
+                        monitored
+                      </span>
+                      <span
+                        className={cn(
+                          "rounded-md border px-2 py-0.5 text-[11px] uppercase",
+                          verified
+                            ? "border-emerald-400/30 bg-emerald-400/[0.08] text-emerald-300"
+                            : "border-amber-300/40 bg-amber-300/[0.08] text-amber-200"
+                        )}
+                      >
+                        {source.verification.state}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {verified
+                        ? `${source.activeIssueCount} active issue${source.activeIssueCount === 1 ? "" : "s"}`
+                        : "Ownership not verified. Full evidence and monitoring require verification."}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {verified
+                        ? source.topIssueTitle
+                          ? `Top finding: ${source.topIssueTitle}`
+                          : "No critical issue detected."
+                        : "Public preview available."}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-1 text-sm">
+                    <p className="text-muted-foreground">Latest scan: {latestScanLabel}</p>
+                    <p className="font-semibold text-primary">
+                      {verified ? `${formatCompactCurrency(source.estimatedLeakage)} / month` : "Protected"}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                    <Link href={source.href} className="vault-link inline-flex items-center gap-1 text-sm">
+                      Open source <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        ) : (
+          <p className="mt-5 rounded-xl border border-dashed border-border/70 p-5 text-sm text-muted-foreground">
+            No additional monitored sources yet.
+          </p>
+        )}
       </section>
 
       <section className="surface-card p-5 sm:p-6 lg:p-7">
@@ -939,7 +1102,11 @@ export default async function SourcesPage({
                   : "No strong commerce signal yet. Keep this optional unless Shopify is part of the revenue path."}
             </p>
             <div className="my-5 h-px bg-border/40" />
-            {showShopifyInlineSetup ? (
+            {!entitlements.canUseShopifyEnrichment ? (
+              <div className="rounded-lg border border-amber-300/25 bg-amber-300/[0.06] p-4 text-sm leading-6 text-amber-100">
+                Upgrade to connect Shopify evidence for checkout and activation signals.
+              </div>
+            ) : showShopifyInlineSetup ? (
               <form method="GET" action="/api/integrations/shopify/install" className="space-y-3">
                 <input type="hidden" name="orgId" value={connectData.organization.id} />
                 <div className="space-y-2">
@@ -1053,7 +1220,11 @@ export default async function SourcesPage({
                     : "Optional until the revenue path shows billing or payment recovery risk."}
             </p>
             <div className="my-5 h-px bg-border/40" />
-            {isPendingStripe ? (
+            {!entitlements.canUseStripeEnrichment ? (
+              <div className="rounded-lg border border-amber-300/25 bg-amber-300/[0.06] p-4 text-sm leading-6 text-amber-100">
+                Upgrade to connect billing recovery signals.
+              </div>
+            ) : isPendingStripe ? (
               <div className="inline-flex items-center gap-2 rounded-lg border border-border/60 bg-card/50 px-4 py-3 text-sm text-foreground">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-foreground/50" />
                 Billing scan running

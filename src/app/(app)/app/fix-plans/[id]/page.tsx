@@ -14,6 +14,7 @@ import {
   getFixPlanSourceAccess,
 } from "@/server/services/fix-plan-service"
 import { getBillingData } from "@/server/services/app-service"
+import { getEntitlementsForOrganization } from "@/server/services/entitlement-service"
 import { cn } from "@/lib/utils"
 import type { FixPlan } from "@/types/domain"
 
@@ -69,6 +70,44 @@ export default async function FixPlanPage({
   }
 
   const sourceAccess = await getFixPlanSourceAccess(id)
+  const entitlements = await getEntitlementsForOrganization(billing.organization.id)
+
+  if (!entitlements.canOpenActionBriefs) {
+    return (
+      <div className="space-y-5 pb-24 lg:pb-4">
+        <section className="space-y-3">
+          <Link
+            href={sourceAccess.storeId ? `/app/stores/${sourceAccess.storeId}` : "/app/stores"}
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back to source
+          </Link>
+          <p className="data-mono text-muted-foreground">Action Brief</p>
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
+            Upgrade to unlock action briefs
+          </h1>
+          <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base sm:leading-7">
+            Your current plan does not include action briefs for this source.
+          </p>
+        </section>
+
+        <section className="surface-card-strong p-5 sm:p-6 lg:p-7">
+          <p className="data-mono text-amber-200">Plan gate</p>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+            Upgrade to review the full action brief and recommended fix sequence.
+          </p>
+          <Link
+            href="/app/billing"
+            className="marketing-primary-cta mt-5 inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
+          >
+            View plans
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </section>
+      </div>
+    )
+  }
 
   if (!sourceAccess.verified) {
     return (
@@ -213,7 +252,16 @@ export default async function FixPlanPage({
             </p>
           </section>
 
-          <FixPlanEvidenceSection fixPlan={fixPlan} />
+          {entitlements.canViewFullEvidence ? (
+            <FixPlanEvidenceSection fixPlan={fixPlan} />
+          ) : (
+            <section className="surface-card p-4 sm:p-5 lg:p-6">
+              <p className="data-mono text-muted-foreground">Evidence</p>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground sm:text-base">
+                Upgrade to view full screenshots and evidence rows for this action brief.
+              </p>
+            </section>
+          )}
 
           <section className="surface-card p-4 sm:p-5 lg:p-6">
             <p className="data-mono text-muted-foreground">Action steps</p>

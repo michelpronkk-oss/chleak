@@ -17,6 +17,7 @@ import { getServerSession } from "@/lib/auth/session"
 import { createSupabaseAdminClient } from "@/lib/supabase/shared"
 import { ensureWorkspaceForUser } from "@/server/services/account-bootstrap-service"
 import { getFixPlanHrefForIssue } from "@/server/services/fix-plan-service"
+import { getEntitlementsForOrganization } from "@/server/services/entitlement-service"
 import type { DashboardSnapshot, Issue, Scan, Store } from "@/types/domain"
 
 import { getDashboardSnapshotForOrganization } from "./dashboard-service"
@@ -25,7 +26,6 @@ import {
   getOnboardingState,
   isConnectingState,
   isPendingScanState,
-  isReadyState,
   type OnboardingState,
 } from "./onboarding-state-service"
 import {
@@ -43,6 +43,7 @@ import {
   loadConnectedSystemDomains,
   resolveStoreSourceVerification,
 } from "./source-verification-service"
+import { getSourceUsageForOrganization } from "./source-entitlement-service"
 import { getShopifySetupState } from "./shopify-service"
 import { getStripeSetupState } from "./stripe-service"
 
@@ -1641,6 +1642,40 @@ async function getJourneyContext() {
     }
   }
 
+  const activeStoreIds = new Set(
+    filteredSnapshot.stores.filter((store) => store.active).map((store) => store.id)
+  )
+  if (activeStoreIds.size !== filteredSnapshot.stores.length) {
+    const activeIssues = filteredSnapshot.issues.filter((issue) =>
+      activeStoreIds.has(issue.storeId)
+    )
+    const activeScans = filteredSnapshot.scans.filter((scan) =>
+      activeStoreIds.has(scan.storeId)
+    )
+    const unresolvedActiveIssues = activeIssues.filter((issue) => issue.status !== "resolved")
+    const highestImpactIssue =
+      pickHighestImpactVisibleIssue(unresolvedActiveIssues) ??
+      filteredSnapshot.summary.highestImpactIssue
+    filteredSnapshot = {
+      ...filteredSnapshot,
+      stores: filteredSnapshot.stores.filter((store) => activeStoreIds.has(store.id)),
+      scans: activeScans,
+      issues: activeIssues,
+      summary: {
+        ...filteredSnapshot.summary,
+        estimatedMonthlyLeakage: unresolvedActiveIssues.reduce(
+          (total, issue) => total + issue.estimatedMonthlyRevenueImpact,
+          0
+        ),
+        activeIssues: unresolvedActiveIssues.length,
+        monitoredStores: activeStoreIds.size,
+        highestImpactIssue,
+      },
+      revenueOpportunities: buildVisibleRevenueOpportunities(unresolvedActiveIssues),
+      suggestedActions: buildVisibleSuggestedActions(unresolvedActiveIssues),
+    }
+  }
+
   if (state !== "demo" && filteredSnapshot.stores.length > 0) {
     const verifiedStoreIds = new Set<string>()
     const admin = createSupabaseAdminClient()
@@ -2070,6 +2105,70 @@ export async function getConnectJourneyData() {
 export async function getStoresIndexData() {
   const journey = await getJourneyContext()
   const shopifyDomainViews = await loadShopifyDomainViews(journey.organizationId)
+  const [sourceUsage, entitlements] = await Promise.all([
+    getSourceUsageForOrganization(journey.organizationId),
+    getEntitlementsForOrganization(journey.organizationId),
+  ])
+  const admin = createSupabaseAdminClient()
+
+  async function buildWebsiteSourceRows() {
+    const rows = []
+    for (const source of sourceUsage.sources) {
+      const [scanResult, issuesResult] = await Promise.all([
+        admin
+          .from("scans")
+          .select("id, status, scanned_at, completed_at, detected_issues_count, estimated_monthly_leakage, error_message")
+          .eq("organization_id", journey.organizationId)
+          .eq("store_id", source.storeId)
+          .order("scanned_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        admin
+          .from("issues")
+          .select("id, title, severity, estimated_monthly_revenue_impact")
+          .eq("organization_id", journey.organizationId)
+          .eq("store_id", source.storeId)
+          .neq("status", "resolved")
+          .order("estimated_monthly_revenue_impact", { ascending: false })
+          .limit(10),
+      ])
+      const verification = await resolveStoreSourceVerification({
+        admin,
+        organizationId: journey.organizationId,
+        storeId: source.storeId,
+        operatorEmail: journey.shellUser.email,
+      })
+      const issues = issuesResult.data ?? []
+      const verified = verification.state === "verified"
+      rows.push({
+        id: source.storeId,
+        name: source.name,
+        domain: source.domain,
+        href: `/app/stores/${source.storeId}`,
+        sourceRole: source.sourceRole,
+        isPrimary: source.isPrimary,
+        verification,
+        latestScan: scanResult.data ? mapScanView({
+          id: scanResult.data.id,
+          organization_id: journey.organizationId,
+          store_id: source.storeId,
+          status: scanResult.data.status,
+          scanned_at: scanResult.data.scanned_at,
+          completed_at: scanResult.data.completed_at,
+          detected_issues_count: scanResult.data.detected_issues_count,
+          estimated_monthly_leakage: scanResult.data.estimated_monthly_leakage,
+          error_message: scanResult.data.error_message,
+        }) : null,
+        activeIssueCount: verified ? issues.length : 0,
+        estimatedLeakage: verified
+          ? issues.reduce((total, issue) => total + issue.estimated_monthly_revenue_impact, 0)
+          : 0,
+        topIssueTitle: verified ? issues[0]?.title ?? null : null,
+      })
+    }
+    return rows
+  }
+  const websiteSources = await buildWebsiteSourceRows()
   const primarySourceStatus = getPrimarySourceStatus({
     onboardingState: journey.state,
     shopifySourceState: journey.shopifySourceState,
@@ -2081,6 +2180,7 @@ export async function getStoresIndexData() {
       onboardingState: journey.state,
       commercialAccessState: journey.commercialAccessState,
       hasPlan: journey.hasPlan,
+      entitlements,
       shopifySourceState: journey.shopifySourceState,
       stripeSourceState: journey.stripeSourceState,
       organization: journey.baseSnapshot.organization,
@@ -2099,6 +2199,7 @@ export async function getStoresIndexData() {
       onboardingState: journey.state,
       commercialAccessState: journey.commercialAccessState,
       hasPlan: journey.hasPlan,
+      entitlements,
       shopifySourceState: journey.shopifySourceState,
       stripeSourceState: journey.stripeSourceState,
       organization: journey.baseSnapshot.organization,
@@ -2117,6 +2218,7 @@ export async function getStoresIndexData() {
       onboardingState: journey.state,
       commercialAccessState: journey.commercialAccessState,
       hasPlan: journey.hasPlan,
+      entitlements,
       shopifySourceState: journey.shopifySourceState,
       stripeSourceState: journey.stripeSourceState,
       organization: journey.baseSnapshot.organization,
@@ -2180,6 +2282,8 @@ export async function getStoresIndexData() {
       stripeSourceState: journey.stripeSourceState,
       organization: journey.baseSnapshot.organization,
       stores: [],
+      sourceUsage,
+      websiteSources,
       stagingSource: null,
     }
   }
@@ -2193,6 +2297,8 @@ export async function getStoresIndexData() {
       stripeSourceState: journey.stripeSourceState,
       organization: journey.baseSnapshot.organization,
       stores: [],
+      sourceUsage,
+      websiteSources,
       stagingSource: {
         label: getSourceLabel(journey.state),
         statusLabel: "Connecting",
@@ -2255,6 +2361,8 @@ export async function getStoresIndexData() {
             },
           ]
         : [],
+      sourceUsage,
+      websiteSources,
       stagingSource: null,
     }
   }
@@ -2346,10 +2454,13 @@ export async function getStoresIndexData() {
     onboardingState: journey.state,
     commercialAccessState: journey.commercialAccessState,
     hasPlan: journey.hasPlan,
+    entitlements,
     shopifySourceState: journey.shopifySourceState,
     stripeSourceState: journey.stripeSourceState,
     organization: journey.baseSnapshot.organization,
     stores,
+    sourceUsage,
+    websiteSources,
     stagingSource: null,
   }
 }
@@ -2357,6 +2468,7 @@ export async function getStoresIndexData() {
 export async function getStoreDetailData(storeId: string) {
   const journey = await getJourneyContext()
   const shopifyDomainViews = await loadShopifyDomainViews(journey.organizationId)
+  const entitlements = await getEntitlementsForOrganization(journey.organizationId)
   const admin = createSupabaseAdminClient()
 
   const snapshot =
@@ -2371,8 +2483,8 @@ export async function getStoreDetailData(storeId: string) {
 
   let store: Store | undefined = snapshot.stores.find((item) => item.id === storeId)
 
-  // For non-ready states, still allow access to website platform stores (URL source)
-  if (!store && !isReadyState(journey.state) && !isPendingScanState(journey.state)) {
+  // Always allow direct website source lookup so stopped sources can show a calm archived state.
+  if (!store) {
     const directResult = await admin
       .from("stores")
       .select("id, organization_id, name, platform, domain, timezone, currency, active, created_at")
@@ -2529,6 +2641,7 @@ export async function getStoreDetailData(storeId: string) {
     onboardingState: journey.state,
     commercialAccessState: journey.commercialAccessState,
     hasPlan: journey.hasPlan,
+    entitlements,
     shopifySourceState: journey.shopifySourceState,
     stripeSourceState: journey.stripeSourceState,
     organization: journey.baseSnapshot.organization,

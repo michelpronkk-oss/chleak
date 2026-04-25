@@ -1,8 +1,8 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/shared"
 import {
-  getMonitoringEntitlementForOrganization,
-  type MonitoringEntitlement,
-} from "@/server/services/monitoring-entitlement-service"
+  getSourceEntitlementsForOrganization,
+  type SourceEntitlements,
+} from "@/server/services/source-entitlement-service"
 import { triggerQueuedScanTask } from "@/server/services/scan-task-service"
 import { resolveStoreSourceVerification } from "@/server/services/source-verification-service"
 
@@ -35,6 +35,18 @@ function readPrimaryUrl(metadata: unknown) {
   return null
 }
 
+function isScheduledSource(metadata: unknown) {
+  const record = asRecord(metadata)
+  if (!record) return false
+  if (record.source_role === "previous_url") return false
+  return (
+    record.source_role === "primary_url" ||
+    record.source_role === "monitored_url" ||
+    record.is_primary_source === true ||
+    record.source_role === undefined
+  )
+}
+
 function isValidHttpUrl(input: string) {
   try {
     const parsed = new URL(input)
@@ -46,10 +58,12 @@ function isValidHttpUrl(input: string) {
 
 interface ScheduledMonitoringResult {
   considered: number
+  eligible: number
   due: number
   queued: number
   triggered: number
   skipped_not_due: number
+  skipped_plan_inactive: number
   skipped_plan_limit: number
   skipped_already_running: number
   skipped_unverified: number
@@ -59,7 +73,7 @@ interface ScheduledMonitoringResult {
 
 function isDueForScheduledMonitoring(input: {
   latestScheduledScanAt: string | null
-  entitlement: MonitoringEntitlement
+  entitlement: SourceEntitlements
   now: Date
 }) {
   if (!input.latestScheduledScanAt) {
@@ -78,14 +92,16 @@ function isDueForScheduledMonitoring(input: {
 export async function queueScheduledWebsiteMonitoringScans(): Promise<ScheduledMonitoringResult> {
   const admin = createSupabaseAdminClient()
   const now = new Date()
-  const entitlementByOrg = new Map<string, MonitoringEntitlement>()
+  const entitlementByOrg = new Map<string, SourceEntitlements>()
   const eligibleSourceCountByOrg = new Map<string, number>()
   const result: ScheduledMonitoringResult = {
     considered: 0,
+    eligible: 0,
     due: 0,
     queued: 0,
     triggered: 0,
     skipped_not_due: 0,
+    skipped_plan_inactive: 0,
     skipped_plan_limit: 0,
     skipped_already_running: 0,
     skipped_unverified: 0,
@@ -112,6 +128,14 @@ export async function queueScheduledWebsiteMonitoringScans(): Promise<ScheduledM
 
   for (const integration of integrationsResult.data ?? []) {
     result.considered += 1
+
+    if (!isScheduledSource(integration.metadata)) {
+      result.skipped.push({
+        storeId: integration.store_id,
+        reason: "source_not_monitored",
+      })
+      continue
+    }
 
     const storeResult = await admin
       .from("stores")
@@ -164,7 +188,7 @@ export async function queueScheduledWebsiteMonitoringScans(): Promise<ScheduledM
     let entitlement = entitlementByOrg.get(integration.organization_id)
     if (!entitlement) {
       try {
-        entitlement = await getMonitoringEntitlementForOrganization(
+        entitlement = await getSourceEntitlementsForOrganization(
           integration.organization_id
         )
         entitlementByOrg.set(integration.organization_id, entitlement)
@@ -175,6 +199,15 @@ export async function queueScheduledWebsiteMonitoringScans(): Promise<ScheduledM
         })
         continue
       }
+    }
+
+    if (!entitlement.isActive || !entitlement.canUseScheduledMonitoring) {
+      result.skipped_plan_inactive += 1
+      result.skipped.push({
+        storeId: integration.store_id,
+        reason: "scheduled_monitoring_not_included",
+      })
+      continue
     }
 
     const eligibleSourceCount =
@@ -192,6 +225,8 @@ export async function queueScheduledWebsiteMonitoringScans(): Promise<ScheduledM
       })
       continue
     }
+
+    result.eligible += 1
 
     const activeScanResult = await admin
       .from("scans")

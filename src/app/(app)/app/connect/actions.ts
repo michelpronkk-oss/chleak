@@ -11,6 +11,8 @@ import {
   LIVE_SOURCE_CONTEXT_COOKIE,
   serializeLiveSourceContext,
 } from "@/server/services/source-connection-state-service"
+import { getSourceUsageForOrganization } from "@/server/services/source-entitlement-service"
+import { getEntitlementsForOrganization } from "@/server/services/entitlement-service"
 import { triggerQueuedScanTask } from "@/server/services/scan-task-service"
 import type { Json } from "@/types/database"
 
@@ -166,12 +168,18 @@ async function upsertPrimaryUrlSourceLane(input: {
       .eq("id", row.id)
   }
 
-  await input.admin
-    .from("stores")
-    .update({ active: false })
-    .eq("organization_id", input.organizationId)
-    .eq("platform", "website")
-    .neq("id", storeId)
+  const previousPrimaryStoreIds = connectorRows
+    .filter((row) => row.store_id !== storeId && isPrimaryUrlSourceMetadata(row.metadata))
+    .map((row) => row.store_id)
+
+  if (previousPrimaryStoreIds.length > 0) {
+    await input.admin
+      .from("stores")
+      .update({ active: false })
+      .eq("organization_id", input.organizationId)
+      .eq("platform", "website")
+      .in("id", previousPrimaryStoreIds)
+  }
 
   let integrationId: string
   if (existingIntegration.data) {
@@ -220,6 +228,101 @@ async function upsertPrimaryUrlSourceLane(input: {
   }
 }
 
+async function createMonitoredUrlSource(input: {
+  admin: ReturnType<typeof createSupabaseAdminClient>
+  organizationId: string
+  normalizedUrl: string
+  normalizedDomain: string
+}) {
+  const [usage, entitlements] = await Promise.all([
+    getSourceUsageForOrganization(input.organizationId),
+    getEntitlementsForOrganization(input.organizationId),
+  ])
+  if (!entitlements.isActive) {
+    return { ok: false as const, reason: "plan_required" as const }
+  }
+  if (usage.isAtLimit) {
+    return { ok: false as const, reason: "source_limit_reached" as const }
+  }
+
+  const existingStore = await input.admin
+    .from("stores")
+    .select("id")
+    .eq("organization_id", input.organizationId)
+    .eq("platform", "website")
+    .eq("domain", input.normalizedDomain)
+    .eq("active", true)
+    .maybeSingle()
+
+  if (existingStore.error) {
+    return { ok: false as const, reason: "source_create_failed" as const }
+  }
+
+  if (existingStore.data) {
+    return {
+      ok: true as const,
+      storeId: existingStore.data.id,
+      existing: true,
+    }
+  }
+
+  const storeResult = await input.admin
+    .from("stores")
+    .insert({
+      organization_id: input.organizationId,
+      name: `${input.normalizedDomain} Source`,
+      platform: "website",
+      domain: input.normalizedDomain,
+      timezone: "UTC",
+      currency: "USD",
+      active: true,
+    })
+    .select("id")
+    .single()
+
+  if (storeResult.error || !storeResult.data) {
+    return { ok: false as const, reason: "source_create_failed" as const }
+  }
+
+  const metadata = {
+    source_entity_type: "website_domain",
+    live_source_url: input.normalizedUrl,
+    live_source_domain: input.normalizedDomain,
+    primary_live_source_url: input.normalizedUrl,
+    primary_live_source_domain: input.normalizedDomain,
+    primary_live_source_updated_at: new Date().toISOString(),
+    is_primary_source: false,
+    source_role: "monitored_url",
+    connected_systems: ["checkoutleak_connector"],
+  }
+
+  const integrationResult = await input.admin
+    .from("store_integrations")
+    .insert({
+      organization_id: input.organizationId,
+      store_id: storeResult.data.id,
+      provider: "checkoutleak_connector",
+      status: "connected",
+      installed_at: new Date().toISOString(),
+      sync_status: "synced",
+      connection_health: "healthy",
+      metadata: metadata as Json,
+      last_synced_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single()
+
+  if (integrationResult.error || !integrationResult.data) {
+    return { ok: false as const, reason: "source_create_failed" as const }
+  }
+
+  return {
+    ok: true as const,
+    storeId: storeResult.data.id,
+    existing: false,
+  }
+}
+
 async function getPrimaryUrlSourceIntegration(input: {
   admin: ReturnType<typeof createSupabaseAdminClient>
   organizationId: string
@@ -245,6 +348,51 @@ async function getPrimaryUrlSourceIntegration(input: {
       rows[0] ??
       null,
   }
+}
+
+async function queueUrlSourceScan(input: {
+  admin: ReturnType<typeof createSupabaseAdminClient>
+  organizationId: string
+  storeId: string
+  recipientEmail: string | null
+}) {
+  const entitlements = await getEntitlementsForOrganization(input.organizationId)
+  if (!entitlements.isActive || !entitlements.canRunManualScan) {
+    return { ok: false as const, reason: "plan_required" as const }
+  }
+
+  const scanInsert = await input.admin
+    .from("scans")
+    .insert({
+      organization_id: input.organizationId,
+      store_id: input.storeId,
+      status: "queued",
+      scanned_at: new Date().toISOString(),
+      detected_issues_count: 0,
+      estimated_monthly_leakage: 0,
+      notification_requested: true,
+      notification_reason: "manual_url_source_analysis",
+      notification_recipient_email: input.recipientEmail,
+    })
+    .select("id")
+    .single()
+
+  if (scanInsert.error || !scanInsert.data) {
+    return { ok: false as const, reason: "queue_failed" as const }
+  }
+
+  const triggerResult = await triggerQueuedScanTask({
+    scanId: scanInsert.data.id,
+    organizationId: input.organizationId,
+    storeId: input.storeId,
+    provider: "checkoutleak_connector",
+  })
+
+  if (!triggerResult.ok) {
+    return { ok: false as const, reason: triggerResult.reason }
+  }
+
+  return { ok: true as const, scanId: scanInsert.data.id }
 }
 
 export async function setLiveSourceContext(formData: FormData) {
@@ -286,6 +434,13 @@ export async function setLiveSourceContext(formData: FormData) {
 
   if (membershipResult.error || !membershipResult.data) {
     redirect("/app/stores?provider=source_url&status=context_save_failed")
+  }
+
+  const entitlements = await getEntitlementsForOrganization(
+    membershipResult.data.organization_id
+  )
+  if (!entitlements.isActive) {
+    redirect("/app/billing?intent=plan_required")
   }
 
   const integrationsResult = await admin
@@ -332,50 +487,80 @@ export async function setLiveSourceContext(formData: FormData) {
     redirect("/app/stores?provider=source_url&status=context_save_failed")
   }
 
-  const scanInsert = await admin
-    .from("scans")
-    .insert({
-      organization_id: membershipResult.data.organization_id,
-      store_id: upsertPrimarySourceLane.storeId,
-      status: "queued",
-      scanned_at: new Date().toISOString(),
-      detected_issues_count: 0,
-      estimated_monthly_leakage: 0,
-      notification_requested: true,
-      notification_reason: "manual_url_source_analysis",
-      notification_recipient_email: session.user.email,
-    })
-    .select("id")
-    .single()
-
-  if (scanInsert.error || !scanInsert.data) {
-    redirect(
-      `/app/stores/${upsertPrimarySourceLane.storeId}?scan_status=queue_failed#surface-analysis`
-    )
-  }
-
-  const triggerResult = await triggerQueuedScanTask({
-    scanId: scanInsert.data.id,
+  const queuedScan = await queueUrlSourceScan({
+    admin,
     organizationId: membershipResult.data.organization_id,
     storeId: upsertPrimarySourceLane.storeId,
-    provider: "checkoutleak_connector",
+    recipientEmail: session.user.email,
   })
+
+  if (!queuedScan.ok) {
+    redirect(
+      `/app/stores/${upsertPrimarySourceLane.storeId}?scan_status=${encodeURIComponent(queuedScan.reason)}#surface-analysis`
+    )
+  }
 
   revalidatePath("/app/connect")
   revalidatePath("/app/stores")
   revalidatePath(`/app/stores/${upsertPrimarySourceLane.storeId}`)
 
-  if (triggerResult.ok) {
+  redirect(
+    `/app/stores/${upsertPrimarySourceLane.storeId}?scan_status=queued#surface-analysis`
+  )
+}
+
+export async function addMonitoredSource(formData: FormData) {
+  const raw = (formData.get("monitored_source_url") as string | null)?.trim() ?? ""
+  const normalized = normalizeLiveSourceUrl(raw)
+
+  if (!normalized) {
+    redirect("/app/stores?provider=source_url&status=invalid_source_url#monitored-sources")
+  }
+
+  const session = await getServerSession()
+  if (!session) {
+    redirect("/auth/sign-in?next=/app/stores")
+  }
+
+  const admin = createSupabaseAdminClient()
+  const membershipResult = await admin
+    .from("org_members")
+    .select("organization_id")
+    .eq("user_id", session.user.id)
+    .single()
+
+  if (membershipResult.error || !membershipResult.data) {
+    redirect("/app/stores?provider=source_url&status=context_save_failed#monitored-sources")
+  }
+
+  const created = await createMonitoredUrlSource({
+    admin,
+    organizationId: membershipResult.data.organization_id,
+    normalizedUrl: normalized.normalizedUrl,
+    normalizedDomain: normalized.hostname,
+  })
+
+  if (!created.ok) {
+    redirect(`/app/stores?provider=source_url&status=${created.reason}#monitored-sources`)
+  }
+
+  const queuedScan = await queueUrlSourceScan({
+    admin,
+    organizationId: membershipResult.data.organization_id,
+    storeId: created.storeId,
+    recipientEmail: session.user.email,
+  })
+
+  revalidatePath("/app/stores")
+  revalidatePath(`/app/stores/${created.storeId}`)
+
+  if (!queuedScan.ok) {
     redirect(
-      `/app/stores/${upsertPrimarySourceLane.storeId}?scan_status=queued#surface-analysis`
+      `/app/stores/${created.storeId}?scan_status=${encodeURIComponent(queuedScan.reason)}#surface-analysis`
     )
   }
 
-  redirect(
-    `/app/stores/${upsertPrimarySourceLane.storeId}?scan_status=${encodeURIComponent(
-      triggerResult.reason
-    )}#surface-analysis`
-  )
+  redirect(`/app/stores/${created.storeId}?scan_status=queued#surface-analysis`)
 }
 
 export async function triggerPrimaryUrlSourceAnalysis() {
@@ -393,6 +578,13 @@ export async function triggerPrimaryUrlSourceAnalysis() {
 
   if (membershipResult.error || !membershipResult.data) {
     redirect("/app/stores?provider=source_url_analysis&status=unauthorized")
+  }
+
+  const entitlements = await getEntitlementsForOrganization(
+    membershipResult.data.organization_id
+  )
+  if (!entitlements.isActive || !entitlements.canRunManualScan) {
+    redirect("/app/billing?intent=plan_required")
   }
 
   const integrationResult = await getPrimaryUrlSourceIntegration({

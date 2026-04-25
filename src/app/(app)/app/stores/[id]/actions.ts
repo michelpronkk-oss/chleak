@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 
 import { getServerSession } from "@/lib/auth/session"
 import { createSupabaseAdminClient } from "@/lib/supabase/shared"
+import { getEntitlementsForOrganization } from "@/server/services/entitlement-service"
 import { triggerQueuedScanTask } from "@/server/services/scan-task-service"
 import type { Json } from "@/types/database"
 
@@ -112,7 +113,7 @@ async function resolveAuthorizedStore(input: { storeId: string; userId: string }
 
   const storeResult = await admin
     .from("stores")
-    .select("id, organization_id, platform")
+    .select("id, organization_id, platform, active")
     .eq("id", input.storeId)
     .eq("organization_id", membershipResult.data.organization_id)
     .single()
@@ -233,6 +234,15 @@ export async function triggerUrlSourceAnalysisForStore(storeId: string) {
     redirect(`/app/stores/${storeId}?scan_status=not_found`)
   }
 
+  if (storeCtx.store.active === false) {
+    redirect(`/app/stores/${storeId}?scan_status=not_found`)
+  }
+
+  const entitlements = await getEntitlementsForOrganization(storeCtx.organizationId)
+  if (!entitlements.isActive || !entitlements.canRunManualScan) {
+    redirect(`/app/stores/${storeId}?scan_status=plan_required`)
+  }
+
   const integrationResult = await storeCtx.admin
     .from("store_integrations")
     .select("id, provider")
@@ -288,6 +298,71 @@ export async function triggerUrlSourceAnalysisForStore(storeId: string) {
   )
 }
 
+export async function stopMonitoringWebsiteSource(storeId: string) {
+  const session = await getServerSession()
+  if (!session) {
+    redirect(`/auth/sign-in?next=/app/stores/${storeId}`)
+  }
+
+  const storeCtx = await resolveAuthorizedStore({
+    storeId,
+    userId: session.user.id,
+  })
+
+  if (!storeCtx || storeCtx.store.platform !== "website") {
+    redirect("/app/stores?provider=source_url&status=not_found")
+  }
+
+  const integrationResult = await storeCtx.admin
+    .from("store_integrations")
+    .select("id, metadata")
+    .eq("organization_id", storeCtx.organizationId)
+    .eq("store_id", storeId)
+    .eq("provider", "checkoutleak_connector")
+    .neq("status", "disconnected")
+    .order("installed_at", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (integrationResult.error || !integrationResult.data) {
+    redirect("/app/stores?provider=source_url&status=stop_failed")
+  }
+
+  const metadata = asRecord(integrationResult.data.metadata)
+  const archivedAt = new Date().toISOString()
+  const [storeUpdate, integrationUpdate] = await Promise.all([
+    storeCtx.admin
+      .from("stores")
+      .update({ active: false })
+      .eq("id", storeId)
+      .eq("organization_id", storeCtx.organizationId),
+    storeCtx.admin
+      .from("store_integrations")
+      .update({
+        status: "disconnected",
+        sync_status: "stopped",
+        connection_health: "inactive",
+        metadata: {
+          ...metadata,
+          is_primary_source: false,
+          source_role: "archived_url",
+          monitoring_stopped_at: archivedAt,
+        } as Json,
+      })
+      .eq("id", integrationResult.data.id),
+  ])
+
+  if (storeUpdate.error || integrationUpdate.error) {
+    redirect("/app/stores?provider=source_url&status=stop_failed")
+  }
+
+  revalidatePath("/app")
+  revalidatePath("/app/stores")
+  revalidatePath(`/app/stores/${storeId}`)
+  redirect("/app/stores?provider=source_url&status=stopped#monitored-sources")
+}
+
 export async function triggerActivationTestRun(storeId: string) {
   const session = await getServerSession()
   if (!session) {
@@ -301,6 +376,11 @@ export async function triggerActivationTestRun(storeId: string) {
 
   if (!storeCtx) {
     redirect(`/app/stores/${storeId}?scan_status=not_found`)
+  }
+
+  const entitlements = await getEntitlementsForOrganization(storeCtx.organizationId)
+  if (!entitlements.isActive || !entitlements.canRunManualScan) {
+    redirect(`/app/stores/${storeId}?scan_status=plan_required`)
   }
 
   const integrationResult = await storeCtx.admin

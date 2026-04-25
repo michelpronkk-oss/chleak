@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { ensureWorkspaceForUser } from "@/server/services/account-bootstrap-service"
+import { getEntitlementsForOrganization } from "@/server/services/entitlement-service"
 import {
   ONBOARDING_STATE_COOKIE,
 } from "@/server/services/onboarding-state-service"
@@ -58,6 +59,12 @@ export async function GET(request: Request) {
     )
   }
   const organizationId = membership.organizationId
+  const entitlements = await getEntitlementsForOrganization(organizationId)
+  if (!entitlements.isActive || !entitlements.canUseShopifyEnrichment) {
+    return NextResponse.redirect(
+      new URL("/app/stores?provider=shopify&status=plan_upgrade_required", url.origin)
+    )
+  }
 
   const setup = getShopifySetupState()
   if (!setup.configured) {

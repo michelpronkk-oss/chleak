@@ -13,7 +13,12 @@ import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
 import { getDirectionalOpportunityEstimate } from "@/lib/opportunity-estimate"
 import { SubmitButton } from "@/components/ui/submit-button"
 import { getStoreDetailData, getStoresIndexData } from "@/server/services/app-service"
-import { saveActivationFlowHints, triggerActivationTestRun, triggerUrlSourceAnalysisForStore } from "./actions"
+import {
+  saveActivationFlowHints,
+  stopMonitoringWebsiteSource,
+  triggerActivationTestRun,
+  triggerUrlSourceAnalysisForStore,
+} from "./actions"
 
 const hintStatusMessage: Record<string, string> = {
   saved: "Activation flow hints saved.",
@@ -34,6 +39,7 @@ const scanStatusMessage: Record<string, string> = {
   not_found: "Store context was not found for this workspace.",
   scan_not_queued_or_missing: "Queued scan could not be processed.",
   scan_not_queued_anymore: "Queued scan is already running.",
+  plan_required: "Upgrade to run manual scans for this source.",
   lookup_failed: "Scan lookup failed.",
   store_missing: "Scan failed because source context was missing.",
   integration_missing: "Scan failed because connection context was missing.",
@@ -187,6 +193,7 @@ export default async function StoreDetailPage({
   const saveHintsAction = saveActivationFlowHints.bind(null, data.store.id)
   const runTestScanAction = triggerActivationTestRun.bind(null, data.store.id)
   const runSurfaceAnalysisAction = triggerUrlSourceAnalysisForStore.bind(null, data.store.id)
+  const stopMonitoringAction = stopMonitoringWebsiteSource.bind(null, data.store.id)
   const hintDefaults = data.integration?.activationFlowHints ?? {
     preferredEntryUrl: null,
     onboardingPathUrl: null,
@@ -214,8 +221,13 @@ export default async function StoreDetailPage({
   const isWebsiteSource = data.store.platform === "website"
   const showLiveShopifyActivationControls = isShopifySource && !isDemoMode
   const showUrlSourceControls = isWebsiteSource && !isDemoMode
+  const sourceStopped = isWebsiteSource && data.store.active === false
   const sourceVerification = data.sourceVerification
   const sourceVerified = isDemoMode || sourceVerification.state === "verified"
+  const entitlements = data.entitlements
+  const canViewFullEvidence = isDemoMode || entitlements.canViewFullEvidence
+  const canRunManualScan = isDemoMode || entitlements.canRunManualScan
+  const canOpenActionBriefs = isDemoMode || entitlements.canOpenActionBriefs
   const urlSourceAnalysis = data.urlSourceAnalysis ?? null
   const sourceTypeLabel = getBusinessTypeLabel(urlSourceAnalysis?.businessType)
   const urlSourceScreenshots = urlSourceAnalysis
@@ -309,6 +321,56 @@ export default async function StoreDetailPage({
   const primaryOpportunity = opportunityItems[0] ?? null
   const hasHardIssue = hardIssues.length > 0
   const hasOpportunity = opportunityItems.length > 0
+
+  if (sourceStopped) {
+    return (
+      <div className="space-y-5 pb-24 lg:pb-4">
+        <section className="vault-page-intro space-y-3">
+          <Link
+            href="/app/stores"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back to sources
+          </Link>
+          <p className="data-mono text-muted-foreground">Source Detail</p>
+          <h1 className="vault-page-intro-title">{data.store.name}</h1>
+          <p className="vault-page-intro-copy">
+            Monitoring has been stopped for this source.
+          </p>
+        </section>
+
+        <section className="surface-card-strong p-5 sm:p-6 lg:p-7">
+          <p className="data-mono text-muted-foreground">Archived source</p>
+          <h2 className="mt-2 text-lg font-semibold tracking-tight">
+            This source is no longer being scanned.
+          </h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+            This source will no longer be scanned and will not count toward your plan limit. Existing scan history remains preserved.
+          </p>
+          <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
+            <div className="rounded-lg border border-border/60 bg-background/30 p-3">
+              <dt className="data-mono text-muted-foreground">Source domain</dt>
+              <dd className="mt-1 break-all text-foreground">
+                {data.storeDisplayDomain ?? data.store.domain ?? "Unknown"}
+              </dd>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-background/30 p-3">
+              <dt className="data-mono text-muted-foreground">Status</dt>
+              <dd className="mt-1 text-foreground">Stopped</dd>
+            </div>
+          </dl>
+          <Link
+            href="/app/stores"
+            className="marketing-primary-cta mt-5 inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
+          >
+            Open sources
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </section>
+      </div>
+    )
+  }
 
   if (!sourceVerified) {
     return (
@@ -773,7 +835,7 @@ export default async function StoreDetailPage({
                 )}
               </MetaPill>
             </div>
-            {(hasHardIssue || hasOpportunity) ? (
+            {(hasHardIssue || hasOpportunity) && canOpenActionBriefs ? (
               <Link
                 href={data.fixPlanLinks[0]?.href ?? "/app/stores"}
                 className="marketing-primary-cta mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
@@ -785,6 +847,10 @@ export default async function StoreDetailPage({
                     : "Review optimization brief"}
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
+            ) : !canOpenActionBriefs ? (
+              <div className="mt-5 rounded-md border border-amber-300/25 bg-amber-300/[0.06] px-4 py-3 text-sm text-amber-200">
+                Upgrade to unlock action briefs for this source.
+              </div>
             ) : (
               <Link
                 href="/app/stores"
@@ -835,7 +901,7 @@ export default async function StoreDetailPage({
             meta={`${data.fixPlanLinks.length} ${isDemoMode ? "simulated " : ""}action brief${data.fixPlanLinks.length !== 1 ? "s" : ""}`}
           >
             <ul className="space-y-2.5 px-4 py-3 sm:px-5">
-              {data.fixPlanLinks.length ? (
+              {canOpenActionBriefs && data.fixPlanLinks.length ? (
                 data.fixPlanLinks.map((plan) => {
                   const isOpportunityPlan = opportunityItems.some(
                     (o) => o.id === plan.issueId
@@ -862,7 +928,9 @@ export default async function StoreDetailPage({
                 })
               ) : (
                 <li className="text-sm text-muted-foreground">
-                  {isDemoMode
+                  {!canOpenActionBriefs
+                    ? "Upgrade to unlock action briefs for this source."
+                    : isDemoMode
                     ? "No simulated fix plans are linked to this source yet."
                     : "No fix plans linked to this source yet."}
                 </li>
@@ -947,7 +1015,13 @@ export default async function StoreDetailPage({
                     ) : null}
                   </div>
                 ) : null}
-                <EvidenceScreenshots screenshots={urlSourceScreenshots} />
+                {canViewFullEvidence ? (
+                  <EvidenceScreenshots screenshots={urlSourceScreenshots} />
+                ) : (
+                  <div className="rounded-md border border-amber-300/25 bg-amber-300/[0.06] p-3 text-xs leading-5 text-amber-100">
+                    Upgrade to view full evidence screenshots and captured proof for this source.
+                  </div>
+                )}
               </div>
               ) : (
                 <p className="px-5 py-6 text-sm text-muted-foreground">
@@ -1038,15 +1112,23 @@ export default async function StoreDetailPage({
                       </div>
                       <div>
                         <dt className="data-mono text-[0.68rem]">Screenshot evidence</dt>
-                        <dd className="mt-1 break-all">
-                          Ref: {screenshotReference ?? "None"}
-                        </dd>
-                        <dd className="mt-1 break-all">
-                          SHA-256: {screenshotSha ?? "None"}
-                        </dd>
-                        <dd className="mt-1">
-                          Bytes: {screenshotBytes ?? "None"}
-                        </dd>
+                        {canViewFullEvidence ? (
+                          <>
+                            <dd className="mt-1 break-all">
+                              Ref: {screenshotReference ?? "None"}
+                            </dd>
+                            <dd className="mt-1 break-all">
+                              SHA-256: {screenshotSha ?? "None"}
+                            </dd>
+                            <dd className="mt-1">
+                              Bytes: {screenshotBytes ?? "None"}
+                            </dd>
+                          </>
+                        ) : (
+                          <dd className="mt-1 text-amber-200">
+                            Upgrade to view full evidence for this source.
+                          </dd>
+                        )}
                       </div>
                     </dl>
                   </div>
@@ -1083,12 +1165,18 @@ export default async function StoreDetailPage({
                     Latest analysis failed. {data.latestScan?.errorMessage ?? "Queue another run when ready."}
                   </div>
                 ) : null}
-                <form action={runSurfaceAnalysisAction} className="mt-4">
-                  <SubmitButton
-                    label={urlSourceAnalysis ? "Re-run surface analysis" : "Run surface analysis"}
-                    pendingLabel="Queueing scan..."
-                  />
-                </form>
+                {canRunManualScan ? (
+                  <form action={runSurfaceAnalysisAction} className="mt-4">
+                    <SubmitButton
+                      label={urlSourceAnalysis ? "Re-run surface analysis" : "Run surface analysis"}
+                      pendingLabel="Queueing scan..."
+                    />
+                  </form>
+                ) : (
+                  <div className="mt-4 rounded-md border border-amber-300/25 bg-amber-300/[0.06] px-3 py-2 text-xs text-amber-200">
+                    Upgrade to run manual surface analysis.
+                  </div>
+                )}
                 {activeScanStatus ? (
                   <p className="mt-2 text-xs text-muted-foreground">{activeScanStatus}</p>
                 ) : null}
@@ -1115,12 +1203,18 @@ export default async function StoreDetailPage({
                         Background scan is active. Results will appear in recent activity and linked opportunities.
                       </div>
                     ) : null}
-                    <form action={runTestScanAction} className="mt-4">
-                      <SubmitButton
-                        label="Run activation scan"
-                        pendingLabel="Queueing scan..."
-                      />
-                    </form>
+                    {canRunManualScan ? (
+                      <form action={runTestScanAction} className="mt-4">
+                        <SubmitButton
+                          label="Run activation scan"
+                          pendingLabel="Queueing scan..."
+                        />
+                      </form>
+                    ) : (
+                      <div className="mt-4 rounded-md border border-amber-300/25 bg-amber-300/[0.06] px-3 py-2 text-xs text-amber-200">
+                        Upgrade to run manual activation scans.
+                      </div>
+                    )}
                     {activeScanStatus ? (
                       <p className="mt-2 text-xs text-muted-foreground">{activeScanStatus}</p>
                     ) : null}
@@ -1137,6 +1231,22 @@ export default async function StoreDetailPage({
           )}
         </div>
       </section>
+
+      {showUrlSourceControls ? (
+        <section className="surface-card p-4 sm:p-5 lg:p-6">
+          <p className="data-mono text-muted-foreground">Monitoring control</p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+            This source will no longer be scanned and will not count toward your plan limit.
+          </p>
+          <form action={stopMonitoringAction} className="mt-4">
+            <SubmitButton
+              label="Stop monitoring"
+              pendingLabel="Stopping monitoring..."
+              className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            />
+          </form>
+        </section>
+      ) : null}
 
       {isShopifySource && !isDemoMode ? (
         <form method="POST" action="/api/integrations/shopify/disconnect">
