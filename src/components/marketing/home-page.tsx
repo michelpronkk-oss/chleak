@@ -433,9 +433,7 @@ export default async function MarketingHomePage({ accessState, isAuthenticated }
               background: isPending
                 ? "linear-gradient(180deg, var(--ink-100), var(--ink-050))"
                 : "linear-gradient(180deg, color-mix(in oklab, var(--signal) 5%, var(--ink-100) 95%), var(--ink-100) 58%, var(--ink-050))",
-              boxShadow: isPending
-                ? "var(--shadow-inset)"
-                : "var(--shadow-inset), 0 30px 90px -58px color-mix(in oklab, var(--signal) 54%, transparent)",
+              boxShadow: "var(--shadow-inset)",
             }}
           >
             {!isPending ? (
