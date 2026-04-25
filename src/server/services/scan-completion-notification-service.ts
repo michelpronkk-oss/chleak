@@ -1,5 +1,6 @@
 import { sendScanCompletionEmail } from "@/lib/email/resend"
 import { createSupabaseAdminClient } from "@/lib/supabase/shared"
+import { resolveStoreSourceVerification } from "@/server/services/source-verification-service"
 
 type ScanNotificationOutcome = "issues_found" | "clean" | "no_signal" | null
 
@@ -110,6 +111,25 @@ export async function sendScanCompletionNotification(
 
   const isScheduledMonitoring =
     claimResult.data.notification_reason === "scheduled_website_monitoring"
+
+  const sourceVerification = await resolveStoreSourceVerification({
+    admin,
+    organizationId: input.organizationId,
+    storeId: input.storeId,
+    includeOrganizationOperators: true,
+  })
+
+  if (sourceVerification.state !== "verified") {
+    await admin
+      .from("scans")
+      .update({
+        notification_status: "skipped",
+        notification_error: "Source ownership is not verified.",
+      })
+      .eq("id", input.scanId)
+
+    return { status: "skipped" as const, reason: "source_ownership_unverified" }
+  }
 
   if (
     isScheduledMonitoring &&

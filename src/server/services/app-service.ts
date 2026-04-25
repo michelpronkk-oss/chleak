@@ -17,7 +17,7 @@ import { getServerSession } from "@/lib/auth/session"
 import { createSupabaseAdminClient } from "@/lib/supabase/shared"
 import { ensureWorkspaceForUser } from "@/server/services/account-bootstrap-service"
 import { getFixPlanHrefForIssue } from "@/server/services/fix-plan-service"
-import type { DashboardSnapshot, Scan, Store } from "@/types/domain"
+import type { DashboardSnapshot, Issue, Scan, Store } from "@/types/domain"
 
 import { getDashboardSnapshotForOrganization } from "./dashboard-service"
 import {
@@ -42,9 +42,6 @@ import {
   deriveSourceVerification,
   loadConnectedSystemDomains,
   resolveStoreSourceVerification,
-  type SourceVerificationReason,
-  type SourceVerificationState,
-  type SourceVerificationView,
 } from "./source-verification-service"
 import { getShopifySetupState } from "./shopify-service"
 import { getStripeSetupState } from "./stripe-service"
@@ -215,10 +212,6 @@ interface LiveSourceSurfaceView {
   connectedSystems: string[]
 }
 
-type LiveSourceVerificationState = SourceVerificationState
-type LiveSourceVerificationReason = SourceVerificationReason
-type LiveSourceVerificationView = SourceVerificationView
-
 function isShopifySetupAttention(view: ShopifyDomainView | undefined) {
   if (!view) {
     return false
@@ -288,6 +281,43 @@ function deriveScanOutcomeForPrimarySource(input: {
   }
 
   return scans > 0 ? (meaningfulSignal ? "clean" : "no_signal") : null
+}
+
+function pickHighestImpactVisibleIssue(issues: Issue[]) {
+  return [...issues].sort(
+    (a, b) => b.estimatedMonthlyRevenueImpact - a.estimatedMonthlyRevenueImpact
+  )[0]
+}
+
+function buildVisibleRevenueOpportunities(issues: Issue[]): DashboardSnapshot["revenueOpportunities"] {
+  return summarizeIssueImpactByLeakFamily(issues)
+    .map(([family, estimatedMonthlyRevenueImpact]) => ({
+      label: formatLeakFamilyLabel(family),
+      estimatedMonthlyRevenueImpact,
+      confidence:
+        estimatedMonthlyRevenueImpact > 20000
+          ? ("high" as const)
+          : ("medium" as const),
+    }))
+    .sort(
+      (a, b) => b.estimatedMonthlyRevenueImpact - a.estimatedMonthlyRevenueImpact
+    )
+}
+
+function buildVisibleSuggestedActions(issues: Issue[]): DashboardSnapshot["suggestedActions"] {
+  return issues.slice(0, 3).map((issue, index) => ({
+    id: `action_${index + 1}`,
+    title: issue.recommendedAction,
+    description: issue.summary,
+    issueIds: [issue.id],
+    estimatedMonthlyRevenueImpact: issue.estimatedMonthlyRevenueImpact,
+    urgency:
+      issue.severity === "critical"
+        ? "do_now"
+        : issue.severity === "high"
+          ? "this_week"
+          : "watch",
+  }))
 }
 
 async function loadBackendSourceSignals(
@@ -523,6 +553,15 @@ function readLiveSourceContextFromMetadata(source: unknown) {
   }
 
   return null
+}
+
+function isPrimaryUrlSourceMetadata(source: unknown) {
+  if (!source || typeof source !== "object" || Array.isArray(source)) {
+    return false
+  }
+
+  const record = source as Record<string, unknown>
+  return record.is_primary_source === true || record.source_role === "primary_url"
 }
 
 function readBooleanFromRecord(source: unknown, key: string): boolean | null {
@@ -930,11 +969,37 @@ async function loadShopifyDomainViews(organizationId: string) {
 
 async function loadLiveSourceContextFromIntegrations(organizationId: string) {
   const admin = createSupabaseAdminClient()
+  const connectorResult = await admin
+    .from("store_integrations")
+    .select("metadata, store_id, installed_at, created_at")
+    .eq("organization_id", organizationId)
+    .eq("provider", "checkoutleak_connector")
+    .neq("status", "disconnected")
+    .order("installed_at", { ascending: false })
+    .order("created_at", { ascending: false })
+
+  if (connectorResult.error) {
+    return null
+  }
+
+  const connectorRows = connectorResult.data ?? []
+  const primaryConnector =
+    connectorRows.find((row) => isPrimaryUrlSourceMetadata(row.metadata)) ??
+    connectorRows[0] ??
+    null
+  const primaryContext = primaryConnector
+    ? readLiveSourceContextFromMetadata(primaryConnector.metadata)
+    : null
+
+  if (primaryContext) {
+    return primaryContext
+  }
+
   const result = await admin
     .from("store_integrations")
     .select("metadata, installed_at, created_at")
     .eq("organization_id", organizationId)
-    .in("provider", ["shopify", "stripe", "checkoutleak_connector"])
+    .in("provider", ["shopify", "stripe"])
     .neq("status", "disconnected")
     .order("installed_at", { ascending: false })
     .order("created_at", { ascending: false })
@@ -951,6 +1016,31 @@ async function loadLiveSourceContextFromIntegrations(organizationId: string) {
   }
 
   return null
+}
+
+async function loadPrimaryUrlSourceIntegration(organizationId: string) {
+  const admin = createSupabaseAdminClient()
+  const result = await admin
+    .from("store_integrations")
+    .select("metadata, store_id, installed_at, created_at")
+    .eq("organization_id", organizationId)
+    .eq("provider", "checkoutleak_connector")
+    .neq("status", "disconnected")
+    .order("installed_at", { ascending: false })
+    .order("created_at", { ascending: false })
+
+  if (result.error) {
+    return { error: result.error, data: null }
+  }
+
+  const rows = result.data ?? []
+  return {
+    error: null,
+    data:
+      rows.find((row) => isPrimaryUrlSourceMetadata(row.metadata)) ??
+      rows[0] ??
+      null,
+  }
 }
 
 function toStateForProvider(input: {
@@ -1551,6 +1641,67 @@ async function getJourneyContext() {
     }
   }
 
+  if (state !== "demo" && filteredSnapshot.stores.length > 0) {
+    const verifiedStoreIds = new Set<string>()
+    const admin = createSupabaseAdminClient()
+
+    for (const store of filteredSnapshot.stores) {
+      const verification = await resolveStoreSourceVerification({
+        admin,
+        organizationId,
+        storeId: store.id,
+        operatorEmail: session.user.email,
+      })
+      if (verification.state === "verified") {
+        verifiedStoreIds.add(store.id)
+      }
+    }
+
+    const visibleIssues = filteredSnapshot.issues.filter((issue) =>
+      verifiedStoreIds.has(issue.storeId)
+    )
+    const visibleScans = filteredSnapshot.scans.filter((scan) =>
+      verifiedStoreIds.has(scan.storeId)
+    )
+    const activeIssues = visibleIssues.filter((issue) => issue.status !== "resolved")
+    const highestImpactIssue =
+      pickHighestImpactVisibleIssue(activeIssues) ??
+      ({
+        id: "protected_issue_placeholder",
+        organizationId,
+        storeId: filteredSnapshot.stores[0]?.id ?? "protected_source",
+        scanId: visibleScans[0]?.id ?? "protected_scan",
+        title: "No verified findings available",
+        summary: "Verify a source to unlock detailed findings.",
+        type: "setup_gap",
+        severity: "low",
+        status: "monitoring",
+        estimatedMonthlyRevenueImpact: 0,
+        recommendedAction: "Verify source ownership.",
+        source: "system",
+        detectedAt: new Date().toISOString(),
+        whyItMatters:
+          "Detailed findings are protected until source ownership is verified.",
+      } as Issue)
+
+    filteredSnapshot = {
+      ...filteredSnapshot,
+      scans: visibleScans,
+      issues: visibleIssues,
+      summary: {
+        ...filteredSnapshot.summary,
+        estimatedMonthlyLeakage: activeIssues.reduce(
+          (total, issue) => total + issue.estimatedMonthlyRevenueImpact,
+          0
+        ),
+        activeIssues: activeIssues.length,
+        highestImpactIssue,
+      },
+      revenueOpportunities: buildVisibleRevenueOpportunities(activeIssues),
+      suggestedActions: buildVisibleSuggestedActions(activeIssues),
+    }
+  }
+
   const displayName = buildDisplayName({
     email: session.user.email,
     fullName: session.user.fullName,
@@ -1812,16 +1963,9 @@ export async function getConnectJourneyData() {
   const integrationLiveSourceContext = await loadLiveSourceContextFromIntegrations(
     journey.organizationId
   )
-  const urlSourceIntegrationResult = await createSupabaseAdminClient()
-    .from("store_integrations")
-    .select("metadata, store_id")
-    .eq("organization_id", journey.organizationId)
-    .eq("provider", "checkoutleak_connector")
-    .neq("status", "disconnected")
-    .order("installed_at", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  const urlSourceIntegrationResult = await loadPrimaryUrlSourceIntegration(
+    journey.organizationId
+  )
   const cookieStore = await cookies()
   const cookieLiveSourceContext = parseLiveSourceContext(
     cookieStore.get(LIVE_SOURCE_CONTEXT_COOKIE)?.value

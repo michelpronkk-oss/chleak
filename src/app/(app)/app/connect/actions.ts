@@ -21,6 +21,11 @@ function asRecord(input: unknown): Record<string, unknown> {
   return input as Record<string, unknown>
 }
 
+function isPrimaryUrlSourceMetadata(metadata: unknown) {
+  const record = asRecord(metadata)
+  return record.is_primary_source === true || record.source_role === "primary_url"
+}
+
 async function upsertPrimaryUrlSourceLane(input: {
   admin: ReturnType<typeof createSupabaseAdminClient>
   organizationId: string
@@ -35,6 +40,8 @@ async function upsertPrimaryUrlSourceLane(input: {
     primary_live_source_url: input.normalizedUrl,
     primary_live_source_domain: input.normalizedDomain,
     primary_live_source_updated_at: new Date().toISOString(),
+    is_primary_source: true,
+    source_role: "primary_url",
     connected_systems: [
       "checkoutleak_connector",
       ...input.connectedSystemProviders.filter(
@@ -43,8 +50,7 @@ async function upsertPrimaryUrlSourceLane(input: {
     ],
   }
 
-  // Find or create the website store for this org and domain
-  const existingStore = await input.admin
+  const existingDomainStore = await input.admin
     .from("stores")
     .select("id")
     .eq("organization_id", input.organizationId)
@@ -52,13 +58,64 @@ async function upsertPrimaryUrlSourceLane(input: {
     .eq("domain", input.normalizedDomain)
     .maybeSingle()
 
-  if (existingStore.error) {
+  if (existingDomainStore.error) {
     return { ok: false as const }
   }
 
-  let storeId: string
-  if (existingStore.data) {
-    storeId = existingStore.data.id
+  const connectorResult = await input.admin
+    .from("store_integrations")
+    .select("id, store_id, metadata, installed_at, created_at")
+    .eq("organization_id", input.organizationId)
+    .eq("provider", "checkoutleak_connector")
+    .neq("status", "disconnected")
+    .order("installed_at", { ascending: false })
+    .order("created_at", { ascending: false })
+
+  if (connectorResult.error) {
+    return { ok: false as const }
+  }
+
+  const connectorRows = connectorResult.data ?? []
+  const primaryConnector =
+    connectorRows.find((row) => isPrimaryUrlSourceMetadata(row.metadata)) ??
+    connectorRows[0] ??
+    null
+
+  const fallbackWebsiteStore = !existingDomainStore.data && !primaryConnector
+    ? await input.admin
+        .from("stores")
+        .select("id")
+        .eq("organization_id", input.organizationId)
+        .eq("platform", "website")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : null
+
+  if (fallbackWebsiteStore?.error) {
+    return { ok: false as const }
+  }
+
+  let storeId = existingDomainStore.data?.id ?? primaryConnector?.store_id ?? fallbackWebsiteStore?.data?.id ?? null
+
+  if (storeId) {
+    const updateStore = await input.admin
+      .from("stores")
+      .update({
+        name: `${input.normalizedDomain} Source`,
+        domain: input.normalizedDomain,
+        active: true,
+      })
+      .eq("id", storeId)
+      .eq("organization_id", input.organizationId)
+      .select("id")
+      .single()
+
+    if (updateStore.error || !updateStore.data) {
+      return { ok: false as const }
+    }
+
+    storeId = updateStore.data.id
   } else {
     const insertStore = await input.admin
       .from("stores")
@@ -79,7 +136,6 @@ async function upsertPrimaryUrlSourceLane(input: {
     storeId = insertStore.data.id
   }
 
-  // Find or create the checkoutleak_connector integration for this store
   const existingIntegration = await input.admin
     .from("store_integrations")
     .select("id")
@@ -91,6 +147,31 @@ async function upsertPrimaryUrlSourceLane(input: {
   if (existingIntegration.error) {
     return { ok: false as const }
   }
+
+  for (const row of connectorRows) {
+    if (row.store_id === storeId) {
+      continue
+    }
+
+    const metadata = asRecord(row.metadata)
+    await input.admin
+      .from("store_integrations")
+      .update({
+        metadata: {
+          ...metadata,
+          is_primary_source: false,
+          source_role: "previous_url",
+        } as Json,
+      })
+      .eq("id", row.id)
+  }
+
+  await input.admin
+    .from("stores")
+    .update({ active: false })
+    .eq("organization_id", input.organizationId)
+    .eq("platform", "website")
+    .neq("id", storeId)
 
   let integrationId: string
   if (existingIntegration.data) {
@@ -136,6 +217,33 @@ async function upsertPrimaryUrlSourceLane(input: {
     ok: true as const,
     storeId,
     integrationId,
+  }
+}
+
+async function getPrimaryUrlSourceIntegration(input: {
+  admin: ReturnType<typeof createSupabaseAdminClient>
+  organizationId: string
+}) {
+  const result = await input.admin
+    .from("store_integrations")
+    .select("id, store_id, metadata, installed_at, created_at")
+    .eq("organization_id", input.organizationId)
+    .eq("provider", "checkoutleak_connector")
+    .neq("status", "disconnected")
+    .order("installed_at", { ascending: false })
+    .order("created_at", { ascending: false })
+
+  if (result.error) {
+    return { error: result.error, data: null }
+  }
+
+  const rows = result.data ?? []
+  return {
+    error: null,
+    data:
+      rows.find((row) => isPrimaryUrlSourceMetadata(row.metadata)) ??
+      rows[0] ??
+      null,
   }
 }
 
@@ -287,16 +395,10 @@ export async function triggerPrimaryUrlSourceAnalysis() {
     redirect("/app/stores?provider=source_url_analysis&status=unauthorized")
   }
 
-  const integrationResult = await admin
-    .from("store_integrations")
-    .select("id, store_id, metadata")
-    .eq("organization_id", membershipResult.data.organization_id)
-    .eq("provider", "checkoutleak_connector")
-    .neq("status", "disconnected")
-    .order("installed_at", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  const integrationResult = await getPrimaryUrlSourceIntegration({
+    admin,
+    organizationId: membershipResult.data.organization_id,
+  })
 
   if (integrationResult.error || !integrationResult.data) {
     redirect("/app/stores?provider=source_url_analysis&status=source_not_set")
