@@ -90,6 +90,24 @@ export interface UrlSourceAnalysisSummaryV1 {
   aiGenericCopyTokens: string[]
   discoveredLinks: UrlSourceDiscoveredLinkV1[]
   funnelTargets: UrlSourceFunnelTargetV1[]
+  // SEO signals (from static HTML — what crawlers see)
+  metaTitle: string | null
+  metaTitleLength: number | null
+  metaTitleQuality: "good" | "short" | "long" | "missing"
+  metaDescription: string | null
+  metaDescriptionLength: number | null
+  metaDescriptionQuality: "good" | "short" | "long" | "missing"
+  h1Count: number
+  hasCanonicalTag: boolean
+  canonicalUrl: string | null
+  hasOpenGraph: boolean
+  // GEO signals (Generative Engine Optimization — what AI search crawlers cite)
+  hasStructuredData: boolean
+  structuredDataTypes: string[]
+  hasFaqSchema: boolean
+  hasOrganizationSchema: boolean
+  hasArticleSchema: boolean
+  geoReadinessScore: number  // 0-5
 }
 
 export interface UrlSourceAnalysisResultV1 {
@@ -115,6 +133,106 @@ function stripInertContent(html: string): string {
 
 function stripHtmlTags(value: string): string {
   return value.replace(/<[^>]+>/g, " ")
+}
+
+// ---------------------------------------------------------------------------
+// SEO extraction — operates on raw HTML because crawlers see the initial document,
+// not JS-rendered content. If tags are only in JS, that is itself an SEO gap.
+// ---------------------------------------------------------------------------
+
+type MetaQuality = "good" | "short" | "long" | "missing"
+
+function extractMetaTitle(rawHtml: string): {
+  title: string | null
+  length: number | null
+  quality: MetaQuality
+} {
+  const match = rawHtml.match(/<title[^>]*>([\s\S]*?)<\/title>/i)
+  const raw = match ? cleanWhitespace(stripHtmlTags(match[1] ?? "")) : null
+  const title = raw && raw.length > 0 ? raw : null
+  if (!title) return { title: null, length: null, quality: "missing" }
+  const length = title.length
+  // Google typically displays 50-60 chars; < 20 is under-optimised, > 70 is truncated
+  const quality: MetaQuality = length < 20 ? "short" : length > 70 ? "long" : "good"
+  return { title, length, quality }
+}
+
+function extractMetaDescription(rawHtml: string): {
+  description: string | null
+  length: number | null
+  quality: MetaQuality
+} {
+  const match =
+    rawHtml.match(/<meta\b[^>]*\bname\s*=\s*["']description["'][^>]*\bcontent\s*=\s*["']([^"']{1,500})["'][^>]*>/i) ??
+    rawHtml.match(/<meta\b[^>]*\bcontent\s*=\s*["']([^"']{1,500})["'][^>]*\bname\s*=\s*["']description["'][^>]*>/i)
+  const raw = match ? cleanWhitespace(match[1] ?? "") : null
+  const description = raw && raw.length > 0 ? raw : null
+  if (!description) return { description: null, length: null, quality: "missing" }
+  const length = description.length
+  // Optimal: 120-160 chars for Google; < 50 under-utilised, > 165 truncated
+  const quality: MetaQuality = length < 50 ? "short" : length > 165 ? "long" : "good"
+  return { description, length, quality }
+}
+
+function countH1Tags(rawHtml: string): number {
+  return (rawHtml.match(/<h1\b[^>]*>/gi) ?? []).length
+}
+
+function extractCanonicalUrl(rawHtml: string): string | null {
+  const match =
+    rawHtml.match(/<link\b[^>]*\brel\s*=\s*["']canonical["'][^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>/i) ??
+    rawHtml.match(/<link\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*\brel\s*=\s*["']canonical["'][^>]*>/i)
+  const url = match ? cleanWhitespace(match[1] ?? "") : null
+  return url && url.length > 0 ? url : null
+}
+
+function detectOpenGraph(rawHtml: string): boolean {
+  return /<meta\b[^>]*\bproperty\s*=\s*["']og:/i.test(rawHtml)
+}
+
+// ---------------------------------------------------------------------------
+// GEO extraction — Generative Engine Optimization.
+// AI search engines (ChatGPT, Perplexity, Gemini, Claude) use JSON-LD schema
+// to identify authoritative, citable pages. Sites without structured data are
+// harder to cite and less likely to appear in AI-generated answers.
+// ---------------------------------------------------------------------------
+
+function extractStructuredDataTypes(rawHtml: string): string[] {
+  const types: string[] = []
+  const jsonLdMatches = rawHtml.matchAll(
+    /<script\b[^>]*\btype\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
+  )
+  for (const match of jsonLdMatches) {
+    try {
+      const parsed: unknown = JSON.parse(match[1] ?? "")
+      const items = Array.isArray(parsed) ? parsed : [parsed]
+      for (const item of items) {
+        if (item && typeof item === "object" && "@type" in item) {
+          const t = String((item as Record<string, unknown>)["@type"])
+          if (t && !types.includes(t)) types.push(t)
+        }
+      }
+    } catch {}
+  }
+  return types
+}
+
+function computeGeoReadinessScore(input: {
+  hasStructuredData: boolean
+  hasFaqSchema: boolean
+  hasOrganizationSchema: boolean
+  hasArticleSchema: boolean
+  hasOpenGraph: boolean
+  metaDescriptionQuality: MetaQuality
+}): number {
+  let score = 0
+  if (input.hasStructuredData) score += 1
+  if (input.hasFaqSchema) score += 2         // FAQ schema is the #1 GEO signal — enables AI Q&A
+  if (input.hasOrganizationSchema) score += 1 // Tells AI who the entity is
+  if (input.hasArticleSchema) score += 1      // Signals citable content
+  if (input.hasOpenGraph) score += 1
+  if (input.metaDescriptionQuality === "good") score += 1
+  return Math.min(5, score)
 }
 
 function cleanWhitespace(value: string): string {
@@ -904,6 +1022,22 @@ function buildFailedResult(input: {
       aiGenericCopyTokens: [],
       discoveredLinks: [],
       funnelTargets: [],
+      metaTitle: null,
+      metaTitleLength: null,
+      metaTitleQuality: "missing",
+      metaDescription: null,
+      metaDescriptionLength: null,
+      metaDescriptionQuality: "missing",
+      h1Count: 0,
+      hasCanonicalTag: false,
+      canonicalUrl: null,
+      hasOpenGraph: false,
+      hasStructuredData: false,
+      structuredDataTypes: [],
+      hasFaqSchema: false,
+      hasOrganizationSchema: false,
+      hasArticleSchema: false,
+      geoReadinessScore: 0,
     },
     evidenceRows: [
       { label: "Runner status", value: "failed" },
@@ -1030,6 +1164,33 @@ export async function runUrlSourceAnalysisV1(input: {
   const aiCopyCheck = detectAiGenericCopy(visibleBodyText)
   const hasAppDashboardLanguage = detectAppDashboardLanguage(visibleBodyText)
 
+  // --- SEO signals (raw HTML — what crawlers and AI indexers see) ---
+  const metaTitleResult = extractMetaTitle(rawHtml)
+  const metaDescResult = extractMetaDescription(rawHtml)
+  const h1Count = countH1Tags(rawHtml)
+  const canonicalUrl = extractCanonicalUrl(rawHtml)
+  const hasCanonicalTag = canonicalUrl !== null
+  const hasOpenGraph = detectOpenGraph(rawHtml)
+
+  // --- GEO signals (structured data for AI citation readiness) ---
+  const structuredDataTypes = extractStructuredDataTypes(rawHtml)
+  const hasStructuredData = structuredDataTypes.length > 0
+  const hasFaqSchema = structuredDataTypes.some((t) => t === "FAQPage" || t.includes("FAQ"))
+  const hasOrganizationSchema = structuredDataTypes.some((t) =>
+    t === "Organization" || t === "LocalBusiness" || t === "Corporation"
+  )
+  const hasArticleSchema = structuredDataTypes.some((t) =>
+    t === "Article" || t === "BlogPosting" || t === "NewsArticle" || t === "WebPage"
+  )
+  const geoReadinessScore = computeGeoReadinessScore({
+    hasStructuredData,
+    hasFaqSchema,
+    hasOrganizationSchema,
+    hasArticleSchema,
+    hasOpenGraph,
+    metaDescriptionQuality: metaDescResult.quality,
+  })
+
   // --- Primary CTA ---
   const primaryCtaLabel = selectPrimaryCta(navLinks, buttonLabels)
   const hasPrimaryCta = primaryCtaLabel !== null
@@ -1138,6 +1299,22 @@ export async function runUrlSourceAnalysisV1(input: {
       aiGenericCopyTokens: aiCopyCheck.tokens,
       discoveredLinks,
       funnelTargets,
+      metaTitle: metaTitleResult.title,
+      metaTitleLength: metaTitleResult.length,
+      metaTitleQuality: metaTitleResult.quality,
+      metaDescription: metaDescResult.description,
+      metaDescriptionLength: metaDescResult.length,
+      metaDescriptionQuality: metaDescResult.quality,
+      h1Count,
+      hasCanonicalTag,
+      canonicalUrl,
+      hasOpenGraph,
+      hasStructuredData,
+      structuredDataTypes,
+      hasFaqSchema,
+      hasOrganizationSchema,
+      hasArticleSchema,
+      geoReadinessScore,
     },
     evidenceRows,
     errorMessage: null,

@@ -18,6 +18,8 @@ const SETTLE_WAIT_MS = 1_500
 // Result type
 // ---------------------------------------------------------------------------
 
+export type CoreWebVitalRating = "good" | "needs_improvement" | "poor"
+
 export interface UrlSourceBrowserInspectionResultV1 {
   detectorVersion: string
   status: "completed" | "failed" | "skipped"
@@ -45,6 +47,12 @@ export interface UrlSourceBrowserInspectionResultV1 {
   // Rendered body text sample for copy quality analysis
   mobileVisibleText: string
   visibleLinks: Array<{ href: string; label: string }>
+  // Core Web Vitals (desktop pass — measured inside real Chromium)
+  lcpMs: number | null
+  lcpRating: CoreWebVitalRating | null
+  clsScore: number | null
+  clsRating: CoreWebVitalRating | null
+  domElementCount: number | null
   errorMessage: string | null
 }
 
@@ -172,6 +180,76 @@ async function evaluateDom(
 }
 
 // ---------------------------------------------------------------------------
+// Core Web Vitals helpers
+// ---------------------------------------------------------------------------
+
+function rateLcp(ms: number): CoreWebVitalRating {
+  if (ms <= 2500) return "good"
+  if (ms <= 4000) return "needs_improvement"
+  return "poor"
+}
+
+function rateCls(score: number): CoreWebVitalRating {
+  if (score <= 0.1) return "good"
+  if (score <= 0.25) return "needs_improvement"
+  return "poor"
+}
+
+async function measureCoreWebVitals(page: Page): Promise<{
+  lcpMs: number | null
+  clsScore: number | null
+  domElementCount: number | null
+}> {
+  try {
+    return await page.evaluate((): Promise<{
+      lcpMs: number | null
+      clsScore: number | null
+      domElementCount: number | null
+    }> => {
+      return new Promise((resolve) => {
+        let lcpMs: number | null = null
+        let clsScore = 0
+
+        try {
+          const lcpObs = new PerformanceObserver((list) => {
+            const entries = list.getEntries()
+            if (entries.length > 0) {
+              lcpMs = entries[entries.length - 1]?.startTime ?? null
+            }
+          })
+          lcpObs.observe({ type: "largest-contentful-paint", buffered: true })
+        } catch {}
+
+        try {
+          const clsObs = new PerformanceObserver((list) => {
+            for (const entry of list.getEntries()) {
+              const shift = entry as PerformanceEntry & { hadRecentInput?: boolean; value?: number }
+              if (!shift.hadRecentInput) {
+                clsScore += shift.value ?? 0
+              }
+            }
+          })
+          clsObs.observe({ type: "layout-shift", buffered: true })
+        } catch {}
+
+        const domElementCount = document.querySelectorAll("*").length
+
+        // Give observers 2 seconds to collect buffered entries
+        setTimeout(() => {
+          resolve({
+            lcpMs,
+            clsScore: Math.round(clsScore * 1000) / 1000,
+            domElementCount,
+          })
+        }, 2000)
+      })
+    })
+  } catch {
+    return { lcpMs: null, clsScore: null, domElementCount: null }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Screenshot helper — mirrors the activation runner's pattern
 // ---------------------------------------------------------------------------
 
@@ -242,6 +320,11 @@ export async function runUrlSourceBrowserInspectionV1(input: {
     desktopScreenshotSha256: null,
     desktopScreenshotBytes: null,
     visibleLinks: [],
+    lcpMs: null,
+    lcpRating: null,
+    clsScore: null,
+    clsRating: null,
+    domElementCount: null,
     errorMessage: message,
   })
 
@@ -288,6 +371,7 @@ export async function runUrlSourceBrowserInspectionV1(input: {
     // --- Desktop pass ---
     let desktopMetrics: DomMetrics | null = null
     let desktopScreenshot: ScreenshotCapture | null = null
+    let cwvMetrics: Awaited<ReturnType<typeof measureCoreWebVitals>> | null = null
 
     try {
       const desktopCtx = await browser.newContext({ viewport: DESKTOP_VIEWPORT })
@@ -299,6 +383,7 @@ export async function runUrlSourceBrowserInspectionV1(input: {
       await desktopPage.waitForTimeout(SETTLE_WAIT_MS)
       if (!finalUrl) finalUrl = desktopPage.url()
       desktopMetrics = await evaluateDom(desktopPage, DESKTOP_VIEWPORT.height)
+      cwvMetrics = await measureCoreWebVitals(desktopPage)
       desktopScreenshot = await captureScreenshot({
         page: desktopPage,
         runId: input.runId,
@@ -342,6 +427,11 @@ export async function runUrlSourceBrowserInspectionV1(input: {
       desktopScreenshotBytes: desktopScreenshot?.bytes ?? null,
       mobileVisibleText: mobileMetrics?.visibleBodyText ?? "",
       visibleLinks: mobileMetrics?.visibleLinks ?? desktopMetrics?.visibleLinks ?? [],
+      lcpMs: cwvMetrics?.lcpMs ?? null,
+      lcpRating: cwvMetrics?.lcpMs !== null && cwvMetrics?.lcpMs !== undefined ? rateLcp(cwvMetrics.lcpMs) : null,
+      clsScore: cwvMetrics?.clsScore ?? null,
+      clsRating: cwvMetrics?.clsScore !== null && cwvMetrics?.clsScore !== undefined ? rateCls(cwvMetrics.clsScore) : null,
+      domElementCount: cwvMetrics?.domElementCount ?? null,
       errorMessage: null,
     }
   } catch (err) {

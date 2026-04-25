@@ -1427,6 +1427,16 @@ function buildUrlSourcePathFindings(input: {
     http_status: s.httpStatus,
     has_ai_generic_copy: s.hasAiGenericCopy,
     ai_generic_copy_tokens: s.aiGenericCopyTokens?.join(", ") ?? null,
+    // SEO signals
+    meta_title_quality: s.metaTitleQuality,
+    meta_description_quality: s.metaDescriptionQuality,
+    h1_count: s.h1Count,
+    has_canonical_tag: s.hasCanonicalTag,
+    has_open_graph: s.hasOpenGraph,
+    has_structured_data: s.hasStructuredData,
+    structured_data_types: s.structuredDataTypes?.join(", ") ?? null,
+    geo_readiness_score: s.geoReadinessScore,
+    has_faq_schema: s.hasFaqSchema,
     // Browser inspection signals
     browser_load_time_ms: bi?.loadTimeMs ?? null,
     browser_final_url: bi?.finalUrl ?? null,
@@ -1928,6 +1938,200 @@ function buildUrlSourcePathFindings(input: {
           path_evaluated: "copy_quality",
           detected_tokens: aiCopyTokens ?? "generic language patterns",
           effective_business_type: effectiveBusinessType,
+        },
+      })
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // SEO findings — apply to all business types.
+  // These run on the static HTML (what Google and AI crawlers see).
+  // -------------------------------------------------------------------------
+
+  // Missing or very short meta title — hurts search ranking and CTR.
+  if (s.metaTitleQuality === "missing" || s.metaTitleQuality === "short") {
+    findings.push({
+      key: "url_source_seo_meta_title_weak_v1",
+      type: "setup_gap",
+      severity: s.metaTitleQuality === "missing" ? "medium" : "low",
+      title:
+        s.metaTitleQuality === "missing"
+          ? "Page title tag is missing"
+          : `Page title is too short at ${s.metaTitleLength ?? 0} characters`,
+      summary:
+        s.metaTitleQuality === "missing"
+          ? "The primary URL has no HTML title tag. Search engines and AI search use the title tag as the primary signal for page topic, ranking, and search result display."
+          : `The page title is ${s.metaTitleLength ?? 0} characters. Google typically displays 50-60 characters and uses title length as a quality signal.`,
+      whyItMatters:
+        "The title tag is the single most important on-page SEO element. A missing or short title reduces click-through rate from search results and signals low-quality content to crawlers.",
+      recommendedAction:
+        "Write a descriptive title of 50-65 characters that includes the primary keyword, the business name, and the main value proposition. Every page should have a unique title.",
+      estimatedMonthlyRevenueImpact: 0,
+      evidence: { ...baseEvidence, path_evaluated: "seo_title", meta_title_quality: s.metaTitleQuality, meta_title_length: s.metaTitleLength },
+    })
+  }
+
+  // Missing or short meta description — reduces search CTR.
+  if (s.metaDescriptionQuality === "missing" || s.metaDescriptionQuality === "short") {
+    findings.push({
+      key: "url_source_seo_meta_description_weak_v1",
+      type: "setup_gap",
+      severity: "low",
+      title:
+        s.metaDescriptionQuality === "missing"
+          ? "Meta description is missing"
+          : `Meta description is too short at ${s.metaDescriptionLength ?? 0} characters`,
+      summary:
+        s.metaDescriptionQuality === "missing"
+          ? "The primary URL has no meta description. Search engines use this as the preview text in results and as a relevance signal."
+          : `The meta description is ${s.metaDescriptionLength ?? 0} characters. 120-160 characters gives the best click-through rate.`,
+      whyItMatters:
+        "Meta descriptions directly affect search click-through rates. A compelling, keyword-rich description increases organic traffic without changing ranking.",
+      recommendedAction:
+        "Write a meta description of 120-160 characters that summarises the page, includes the primary keyword, and has a clear value proposition or call to action.",
+      estimatedMonthlyRevenueImpact: 0,
+      evidence: { ...baseEvidence, path_evaluated: "seo_description", meta_description_quality: s.metaDescriptionQuality },
+    })
+  }
+
+  // Multiple H1 tags — confuses crawlers and dilutes heading structure.
+  if (s.h1Count > 1) {
+    findings.push({
+      key: "url_source_seo_multiple_h1_v1",
+      type: "setup_gap",
+      severity: "low",
+      title: `${s.h1Count} H1 headings detected — only one should exist`,
+      summary:
+        `The page has ${s.h1Count} H1 tags. Search engines expect exactly one H1 per page as the primary topic signal. Multiple H1s dilute heading structure and reduce topical clarity.`,
+      whyItMatters:
+        "A single, keyword-focused H1 is a foundational SEO signal. Multiple H1s indicate structural issues to crawlers and reduce the ranking weight of each heading.",
+      recommendedAction:
+        "Ensure the page has exactly one H1 tag that reflects the primary topic. Use H2 and H3 for secondary headings.",
+      estimatedMonthlyRevenueImpact: 0,
+      evidence: { ...baseEvidence, path_evaluated: "seo_h1", h1_count: s.h1Count },
+    })
+  }
+
+  // Missing Open Graph — reduces shareability and social traffic.
+  if (!s.hasOpenGraph) {
+    findings.push({
+      key: "url_source_seo_no_open_graph_v1",
+      type: "setup_gap",
+      severity: "low",
+      title: "Open Graph tags are missing",
+      summary:
+        "The primary URL has no Open Graph meta tags. When shared on LinkedIn, Twitter, Slack, or WhatsApp, the link will show a blank or generic preview instead of a branded image and description.",
+      whyItMatters:
+        "Open Graph controls how links look when shared. A strong OG image and title dramatically increases click-through from social shares, especially for agencies and SaaS where referral is a key channel.",
+      recommendedAction:
+        "Add og:title, og:description, og:image, and og:url to the page head. The og:image should be 1200x630px and convey the core value proposition.",
+      estimatedMonthlyRevenueImpact: 0,
+      evidence: { ...baseEvidence, path_evaluated: "seo_og" },
+    })
+  }
+
+  // -------------------------------------------------------------------------
+  // GEO findings — Generative Engine Optimization.
+  // AI search engines (ChatGPT Search, Perplexity, Gemini, Claude) use
+  // structured data to identify authoritative, citable sources.
+  // Low GEO readiness = invisible to AI-driven search traffic.
+  // -------------------------------------------------------------------------
+
+  if (s.geoReadinessScore <= 1) {
+    findings.push({
+      key: "url_source_geo_low_readiness_v1",
+      type: "setup_gap",
+      severity: "medium",
+      title: `GEO readiness score is ${s.geoReadinessScore}/5 — site is low-visibility in AI search`,
+      summary:
+        "The primary URL has minimal structured data and metadata for AI search engines. ChatGPT, Perplexity, Gemini, and Claude cite pages with Organization schema, FAQ schema, and good Open Graph. Pages without these signals are rarely surfaced in AI-generated answers.",
+      whyItMatters:
+        "AI search is capturing a growing share of top-of-funnel discovery. For agencies, SaaS, and service businesses, appearing in AI answers for industry questions is a significant lead source. Low GEO readiness means your business is invisible to this channel.",
+      recommendedAction:
+        "Add JSON-LD structured data to the page: at minimum Organization schema with name, url, logo, and sameAs links. Add FAQPage schema if you have common client questions. Add Article or Service schema for key service pages. Ensure meta description is present and descriptive.",
+      estimatedMonthlyRevenueImpact: 0,
+      evidence: {
+        ...baseEvidence,
+        path_evaluated: "geo_readiness",
+        geo_score: s.geoReadinessScore,
+        has_structured_data: s.hasStructuredData,
+        has_faq_schema: s.hasFaqSchema,
+        has_organization_schema: s.hasOrganizationSchema,
+        structured_data_types: s.structuredDataTypes?.join(", ") ?? "none",
+      },
+    })
+  } else if (!s.hasFaqSchema && s.geoReadinessScore < 4) {
+    // Has some structured data but missing FAQ schema — the highest GEO signal.
+    findings.push({
+      key: "url_source_geo_no_faq_schema_v1",
+      type: "setup_gap",
+      severity: "low",
+      title: "FAQ schema missing — reduces AI search citation potential",
+      summary:
+        "The page has some structured data but no FAQPage schema. FAQ schema is the single most effective signal for appearing in AI-generated answers, as it directly provides question-answer pairs to AI indexers.",
+      whyItMatters:
+        "AI search engines prioritise FAQ-structured content when generating answers to user queries. Adding FAQPage schema to your key pages increases the probability of being cited in AI search results for relevant questions.",
+      recommendedAction:
+        "Identify 3-5 questions your target clients ask most often. Add FAQPage JSON-LD schema to your homepage or services page with these questions and direct answers.",
+      estimatedMonthlyRevenueImpact: 0,
+      evidence: {
+        ...baseEvidence,
+        path_evaluated: "geo_faq",
+        geo_score: s.geoReadinessScore,
+        existing_schema_types: s.structuredDataTypes?.join(", ") ?? "none",
+      },
+    })
+  }
+
+  // -------------------------------------------------------------------------
+  // Core Web Vitals findings — only when Playwright measured real values.
+  // Thresholds from Google's Web Vitals guidelines (June 2024).
+  // -------------------------------------------------------------------------
+
+  if (bi) {
+    // LCP: Largest Contentful Paint. > 4s is poor.
+    if (bi.lcpMs !== null && bi.lcpRating && bi.lcpRating !== "good") {
+      findings.push({
+        key: "url_source_lcp_poor_v1",
+        type: "setup_gap",
+        severity: bi.lcpRating === "poor" ? "medium" : "low",
+        title: `Largest Contentful Paint is ${bi.lcpRating} at ${Math.round(bi.lcpMs ?? 0)}ms`,
+        summary:
+          `Browser measurement found the Largest Contentful Paint at ${Math.round(bi.lcpMs ?? 0)}ms. Google's threshold is under 2500ms for "good". ${bi.lcpRating === "poor" ? "At over 4000ms, this will hurt both ranking and conversion." : "At 2500-4000ms, this is below Google's recommended threshold."}`,
+        whyItMatters:
+          "LCP is one of Google's Core Web Vitals and directly affects search ranking. Slower LCP also means higher bounce rates — studies show each 1-second delay reduces conversion by 7%.",
+        recommendedAction:
+          "Identify the largest visible element (usually a hero image or headline block). Optimise image sizes, enable lazy loading for below-fold images, preload the LCP resource, and consider a CDN for faster delivery.",
+        estimatedMonthlyRevenueImpact: 0,
+        evidence: {
+          ...baseEvidence,
+          path_evaluated: "core_web_vitals_lcp",
+          lcp_ms: bi.lcpMs,
+          lcp_rating: bi.lcpRating,
+          dom_element_count: bi.domElementCount,
+        },
+      })
+    }
+
+    // CLS: Cumulative Layout Shift. > 0.25 is poor.
+    if (bi.clsScore !== null && bi.clsRating && bi.clsRating !== "good") {
+      findings.push({
+        key: "url_source_cls_poor_v1",
+        type: "setup_gap",
+        severity: bi.clsRating === "poor" ? "medium" : "low",
+        title: `Cumulative Layout Shift is ${bi.clsRating} at ${bi.clsScore?.toFixed(3)}`,
+        summary:
+          `Browser measurement found a CLS score of ${bi.clsScore?.toFixed(3)}. Google's threshold is under 0.1 for "good". Layout shift means elements are moving after initial load, which disrupts users and signals poor build quality to crawlers.`,
+        whyItMatters:
+          "CLS is a Core Web Vital that affects ranking and user experience. High CLS means buttons, CTAs, and forms shift position after load, causing misclicks and reducing trust in the page.",
+        recommendedAction:
+          "Reserve space for dynamic content (images, ads, embeds) with explicit width and height attributes. Avoid inserting content above existing elements after load. Use CSS transform instead of top/left for animations.",
+        estimatedMonthlyRevenueImpact: 0,
+        evidence: {
+          ...baseEvidence,
+          path_evaluated: "core_web_vitals_cls",
+          cls_score: bi.clsScore,
+          cls_rating: bi.clsRating,
         },
       })
     }
@@ -2501,9 +2705,35 @@ export async function processQueuedScanV1(input?: {
                 desktop_screenshot_sha256: urlSourceBrowserInspection.desktopScreenshotSha256,
                 desktop_screenshot_bytes: urlSourceBrowserInspection.desktopScreenshotBytes,
                 visible_links: urlSourceBrowserInspection.visibleLinks,
+                mobile_h1_font_size_px: urlSourceBrowserInspection.mobileH1FontSizePx,
+                mobile_h1_is_oversized: urlSourceBrowserInspection.mobileH1IsOversized,
+                lcp_ms: urlSourceBrowserInspection.lcpMs,
+                lcp_rating: urlSourceBrowserInspection.lcpRating,
+                cls_score: urlSourceBrowserInspection.clsScore,
+                cls_rating: urlSourceBrowserInspection.clsRating,
+                dom_element_count: urlSourceBrowserInspection.domElementCount,
                 error_message: urlSourceBrowserInspection.errorMessage,
               }
             : null,
+          // SEO and GEO signals from the HTML analysis
+          url_source_seo: urlSourceAnalysisRun ? {
+            meta_title: urlSourceAnalysisRun.summary.metaTitle,
+            meta_title_length: urlSourceAnalysisRun.summary.metaTitleLength,
+            meta_title_quality: urlSourceAnalysisRun.summary.metaTitleQuality,
+            meta_description: urlSourceAnalysisRun.summary.metaDescription,
+            meta_description_length: urlSourceAnalysisRun.summary.metaDescriptionLength,
+            meta_description_quality: urlSourceAnalysisRun.summary.metaDescriptionQuality,
+            h1_count: urlSourceAnalysisRun.summary.h1Count,
+            has_canonical_tag: urlSourceAnalysisRun.summary.hasCanonicalTag,
+            canonical_url: urlSourceAnalysisRun.summary.canonicalUrl,
+            has_open_graph: urlSourceAnalysisRun.summary.hasOpenGraph,
+            has_structured_data: urlSourceAnalysisRun.summary.hasStructuredData,
+            structured_data_types: urlSourceAnalysisRun.summary.structuredDataTypes,
+            has_faq_schema: urlSourceAnalysisRun.summary.hasFaqSchema,
+            has_organization_schema: urlSourceAnalysisRun.summary.hasOrganizationSchema,
+            has_article_schema: urlSourceAnalysisRun.summary.hasArticleSchema,
+            geo_readiness_score: urlSourceAnalysisRun.summary.geoReadinessScore,
+          } : null,
           url_source_funnel_analysis_last_run: urlSourceFunnelAnalysis
             ? {
                 detector_version: urlSourceFunnelAnalysis.detectorVersion,

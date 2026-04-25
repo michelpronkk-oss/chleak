@@ -197,6 +197,17 @@ function readFindingEvidenceForIssueType(input: {
       "url_source_slow_page_load_v1",
       "url_source_mobile_h1_oversized_v1",
       "url_source_generic_copy_detected_v1",
+      // SEO findings
+      "url_source_seo_meta_title_weak_v1",
+      "url_source_seo_meta_description_weak_v1",
+      "url_source_seo_multiple_h1_v1",
+      "url_source_seo_no_open_graph_v1",
+      // GEO findings
+      "url_source_geo_low_readiness_v1",
+      "url_source_geo_no_faq_schema_v1",
+      // Core Web Vitals findings
+      "url_source_lcp_poor_v1",
+      "url_source_cls_poor_v1",
     ],
     checkout_friction: [
       "url_source_ecommerce_no_checkout_v1",
