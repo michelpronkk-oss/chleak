@@ -64,6 +64,7 @@ export async function triggerQueuedScanTask(input: TriggerQueuedScanTaskInput) {
       .update({
         status: "failed",
         completed_at: new Date().toISOString(),
+        error_message: `Trigger.dev could not start ${taskId}: ${message}`.slice(0, 2000),
       })
       .eq("id", input.scanId)
       .eq("status", "queued")

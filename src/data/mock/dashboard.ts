@@ -58,6 +58,7 @@ const scans: Scan[] = [
     completedAt: subHours(now, 2).toISOString(),
     detectedIssuesCount: 4,
     estimatedMonthlyLeakage: 38200,
+    errorMessage: null,
   },
   {
     id: "scan_7083",
@@ -68,6 +69,7 @@ const scans: Scan[] = [
     completedAt: subHours(now, 5).toISOString(),
     detectedIssuesCount: 3,
     estimatedMonthlyLeakage: 24100,
+    errorMessage: null,
   },
   {
     id: "scan_7084",
@@ -78,6 +80,7 @@ const scans: Scan[] = [
     completedAt: null,
     detectedIssuesCount: 0,
     estimatedMonthlyLeakage: 0,
+    errorMessage: null,
   },
 ]
 

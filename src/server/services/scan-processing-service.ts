@@ -1385,6 +1385,17 @@ function resolveEffectiveBusinessType(
   return htmlType
 }
 
+function hasBrowserLeadGenCta(bi: UrlSourceBrowserInspectionResultV1 | null) {
+  if (!bi || bi.status !== "completed") {
+    return false
+  }
+
+  return [
+    ...bi.mobileAboveFoldCtaLabels,
+    ...bi.desktopAboveFoldCtaLabels,
+  ].some((label) => LEAD_GEN_CTA_RX_SPS.test(label.trim()))
+}
+
 function buildUrlSourcePathFindings(input: {
   run: UrlSourceAnalysisResultV1 | null
   browserInspection: UrlSourceBrowserInspectionResultV1 | null
@@ -1404,6 +1415,30 @@ function buildUrlSourcePathFindings(input: {
   const bi = input.browserInspection?.status === "completed" ? input.browserInspection : null
   const funnel = input.funnelAnalysis
   const findings: FindingDraft[] = []
+  const strongSelfServeEvidence =
+    s.hasSignupPath ||
+    funnel?.hasSignupPath === true ||
+    funnel?.hasDemoPath === true ||
+    (s.hasPricingPath && s.hasSubscriptionLanguage)
+  const strongLeadGenEvidence =
+    s.hasContactOrBookingPath ||
+    funnel?.hasInquiryPath === true ||
+    hasBrowserLeadGenCta(input.browserInspection ?? null)
+  const strongCommerceEvidence =
+    s.hasCheckoutSignal ||
+    funnel?.hasCheckoutPath === true ||
+    funnel?.hasCartPath === true ||
+    (funnel?.hasProductPath === true && s.hasCheckoutSignal)
+  const shouldRunSaasLane =
+    effectiveBusinessType === "saas" ||
+    (effectiveBusinessType === "mixed" && strongSelfServeEvidence)
+  const shouldRunLeadLane =
+    effectiveBusinessType === "agency" ||
+    effectiveBusinessType === "service_business" ||
+    (effectiveBusinessType === "mixed" && strongLeadGenEvidence)
+  const shouldRunCommerceLane =
+    effectiveBusinessType === "ecommerce" ||
+    (effectiveBusinessType === "mixed" && strongCommerceEvidence)
 
   // Shared evidence base attached to every URL-source finding
   const baseEvidence = {
@@ -1482,7 +1517,7 @@ function buildUrlSourcePathFindings(input: {
   // -------------------------------------------------------------------------
   // SaaS lane — only fires when businessType is definitively saas
   // -------------------------------------------------------------------------
-  if (effectiveBusinessType === "saas" || effectiveBusinessType === "mixed") {
+  if (shouldRunSaasLane) {
 
     // Signup path is the growth entry point. If it is absent, the funnel is broken.
     const funnelHasSignupOrDemo =
@@ -1582,9 +1617,7 @@ function buildUrlSourcePathFindings(input: {
   // Agency and service business lane
   // -------------------------------------------------------------------------
   if (
-    effectiveBusinessType === "agency" ||
-    effectiveBusinessType === "service_business" ||
-    effectiveBusinessType === "mixed"
+    shouldRunLeadLane
   ) {
     const isAgency = effectiveBusinessType === "agency"
 
@@ -1702,7 +1735,7 @@ function buildUrlSourcePathFindings(input: {
   // -------------------------------------------------------------------------
   // Ecommerce lane
   // -------------------------------------------------------------------------
-  if (effectiveBusinessType === "ecommerce" || effectiveBusinessType === "mixed") {
+  if (shouldRunCommerceLane) {
 
     // No clear checkout or cart path — the transaction path is broken.
     const funnelHasPurchasePath =
@@ -1767,7 +1800,7 @@ function buildUrlSourcePathFindings(input: {
       key: "url_source_no_clear_revenue_path_v1",
       type: "setup_gap",
       severity: "medium",
-      title: "Primary URL source has no detectable revenue path",
+      title: "More commercial signal needed for this URL source",
       summary:
         "Surface analysis could not identify a pricing, signup, checkout, or contact path on the primary URL. The surface does not provide enough commercial signal for path evaluation.",
       whyItMatters:
@@ -2280,6 +2313,52 @@ export async function processQueuedScanV1(input?: {
   const storePlatform = parseMerchantPlatform(storeResult.data.platform)
   const scanFamily = getPrimaryScanFamilyForPlatform(storePlatform)
   const integrationProvider = integrationResult.data.provider
+  const failRunningScan = async (reason: string, errorMessage: string) => {
+    const completedAt = new Date().toISOString()
+    const failureUpdate = await admin
+      .from("scans")
+      .update({
+        status: "failed",
+        completed_at: completedAt,
+        error_message: errorMessage.slice(0, 2000),
+        detected_issues_count: 0,
+        estimated_monthly_leakage: 0,
+      })
+      .eq("id", queuedScan.id)
+
+    if (failureUpdate.error) {
+      console.error(
+        `[scan-runner] failed scan update failed: scan_id=${queuedScan.id}; reason=${failureUpdate.error.message}`
+      )
+    }
+
+    await sendScanCompletionNotification({
+      scanId: queuedScan.id,
+      organizationId: queuedScan.organization_id,
+      storeId: queuedScan.store_id,
+      outcome: null,
+      status: "failed",
+      detectedIssuesCount: 0,
+      estimatedMonthlyLeakage: 0,
+      scanFamily,
+    })
+
+    return {
+      processed: false,
+      reason,
+      scanId: queuedScan.id,
+      outcome: null,
+      organizationId: queuedScan.organization_id,
+      storeId: queuedScan.store_id,
+      storePlatform,
+      integrationProvider,
+      status: "failed",
+      completedAt,
+      detectedIssuesCount: 0,
+      estimatedMonthlyLeakage: 0,
+      scanFamily,
+    } satisfies ScanProcessResult
+  }
   const integrationMetadata = asRecord(integrationResult.data.metadata) ?? {}
   const activationFlowHintsConfig =
     integrationProvider === "shopify"
@@ -2338,12 +2417,29 @@ export async function processQueuedScanV1(input?: {
           entryUrl: primaryUrl,
         })
         console.info(
-          `[scan-runner] url source analysis completed: scan_id=${queuedScan.id}; status=${urlSourceAnalysisRun.status}; classification=${urlSourceAnalysisRun.summary.surfaceClassification}; clarity=${urlSourceAnalysisRun.summary.revenuePathClarity}; business_type=${urlSourceAnalysisRun.summary.businessType}`
+          `[scan-runner] url source analysis completed: scan_id=${queuedScan.id}; status=${urlSourceAnalysisRun.status}; classification=${urlSourceAnalysisRun.summary.surfaceClassification}; clarity=${urlSourceAnalysisRun.summary.revenuePathClarity}; business_type=${urlSourceAnalysisRun.summary.businessType}; error=${urlSourceAnalysisRun.errorMessage ?? "none"}`
         )
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         console.error(
           `[scan-runner] url source analysis failed: scan_id=${queuedScan.id}; reason=${message}`
+        )
+        return failRunningScan(
+          "url_source_analysis_failed",
+          `URL source analysis failed before completion: ${message}`
+        )
+      }
+
+      if (urlSourceAnalysisRun.status !== "completed") {
+        const message =
+          urlSourceAnalysisRun.errorMessage ??
+          `URL source analysis returned ${urlSourceAnalysisRun.status}.`
+        console.error(
+          `[scan-runner] url source analysis returned failed status: scan_id=${queuedScan.id}; status=${urlSourceAnalysisRun.status}; reason=${message}`
+        )
+        return failRunningScan(
+          "url_source_analysis_failed",
+          `URL source analysis failed before completion: ${message}`
         )
       }
 
@@ -2499,34 +2595,22 @@ export async function processQueuedScanV1(input?: {
       : integrationProvider === "checkoutleak_connector"
         ? "url_source_analysis_v1"
       : "shopify_monitoring_v1"
-  if (
+  const sourcesToResolve =
     integrationProvider === "shopify" ||
     integrationProvider === "stripe" ||
     integrationProvider === "checkoutleak_connector"
-  ) {
-    const sourcesToResolve = simulationOutcome
-      ? integrationProvider === "stripe"
-        ? ["stripe_simulation_v1", "stripe_monitoring_v1"]
-        : ["shopify_simulation_v1", "shopify_monitoring_v1"]
-      : integrationProvider === "checkoutleak_connector"
-        ? ["url_source_analysis_v1"]
-        : [managedIssueSource]
-    const resolveOldIssues = await admin
-      .from("issues")
-      .update({ status: "resolved" })
-      .eq("organization_id", queuedScan.organization_id)
-      .eq("store_id", queuedScan.store_id)
-      .in("source", sourcesToResolve)
-      .neq("status", "resolved")
-
-    if (resolveOldIssues.error) {
-      console.error(
-        `[scan-runner] issue resolution cleanup failed: scan_id=${queuedScan.id}; reason=${resolveOldIssues.error.message}`
-      )
-    }
-  }
+      ? simulationOutcome
+        ? integrationProvider === "stripe"
+          ? ["stripe_simulation_v1", "stripe_monitoring_v1"]
+          : ["shopify_simulation_v1", "shopify_monitoring_v1"]
+        : integrationProvider === "checkoutleak_connector"
+          ? ["url_source_analysis_v1"]
+          : [managedIssueSource]
+      : []
 
   let insertedFindings = 0
+  let findingsInsertSucceeded = findings.length === 0
+  let findingsInsertError: string | null = null
   if (findings.length > 0) {
     const issueRows: IssueInsert[] = findings.map((finding) => ({
       organization_id: queuedScan.organization_id,
@@ -2546,11 +2630,41 @@ export async function processQueuedScanV1(input?: {
 
     const issuesInsert = await admin.from("issues").insert(issueRows).select("id")
     if (issuesInsert.error) {
+      findingsInsertError = issuesInsert.error.message
       console.error(
         `[scan-runner] findings insert failed: scan_id=${queuedScan.id}; reason=${issuesInsert.error.message}`
       )
     } else {
       insertedFindings = issuesInsert.data?.length ?? 0
+      findingsInsertSucceeded = true
+    }
+  }
+
+  if (!findingsInsertSucceeded) {
+    return failRunningScan(
+      "findings_insert_failed",
+      `Findings insert failed after analysis completed: ${findingsInsertError ?? "unknown error"}`
+    )
+  }
+
+  if (sourcesToResolve.length > 0 && findingsInsertSucceeded) {
+    const query = admin
+      .from("issues")
+      .update({ status: "resolved" })
+      .eq("organization_id", queuedScan.organization_id)
+      .eq("store_id", queuedScan.store_id)
+      .in("source", sourcesToResolve)
+      .neq("status", "resolved")
+
+    const resolveOldIssues =
+      insertedFindings > 0
+        ? await query.neq("scan_id", queuedScan.id)
+        : await query
+
+    if (resolveOldIssues.error) {
+      console.error(
+        `[scan-runner] issue resolution cleanup failed: scan_id=${queuedScan.id}; reason=${resolveOldIssues.error.message}`
+      )
     }
   }
 
@@ -2558,6 +2672,7 @@ export async function processQueuedScanV1(input?: {
   const completionPayload = {
     status: "completed",
     completed_at: completedAt,
+    error_message: null,
     detected_issues_count: insertedFindings,
     estimated_monthly_leakage: findings.reduce(
       (total, finding) => total + finding.estimatedMonthlyRevenueImpact,

@@ -962,6 +962,7 @@ function mapScanView(row: {
   completed_at: string | null
   detected_issues_count: number
   estimated_monthly_leakage: number
+  error_message?: string | null
 }): Scan {
   return {
     id: row.id,
@@ -972,6 +973,7 @@ function mapScanView(row: {
     completedAt: row.completed_at,
     detectedIssuesCount: row.detected_issues_count,
     estimatedMonthlyLeakage: row.estimated_monthly_leakage,
+    errorMessage: row.error_message ?? null,
   }
 }
 
@@ -1965,7 +1967,7 @@ export async function getConnectJourneyData() {
   const latestUrlSourceScanResult = urlSourceStoreId
     ? await createSupabaseAdminClient()
         .from("scans")
-        .select("id, organization_id, store_id, status, scanned_at, completed_at, detected_issues_count, estimated_monthly_leakage")
+        .select("id, organization_id, store_id, status, scanned_at, completed_at, detected_issues_count, estimated_monthly_leakage, error_message")
         .eq("organization_id", journey.organizationId)
         .eq("store_id", urlSourceStoreId)
         .order("scanned_at", { ascending: false })
@@ -2374,7 +2376,7 @@ export async function getStoreDetailData(storeId: string) {
     const [scansResult, issuesResult] = await Promise.all([
       admin
         .from("scans")
-        .select("id, organization_id, store_id, status, scanned_at, completed_at, detected_issues_count, estimated_monthly_leakage")
+        .select("id, organization_id, store_id, status, scanned_at, completed_at, detected_issues_count, estimated_monthly_leakage, error_message")
         .eq("organization_id", journey.organizationId)
         .eq("store_id", storeId)
         .order("scanned_at", { ascending: false })
@@ -2410,6 +2412,7 @@ export async function getStoreDetailData(storeId: string) {
     )
   }
   const latestScan = scans[0] ?? null
+  const latestSuccessfulScan = scans.find((scan) => scan.status === "completed") ?? null
   const highestSeverity = getHighestSeverity(issues.map((i) => i.severity))
   const status = getStoreStatus({ issueCount: issues.length, highestSeverity })
   const integrationView = shopifyDomainViews.get(storeId)
@@ -2505,6 +2508,7 @@ export async function getStoreDetailData(storeId: string) {
           ? { label: "Setup attention", tone: "text-amber-300" }
           : status,
     latestScan,
+    latestSuccessfulScan,
     issues,
     scans,
     estimatedLeakage,

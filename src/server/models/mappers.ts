@@ -86,6 +86,7 @@ export function mapScanRow(row: ScanRow): Scan {
     completedAt: row.completed_at,
     detectedIssuesCount: row.detected_issues_count,
     estimatedMonthlyLeakage: row.estimated_monthly_leakage,
+    errorMessage: row.error_message ?? null,
   }
 }
 

@@ -302,6 +302,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           detected_issues_count: number
+          error_message: string | null
           estimated_monthly_leakage: number
           id: string
           notification_error: string | null
@@ -319,6 +320,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           detected_issues_count?: number
+          error_message?: string | null
           estimated_monthly_leakage?: number
           id?: string
           notification_error?: string | null
@@ -336,6 +338,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           detected_issues_count?: number
+          error_message?: string | null
           estimated_monthly_leakage?: number
           id?: string
           notification_error?: string | null

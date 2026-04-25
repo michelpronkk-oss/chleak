@@ -100,6 +100,7 @@ export interface Scan {
   completedAt: string | null
   detectedIssuesCount: number
   estimatedMonthlyLeakage: number
+  errorMessage: string | null
 }
 
 export interface Issue {

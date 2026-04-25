@@ -267,6 +267,9 @@ export default async function StoreDetailPage({
     : []
   const latestScanIsActive =
     data.latestScan?.status === "queued" || data.latestScan?.status === "running"
+  const latestScanFailed = data.latestScan?.status === "failed"
+  const showingPreviousFindings =
+    latestScanFailed && data.latestSuccessfulScan !== null && data.issues.length > 0
   const liveSourceSurface = data.integration?.liveSourceSurface ?? null
   const connectedSystems = (
     liveSourceSurface?.connectedSystems?.length
@@ -350,7 +353,7 @@ export default async function StoreDetailPage({
           </p>
         </article>
         <article className="vault-metric-cell">
-          <p className="vault-metric-key">Latest scan</p>
+          <p className="vault-metric-key">Latest attempted scan</p>
           <p className="vault-metric-value text-2xl sm:text-3xl">
             {data.latestScan ? formatRelativeTimestamp(data.latestScan.scannedAt) : "Pending"}
           </p>
@@ -365,6 +368,21 @@ export default async function StoreDetailPage({
           </p>
         </article>
         <article className="vault-metric-cell">
+          <p className="vault-metric-key">Latest successful scan</p>
+          <p className="vault-metric-value text-2xl sm:text-3xl">
+            {data.latestSuccessfulScan
+              ? formatRelativeTimestamp(
+                  data.latestSuccessfulScan.completedAt ?? data.latestSuccessfulScan.scannedAt
+                )
+              : "None"}
+          </p>
+          <p className="vault-metric-delta">
+            {data.latestSuccessfulScan
+              ? `${data.latestSuccessfulScan.detectedIssuesCount} findings`
+              : "No completed pass yet"}
+          </p>
+        </article>
+        <article className="vault-metric-cell">
           <p className="vault-metric-key">Status</p>
           <p className={`vault-metric-value text-2xl sm:text-3xl ${data.status.tone}`}>{data.status.label}</p>
           <p className="vault-metric-delta">{data.store.platform}</p>
@@ -373,7 +391,15 @@ export default async function StoreDetailPage({
 
       <section className="vault-dashboard-grid">
         <div className="space-y-5">
-          <VaultPanel title={`Issue queue | ${hardIssues.length} open`} meta="Sorted by exposure">
+          <VaultPanel
+            title={`Issue queue | ${hardIssues.length} open`}
+            meta={showingPreviousFindings ? "Previous successful scan findings" : "Sorted by exposure"}
+          >
+            {showingPreviousFindings ? (
+              <div className="border-b border-border/60 px-5 py-3 text-sm text-amber-300">
+                Latest scan failed. Showing previous findings.
+              </div>
+            ) : null}
             {hardIssues.length ? (
               hardIssues.map((issue) => (
                 <RankedQueueRow
@@ -382,7 +408,11 @@ export default async function StoreDetailPage({
                   title={issue.title}
                   meta={issue.summary}
                   amount={formatCompactCurrency(issue.estimatedMonthlyRevenueImpact)}
-                  age={formatRelativeTimestamp(issue.detectedAt)}
+                  age={
+                    showingPreviousFindings
+                      ? `Previous finding | ${formatRelativeTimestamp(issue.detectedAt)}`
+                      : formatRelativeTimestamp(issue.detectedAt)
+                  }
                 />
               ))
             ) : (
@@ -602,12 +632,16 @@ export default async function StoreDetailPage({
                     : "Source status"}
             </p>
             <h2 className="mt-2 text-lg font-semibold tracking-tight text-foreground">
-              {primaryMove?.title ??
+              {showingPreviousFindings && primaryMove
+                ? `Previous finding: ${primaryMove.title}`
+                : primaryMove?.title ??
                 primaryOpportunity?.title ??
                 (isDemoMode ? "No simulated intervention required" : "Source path is healthy")}
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              {primaryMove?.summary ??
+              {showingPreviousFindings
+                ? "The latest scan failed, so this recommendation comes from the latest successful scan."
+                : primaryMove?.summary ??
                 primaryOpportunity?.summary ??
                 (isDemoMode
                   ? "This simulated source is currently stable."
@@ -630,7 +664,11 @@ export default async function StoreDetailPage({
                 href={data.fixPlanLinks[0]?.href ?? "/app/stores"}
                 className="marketing-primary-cta mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
               >
-                {hasHardIssue ? "Review action brief" : "Review optimization brief"}
+                {showingPreviousFindings
+                  ? "Review previous action brief"
+                  : hasHardIssue
+                    ? "Review action brief"
+                    : "Review optimization brief"}
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             ) : (
@@ -662,7 +700,9 @@ export default async function StoreDetailPage({
                       {formatRelativeTimestamp(scan.scannedAt)}
                       {scan.status === "completed"
                         ? ` | ${scan.detectedIssuesCount} issues`
-                        : " | results pending"}
+                        : scan.status === "failed"
+                          ? ` | ${scan.errorMessage ?? "scan failed"}`
+                          : " | results pending"}
                     </p>
                   </li>
                 ))}
@@ -921,6 +961,12 @@ export default async function StoreDetailPage({
                   <div className="mt-3 rounded-md border border-primary/25 bg-primary/[0.06] px-3 py-2 text-xs text-muted-foreground">
                     <ScanStatePill status={data.latestScan.status} className="mr-2 py-0.5" />
                     Background analysis is active. This page will show new evidence when it completes.
+                  </div>
+                ) : null}
+                {latestScanFailed ? (
+                  <div className="mt-3 rounded-md border border-amber-300/25 bg-amber-300/[0.06] px-3 py-2 text-xs text-amber-200">
+                    <ScanStatePill status="failed" className="mr-2 py-0.5" />
+                    Latest analysis failed. {data.latestScan?.errorMessage ?? "Queue another run when ready."}
                   </div>
                 ) : null}
                 <form action={runSurfaceAnalysisAction} className="mt-4">
