@@ -1,36 +1,55 @@
 @AGENTS.md
 
-# CheckoutLeak — Operational Continuity File
+# SilentLeak — Operational Continuity File
 
-Product: operator-grade SaaS for detecting revenue leakage across checkout, payments, and billing.
-Stack: Next.js App Router, TypeScript, Tailwind CSS, Supabase, Shopify OAuth, Stripe, Dodo Payments.
-Domain: checkoutleak.com
+Product: operator-grade revenue intelligence SaaS. Detects leakage across website surfaces, checkout paths, payment flows, and billing recovery.
+Stack: Next.js App Router, TypeScript, Tailwind CSS, Supabase, Shopify OAuth, Stripe, Dodo Payments, Trigger.dev, Resend.
+Domain: https://www.silentleak.com
+Support email: hello@silentleak.com
+
+Legacy name: CheckoutLeak. Internal DB tables, provider IDs, route paths, and integration identifiers still use "checkoutleak" naming. Do not rename them unless explicitly instructed.
 
 ---
 
 ## 1. CURRENT PRODUCT TRUTH
 
-**Working and verified:**
-- Shopify OAuth install/callback flow works end to end
-- Store persistence to `stores` table works
-- `store_integrations` row persisted correctly on Shopify connect
-- Disconnect/reconnect flow works (`/api/integrations/shopify/disconnect`)
-- Automatic scan creation fires after Shopify connect completes
-- Automatic scan processing runs after creation
-- All three scan result state families render correctly:
-  - `no_signal` — not enough activity; monitoring active; no issues shown
-  - `clean` — enough signal; no material leakage found
-  - `findings_present` — real issues; action-needed UX; issue feed + suggested actions visible
-- `findings_present` flow verified via internal simulation
-- Impact treatment fixed: `$0` replaced with `"Impact pending"` when `estimatedMonthlyRevenueImpact` is 0
-- Simulation prefix (`simulation:`) stripped from displayed copy via `cleanPrimaryCopy()`
-- Shopify store detail page distinguishes user-facing domain vs internal canonical Shopify domain
+**Core flow (working and verified):**
+- URL-first primary source flow: save URL, upsert website store + checkoutleak_connector integration, queue scan
+- Surface analysis: HTML runner (business type, SEO, GEO, copy quality) + Playwright browser inspector (mobile/desktop, Core Web Vitals, H1 size, screenshots)
+- Trigger.dev async scan pipeline: url-source-scan and shopify-activation-scan tasks
+- Scheduled weekly monitoring via Trigger.dev cron
+- Issue pipeline: findings emitted into issues table, fix plans generated
+- Source detail pages: issues vs opportunities split, recommended move, linked opportunities
+- Ownership gating: unverified sources see limited preview; verified sources see full evidence
+- Plan/paywall logic: plan entitlement enforced, source slot limits respected
+- Multi-source support: multiple website sources allowed per plan
+- Resend email: transactional emails on scan completion, issue detection, access approvals
+- Shopify OAuth: install/callback/disconnect flow works
+- Stripe billing signals: connected but less battle-tested than website lane
+- Demo workspace: dev-only, gated behind NODE_ENV check in app-shell.tsx
 
-**Mobile homepage:**
-- Mobile homepage has been audited and partially upgraded
-- Current session completed a full mobile refactor of `src/components/marketing/home-page.tsx` and `src/components/layout/marketing-footer.tsx`
-- Changes: tighter hero, proof strip always 3-col, console signals compressed to single-row mobile layout, "How it works" + "Issue intelligence" merged into one section, Growth first on mobile in pricing, closing CTA escalated, footer tagline and authority bar improved
-- Desktop layout preserved
+**URL source detection covers:**
+- Business type: agency, saas, ecommerce, service_business, mixed, unknown
+- Revenue model: lead_generation, self_serve_signup, checkout, hybrid
+- 4-path evaluation: activation, pricing, checkout, billing recovery
+- SEO: meta title, meta description, H1 count, canonical tag, Open Graph
+- GEO: JSON-LD structured data, FAQ schema, Organization schema, geo readiness score
+- Core Web Vitals: LCP, CLS from real Chromium via Playwright
+- Mobile quality: viewport, ATF CTA, H1 font size, layout overflow
+- Copy quality: AI/generic copy token detection
+
+**Scan states:**
+- queued: scan row inserted, Trigger.dev task being dispatched
+- running: task picked up by worker
+- completed: results written to integration metadata + issues table
+- failed: Trigger.dev could not start OR processing failed
+- queued_stale: queued > 2 minutes (shown as warning, retry encouraged)
+- running_stale: running > 10 minutes (shown as warning)
+
+**Demo workspace:**
+- Available in development only (NODE_ENV !== "production")
+- Hidden in production: isDemoMode is forced false in app-shell.tsx
+- No demo CTA visible to real beta users
 
 ---
 
@@ -39,113 +58,99 @@ Domain: checkoutleak.com
 | Purpose | Path |
 |---|---|
 | Marketing homepage | `src/components/marketing/home-page.tsx` |
-| Marketing header | `src/components/layout/marketing-header.tsx` |
-| Marketing footer | `src/components/layout/marketing-footer.tsx` |
 | App dashboard (main) | `src/app/(app)/app/page.tsx` |
-| Store detail page | `src/app/(app)/app/stores/[id]/page.tsx` |
-| Connect flow | `src/app/(app)/app/connect/page.tsx` |
-| Simulation route | `src/app/api/internal/scans/simulate/route.ts` |
-| Manual processor route | `src/app/api/internal/scans/process-next/route.ts` |
-| Shopify install | `src/app/api/integrations/shopify/install/route.ts` |
-| Shopify callback | `src/app/api/integrations/shopify/callback/route.ts` |
-| Shopify disconnect | `src/app/api/integrations/shopify/disconnect/route.ts` |
+| Sources page | `src/app/(app)/app/stores/page.tsx` |
+| Source detail page | `src/app/(app)/app/stores/[id]/page.tsx` |
+| Connect/sources redirect | `src/app/(app)/app/connect/page.tsx` |
+| Source actions (save URL, trigger scan) | `src/app/(app)/app/connect/actions.ts` |
+| Store detail actions | `src/app/(app)/app/stores/[id]/actions.ts` |
 | App service (journey data) | `src/server/services/app-service.ts` |
 | Scan processing service | `src/server/services/scan-processing-service.ts` |
-| Pricing data | `src/data/mock/pricing.ts` |
+| URL source analysis runner | `src/server/services/url-source-analysis-runner.ts` |
+| Browser inspector | `src/server/services/url-source-browser-inspector.ts` |
+| Scan task service (Trigger.dev dispatch) | `src/server/services/scan-task-service.ts` |
+| Browser launch utility | `src/server/services/browser-launch.ts` |
+| Opportunity estimate | `src/lib/opportunity-estimate.ts` |
+| Scan state helpers | `src/lib/scan-state.ts` |
+| Trigger.dev tasks | `src/trigger/url-source-scan.ts`, `src/trigger/shopify-activation-scan.ts` |
+| Trigger.dev config | `trigger.config.ts` |
+| App shell | `src/components/layout/app-shell.tsx` |
+| App shell client | `src/components/layout/app-shell-client.tsx` |
+| Fix plan service | `src/server/services/fix-plan-service.ts` |
 
 ---
 
-## 3. SIMULATION SYSTEM
+## 3. SCAN PIPELINE ARCHITECTURE
 
-**Route:** `POST /api/internal/scans/simulate`
+1. User saves primary source URL
+2. `setLiveSourceContext` in connect/actions.ts upserts website store + checkoutleak_connector integration
+3. `triggerPrimaryUrlSourceAnalysis` creates a scan row (status: queued) and calls `triggerQueuedScanTask`
+4. `triggerQueuedScanTask` in scan-task-service.ts dispatches to Trigger.dev
+5. If dispatch fails: scan marked failed immediately (do not leave as queued)
+6. Trigger.dev worker runs `processQueuedScanV1` which: fetches URL, runs browser inspector, emits findings, writes to integration metadata, inserts issues
+7. On completion: `sendScanCompletionNotification` fires via Resend
+8. Source detail page shows results; stale detection warns if scan is stuck
 
-**Authorization:**
-- In non-production: no key required
-- In production: requires header `x-checkoutleak-sim-key` or `x-checkoutleak-manual-key` or `?key=` query param matching env var `INTERNAL_SCAN_SIM_KEY` (falls back to `INTERNAL_SCAN_PROCESS_KEY`)
-
-**Request body:**
-```json
-{
-  "outcome": "findings_present",   // required: no_signal | clean | findings_present
-  "organizationId": "org_xxx",     // required if storeId not provided
-  "storeId": "store_xxx"           // optional; resolved from org if omitted
-}
-```
-
-**What each outcome produces:**
-- `no_signal` — scan completed, zero issues, no leakage; dashboard shows no-signal UX
-- `clean` — scan completed, no material issues found; dashboard shows clean/baseline UX
-- `findings_present` — scan completed with seeded issues; dashboard shows action-needed UX with issue feed, suggested actions, decision banner, revenue opportunity panel
-
-**Simulation is the fastest path to validate all state families without real Shopify activity.**
-Issues created by simulation use `"Simulation"` as source value — stripped from display copy by `cleanPrimaryCopy()`.
+**Trigger.dev task IDs:**
+- `url-source-scan` for website/checkoutleak_connector sources
+- `shopify-activation-scan` for Shopify sources
+- `stripe-billing-scan` for Stripe sources
 
 ---
 
-## 4. DASHBOARD JOURNEY MODES
+## 4. OWNERSHIP GATING
 
-The dashboard at `/app` resolves via `getDashboardJourneyData()` into one of these modes:
+Sources can be verified or unverified:
+- Verified: email domain matches source domain, or connected system domain matches
+- Unverified: manual context, ownership not confirmed
 
-| Mode | Trigger | UX |
-|---|---|---|
-| `plan_required` | No active plan | Redirect to `/app/billing?intent=plan_required` |
-| `empty` | No connected source | Redirect to `/app/connect` |
-| `connecting` | Integration row exists but not confirmed | Prompt to complete setup |
-| `integration_error` | Integration in error state | Show error + reconnect CTA |
-| `pending_scan` | Scan queued/running, no result yet | Animated scan-in-progress screen |
-| `first_results` | First scan with findings complete | First-time findings handoff screen |
-| `no_signal` | Latest scan returned no signal | No-signal monitoring-active screen |
-| `ready` (clean) | Latest scan is clean | Clean baseline screen |
-| `ready` (findings_present) | Issues exist | Full action-needed dashboard |
+Unverified sources:
+- Show scan state and basic classification
+- Do not show full screenshot evidence or detailed findings
+- Fix plans link to limited preview
+
+This is enforced in `getStoreDetailData` and the detail page. Do not remove it.
 
 ---
 
-## 5. STATE FAMILY SEMANTICS — DO NOT BLUR THESE
+## 5. DEMO WORKSPACE — DEV ONLY
 
-- `no_signal`: Not enough commercial activity or data depth for meaningful analysis. Monitoring is active. Nothing wrong with the setup.
-- `clean`: Enough signal, baseline analysis complete, no material leakage issues found at this time. Not the same as no_signal.
-- `findings_present`: Real issues exist, ranked by revenue impact, action-needed UX must appear.
+Demo mode is gated: `DEMO_ENABLED = process.env.NODE_ENV !== "production"` in app-shell.tsx.
 
-These three states are semantically distinct and must remain that way. Do not collapse them.
+In production: `isDemoMode` is always false. Demo CTA in billing page was removed. No fake monitors visible.
 
----
-
-## 6. UX BASELINES (DO NOT REGRESS)
-
-- Impact label: `> 0` → formatted currency; `= 0` → `"Impact pending"` (not `$0`)
-- Action CTA language: `"Review action brief"` (not "fix plan" or fake execution language)
-- Simulation prefix stripped from all user-facing copy
-- Store detail: user-facing domain shown as primary; internal Shopify canonical domain shown only when different
-- Marketing header CTA adapts dynamically: unauthenticated → "Start monitoring", has plan but no source → "Connect source", fully active → "Open app"
-- Pricing plan order on marketing page: Growth first on mobile (JSX order), Starter | Growth | Pro on desktop via `lg:order-*`
+In development: demo can be activated via `/api/mock/onboarding?state=demo&next=/app`. Useful for testing scan states and UI flows without real data.
 
 ---
 
-## 7. KNOWN OPEN PROBLEMS
+## 6. CORE PRINCIPLES
 
-- **Auth/session persistence across `/app` route switching** — may still be unreliable depending on Supabase session hydration on server components. If `/app` redirects to `/auth` unexpectedly after navigating between app routes, this is the culprit. Not confirmed fully resolved.
-- **Real-store baseline metrics** — `estimatedMonthlyRevenueImpact` values for simulation-seeded issues are hardcoded; real impact logic is not yet implemented
-- **Webhook registration** — Shopify webhook setup on install has not been deeply verified for all event types in production
-- **Stripe integration** — connect flow exists but less battle-tested than Shopify; Stripe-side scans not yet verified end to end
-
----
-
-## 8. PRIORITY ORDER (from this point)
-
-1. Stabilize auth/session across `/app` route switching if still unreliable
-2. Continue mobile homepage quality — verify the recent refactor renders correctly, then assess if any remaining sections need tightening
-3. Deepen findings-to-action product quality (real issue detail, fix plan richness)
-4. Move from simulated findings toward trustworthy real-store baseline impact logic
-5. Harden Stripe integration scan flow to match Shopify baseline
-6. Only then: advanced recovery modeling, deeper webhook reliability, multi-store scenarios
+- Trust over hype: no fake revenue numbers; "Impact pending" > $0
+- Deterministic findings: scan results must be evidence-backed, not fabricated
+- Semantic state clarity: queued, running, completed, failed, stale states are distinct and truthful
+- No internal tool names in UI: "checkoutleak_connector" never shown to operators
+- Operator-grade tone: direct, commercial, signal-first; no generic SaaS copy
+- No em dashes in UI copy or code comments
+- Minimal blast radius: changes should be surgical and scoped
 
 ---
 
-## 9. CORE PRINCIPLES
+## 7. KNOWN OPEN ITEMS
 
-- **Trust over hype** — no fake revenue numbers when not warranted; "Impact pending" > `$0`
-- **Deterministic findings** — scan results must be defensible, not AI-fabricated summaries
-- **Semantic state clarity** — no_signal, clean, and findings_present must remain distinct and truthful
-- **Simulation is internal only** — never surface simulation language or artifacts to real users
-- **Operator-grade tone** — direct, commercial, signal-first; no generic SaaS copy
-- **Mobile-first homepage** — premium hierarchy, tight rhythm, proof before explanation, CTA progression not CTA repetition
+- Stripe scan lane: less tested than website lane; needs validation
+- Before/after recovery tracking: not yet implemented
+- Change detection between scans: not yet implemented
+- Competitive benchmarking: not yet implemented
+- scans.error_message column: migration 202604251000_scans_error_message.sql must be run in production
+- Multi-page funnel analysis: implemented but needs accuracy validation against diverse sites
+
+---
+
+## 8. WHAT NOT TO DO
+
+- Do not rename DB tables, provider IDs (checkoutleak_connector), or route paths
+- Do not remove ownership gating
+- Do not expose demo workspace in production
+- Do not use em dashes in any output
+- Do not broad-rewrite architecture without explicit instruction
+- Do not use fake or AI-fabricated evidence in findings

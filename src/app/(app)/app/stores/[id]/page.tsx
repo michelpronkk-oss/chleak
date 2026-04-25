@@ -8,6 +8,8 @@ export const metadata: Metadata = {
 }
 
 import { MetaPill, RankedQueueRow, ScanStatePill, SeverityPill, VaultPanel } from "@/components/dashboard/vault-primitives"
+import { PendingScanLiveRefresh } from "@/components/dashboard/pending-scan-live-refresh"
+import { classifyScanState, getScanStateMessage, scanStateIsActive, scanStateIsStale } from "@/lib/scan-state"
 import { EvidenceScreenshots } from "@/components/evidence/evidence-screenshots"
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
 import { getDirectionalOpportunityEstimate } from "@/lib/opportunity-estimate"
@@ -296,9 +298,15 @@ export default async function StoreDetailPage({
         hasSubscriptionLanguage: urlSourceAnalysis.hasSubscriptionLanguage,
       })
     : []
-  const latestScanIsActive =
-    data.latestScan?.status === "queued" || data.latestScan?.status === "running"
+  const latestScanState = classifyScanState(
+    data.latestScan
+      ? { status: data.latestScan.status, scannedAt: data.latestScan.scannedAt }
+      : null
+  )
+  const latestScanIsActive = scanStateIsActive(latestScanState)
+  const latestScanIsStale = scanStateIsStale(latestScanState)
   const latestScanFailed = data.latestScan?.status === "failed"
+  const latestScanStateMessage = getScanStateMessage(latestScanState)
   const showingPreviousFindings =
     latestScanFailed && data.latestSuccessfulScan !== null && data.issues.length > 0
   const liveSourceSurface = data.integration?.liveSourceSurface ?? null
@@ -1153,11 +1161,14 @@ export default async function StoreDetailPage({
                 <p className="text-sm text-muted-foreground">
                   Analyze the live revenue surface to detect pricing path, signup flow, and checkout signal presence. Results appear in Surface analysis.
                 </p>
-                {latestScanIsActive ? (
-                  <div className="mt-3 rounded-md border border-primary/25 bg-primary/[0.06] px-3 py-2 text-xs text-muted-foreground">
-                    <ScanStatePill status={data.latestScan.status} className="mr-2 py-0.5" />
-                    Background analysis is active. This page will show new evidence when it completes.
+                {(latestScanIsActive || latestScanIsStale) ? (
+                  <div className={`mt-3 rounded-md border px-3 py-2 text-xs text-muted-foreground ${latestScanIsStale ? "border-amber-400/30 bg-amber-400/[0.07] text-amber-200" : "border-primary/25 bg-primary/[0.06]"}`}>
+                    <ScanStatePill status={data.latestScan!.status} className="mr-2 py-0.5" />
+                    {latestScanStateMessage}
                   </div>
+                ) : null}
+                {latestScanIsActive && !latestScanIsStale ? (
+                  <PendingScanLiveRefresh />
                 ) : null}
                 {latestScanFailed ? (
                   <div className="mt-3 rounded-md border border-amber-300/25 bg-amber-300/[0.06] px-3 py-2 text-xs text-amber-200">
