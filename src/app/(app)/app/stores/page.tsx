@@ -7,7 +7,6 @@ import {
   ChevronRight,
   CircleCheck,
   CircleDashed,
-  CircleDot,
   CreditCard,
   Globe2,
   ShoppingBag,
@@ -18,7 +17,6 @@ export const metadata: Metadata = {
 }
 
 import { SubmitButton } from "@/components/ui/submit-button"
-import { EvidenceScreenshots } from "@/components/evidence/evidence-screenshots"
 import { ScanStatePill, SeverityPill } from "@/components/dashboard/vault-primitives"
 import { normalizeLiveSourceUrl } from "@/lib/live-source"
 import { normalizeScanState } from "@/lib/scan-state"
@@ -816,49 +814,14 @@ export default async function SourcesPage({
                   revenuePathClarity: urlSourceAnalysis.revenuePathClarity,
                 })}
               </p>
-              <dl className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
-                {businessSignalRows.map((row) => (
-                  <div key={row.label}>
-                    <dt className="data-mono text-[0.65rem]">{row.label}</dt>
-                    <dd className="mt-1 text-foreground">{row.value}</dd>
-                  </div>
-                ))}
-              </dl>
               {urlSourceAnalysis.errorMessage ? (
                 <p className="mt-1 text-xs text-amber-300">
                   {urlSourceAnalysis.errorMessage}
                 </p>
               ) : null}
-              {urlSourceAnalysis.funnelSummary ? (
-                <div className="mt-3 rounded-md border border-border/50 bg-background/40 p-3">
-                  <p className="data-mono text-[0.65rem] text-muted-foreground">
-                    Funnel pages
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-foreground">
-                    {urlSourceAnalysis.funnelSummary}
-                  </p>
-                  {urlSourceAnalysis.funnelPages.length ? (
-                    <div className="mt-2 flex flex-wrap gap-2 text-[0.65rem] text-muted-foreground">
-                      {urlSourceAnalysis.funnelPages.slice(0, 5).map((page) => (
-                        <span
-                          key={`${page.role}-${page.url}`}
-                          className="rounded-full border border-border/60 px-2 py-1"
-                        >
-                          {(page.role ?? "page").replaceAll("_", " ")}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
             </div>
           ) : null}
 
-              {urlSourceAnalysis && primarySourceVerified ? (
-            <div className="mt-4">
-              <EvidenceScreenshots screenshots={urlSourceScreenshots} />
-            </div>
-          ) : null}
 
           {primarySourceSaved && !primarySourceVerified ? (
             <div className="mt-4 rounded-lg border border-amber-300/25 bg-amber-300/[0.06] p-3">
@@ -886,23 +849,14 @@ export default async function SourcesPage({
               <p className="mt-2 text-xs leading-5 text-muted-foreground">
                 {urlSourceTopIssue.summary}
               </p>
-              <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                {urlSourceTopIssue.whyItMatters}
-              </p>
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <span className="font-mono text-xs text-[color:var(--signal)]">
-                  {opportunitySignal.label}: {opportunitySignal.detail}
-                </span>
+              <div className="mt-3">
                 <Link
                   href={urlSourceTopIssue.href ?? `/app/stores/${urlSourceStoreId}`}
                   className="vault-link inline-flex items-center gap-1 text-xs"
                 >
-                  Open action path <ArrowRight className="h-3 w-3" />
+                  Open source detail <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>
-              <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                Next action: {urlSourceTopIssue.recommendedAction}
-              </p>
             </div>
           ) : null}
 
@@ -1377,37 +1331,6 @@ export default async function SourcesPage({
         )}
       </section>
 
-      <section className="surface-card p-4 sm:p-5 lg:p-6">
-        <p className="data-mono text-muted-foreground">Coverage Snapshot</p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3 sm:gap-4">
-          <div className="rounded-xl border border-border/70 bg-background/35 p-3.5 sm:p-4">
-            <p className="text-sm text-muted-foreground">Active sources</p>
-            <p className="mt-1 text-2xl font-semibold tracking-tight">
-              {storesData.stores.length + (primarySourceSaved ? 1 : 0)}
-            </p>
-          </div>
-          <div className="rounded-xl border border-border/70 bg-background/35 p-3.5 sm:p-4">
-            <p className="text-sm text-muted-foreground">Total active issues</p>
-            <p className="mt-1 text-2xl font-semibold tracking-tight">
-              {storesData.stores.reduce((count, store) => count + store.activeIssueCount, 0)}
-            </p>
-          </div>
-          <div className="rounded-xl border border-border/70 bg-background/35 p-3.5 sm:p-4">
-            <p className="text-sm text-muted-foreground">Combined leakage estimate</p>
-            <p className="mt-1 text-2xl font-semibold tracking-tight text-primary">
-              {formatCompactCurrency(
-                storesData.stores.reduce((total, store) => total + store.estimatedLeakage, 0)
-              )}
-            </p>
-          </div>
-        </div>
-        <p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-          <CircleDot className="h-3.5 w-3.5 text-muted-foreground/60" />
-          {isDemoMode
-            ? "Demo source health reflects simulated scan and issue changes."
-            : "Source health updates as scans complete and issue status changes."}
-        </p>
-      </section>
     </div>
   )
 }

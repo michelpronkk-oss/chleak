@@ -61,6 +61,25 @@ Legacy name: CheckoutLeak. Internal DB tables, provider IDs, route paths, and in
 - Unverified sources show protected preview. Full evidence, detailed findings, monitoring, alerts, and action briefs require verification and plan entitlement.
 - Do not render the primary URL source twice. The primary source card is the canonical display; monitored source lists should show additional sources only.
 
+**Page responsibility model (do not blur these):**
+
+Overview (/app):
+- Control center. Shows current workspace state, primary source status, top next action.
+- In `source_workspace` mode: h1 is the primary source domain, subtitle is the live scan state message.
+- Does NOT contain: signal breakdown rows, funnel analysis, evidence screenshots, severity key reference panels, redundant "Open sources" CTAs after another equivalent CTA already exists on the page.
+- Each mode answers: what is happening right now, what should I do next, where do I go for more detail.
+
+Sources (/app/stores):
+- Source management and setup page. Not a second detail page.
+- Shows: primary source URL form, one-line analysis summary, top finding card (if verified), enrichment cards, monitored source list.
+- Does NOT contain: detailed signal breakdown grids (Contact path: Detected / Pricing path: Detected etc.), evidence screenshots, funnel page breakdowns, coverage snapshot stat boxes. These all belong on the source detail page.
+- If a section is not yet useful (no analysis, no systems connected), hide it or replace with a short placeholder rather than showing an empty state.
+
+Source detail (/app/stores/[id]):
+- The operational deep-dive. All detailed content belongs here.
+- Shows: full issue queue, recommendations, linked opportunities, surface analysis with signal rows, evidence screenshots, scan history, monitoring controls, verification state.
+- This is where signal breakdowns, funnel analysis, screenshots, and action briefs live.
+
 ---
 
 ## 2. KEY FILE PATHS

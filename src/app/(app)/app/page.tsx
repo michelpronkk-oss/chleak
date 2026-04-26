@@ -81,10 +81,10 @@ export default async function DashboardOverviewPage() {
         <section className="space-y-2">
           <p className="data-mono text-muted-foreground">Revenue Workspace</p>
           <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">
-            Revenue workspace
+            {journey.primarySource.domain ?? journey.primarySource.name}
           </h1>
           <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
-            Your primary source is saved. Review scan status, verification, and the next action from the source record.
+            {scanState.message || "Run analysis to build the first revenue surface baseline."}
           </p>
         </section>
 
@@ -410,20 +410,6 @@ export default async function DashboardOverviewPage() {
           </article>
         </section>
 
-        <section className="surface-card p-5 sm:p-6 lg:p-7">
-          <p className="text-sm text-muted-foreground">
-            No leak findings yet because recent commercial signal is still limited. Monitoring remains active.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <Link
-              href="/app/stores"
-              className="marketing-primary-cta inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-transform hover:-translate-y-px"
-            >
-              Open sources
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-        </section>
       </div>
     )
   }
@@ -670,26 +656,6 @@ export default async function DashboardOverviewPage() {
             </div>
           </VaultPanel>
 
-          <VaultPanel title="Severity key" meta="Decision language">
-            <div className="space-y-2.5 px-4 py-3 text-xs text-muted-foreground sm:px-5">
-              <div className="grid grid-cols-[68px_1fr] items-center gap-2">
-                <SeverityPill severity="critical" className="w-[4rem] justify-center px-0 py-0.5" />
-                <span>Leaking now and compounding</span>
-              </div>
-              <div className="grid grid-cols-[68px_1fr] items-center gap-2">
-                <SeverityPill severity="high" className="w-[4rem] justify-center px-0 py-0.5" />
-                <span>Active loss and immediate queue item</span>
-              </div>
-              <div className="grid grid-cols-[68px_1fr] items-center gap-2">
-                <SeverityPill severity="medium" className="w-[4rem] justify-center px-0 py-0.5" />
-                <span>Confirmed leak, schedule this week</span>
-              </div>
-              <div className="grid grid-cols-[68px_1fr] items-center gap-2">
-                <SeverityPill severity="low" className="w-[4rem] justify-center px-0 py-0.5" />
-                <span>Watch list only</span>
-              </div>
-            </div>
-          </VaultPanel>
         </div>
       </section>
     </div>
