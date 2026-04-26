@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 
 import { getServerSession } from "@/lib/auth/session"
 import { createSupabaseAdminClient } from "@/lib/supabase/shared"
+import { sendVerificationRequestNotification } from "@/lib/email/resend"
 import { getEntitlementsForOrganization } from "@/server/services/entitlement-service"
 import { triggerQueuedScanTask } from "@/server/services/scan-task-service"
 import type { Json } from "@/types/database"
@@ -436,4 +437,100 @@ export async function triggerActivationTestRun(storeId: string) {
   redirect(
     `/app/stores/${storeId}?scan_status=queued&scan_id=${encodeURIComponent(insertScan.data.id)}`
   )
+}
+
+export async function requestManualVerification(storeId: string) {
+  const session = await getServerSession()
+  if (!session) {
+    redirect(`/app/stores/${storeId}?verify_status=unauthorized`)
+  }
+
+  const storeCtx = await resolveAuthorizedStore({
+    storeId,
+    userId: session.user.id,
+  })
+  if (!storeCtx) {
+    redirect(`/app/stores/${storeId}?verify_status=not_found`)
+  }
+
+  const admin = storeCtx.admin
+
+  const integrationResult = await admin
+    .from("store_integrations")
+    .select("id, metadata, provider")
+    .eq("organization_id", storeCtx.organizationId)
+    .eq("store_id", storeId)
+    .neq("status", "disconnected")
+    .order("installed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (integrationResult.error || !integrationResult.data) {
+    redirect(`/app/stores/${storeId}?verify_status=no_integration`)
+  }
+
+  const metadata: Record<string, unknown> =
+    integrationResult.data.metadata &&
+    typeof integrationResult.data.metadata === "object" &&
+    !Array.isArray(integrationResult.data.metadata)
+      ? (integrationResult.data.metadata as Record<string, unknown>)
+      : {}
+
+  const existing =
+    metadata.source_verification &&
+    typeof metadata.source_verification === "object" &&
+    !Array.isArray(metadata.source_verification)
+      ? (metadata.source_verification as Record<string, unknown>)
+      : null
+
+  if (existing?.state === "verified") {
+    redirect(`/app/stores/${storeId}?verify_status=already_verified`)
+  }
+  if (existing?.state === "pending") {
+    redirect(`/app/stores/${storeId}?verify_status=already_requested`)
+  }
+
+  const storeResult = await admin
+    .from("stores")
+    .select("domain, name")
+    .eq("id", storeId)
+    .maybeSingle()
+
+  const storeDomain = storeResult.data?.domain ?? storeId
+  const storeName = storeResult.data?.name ?? storeId
+  const requestedAt = new Date().toISOString()
+
+  // Persist the pending state in integration metadata so the UI can reflect it
+  await admin
+    .from("store_integrations")
+    .update({
+      metadata: {
+        ...metadata,
+        source_verification: {
+          state: "pending",
+          reason: "manual_unverified",
+          requested_at: requestedAt,
+          requested_by: session.user.email,
+        },
+      } as Json,
+    })
+    .eq("id", integrationResult.data.id)
+
+  // Notify the SilentLeak team via email
+  await sendVerificationRequestNotification({
+    sourceDomain: storeDomain,
+    sourceUrl: typeof metadata.primary_live_source_url === "string"
+      ? metadata.primary_live_source_url
+      : null,
+    storeName,
+    storeId,
+    organizationId: storeCtx.organizationId,
+    userEmail: session.user.email ?? "unknown",
+    requestedAt,
+  }).catch(() => {
+    // Email failure must not block the flow
+  })
+
+  revalidatePath(`/app/stores/${storeId}`)
+  redirect(`/app/stores/${storeId}?verify_status=requested`)
 }

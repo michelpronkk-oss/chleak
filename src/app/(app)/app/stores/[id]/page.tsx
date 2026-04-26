@@ -17,6 +17,7 @@ import { SubmitButton } from "@/components/ui/submit-button"
 import { getStoreDetailData, getStoresIndexData } from "@/server/services/app-service"
 import { createShareableReport } from "./share-actions"
 import {
+  requestManualVerification,
   saveActivationFlowHints,
   stopMonitoringWebsiteSource,
   triggerActivationTestRun,
@@ -198,6 +199,9 @@ export default async function StoreDetailPage({
   const reportUrlRaw = query.report_url
   const reportUrl = Array.isArray(reportUrlRaw) ? reportUrlRaw[0] : reportUrlRaw
   const createShareAction = createShareableReport.bind(null, data.store.id)
+  const requestVerificationAction = requestManualVerification.bind(null, data.store.id)
+  const verifyStatusRaw = query.verify_status
+  const verifyStatus = Array.isArray(verifyStatusRaw) ? verifyStatusRaw[0] : verifyStatusRaw
   const saveHintsAction = saveActivationFlowHints.bind(null, data.store.id)
   const runTestScanAction = triggerActivationTestRun.bind(null, data.store.id)
   const runSurfaceAnalysisAction = triggerUrlSourceAnalysisForStore.bind(null, data.store.id)
@@ -232,6 +236,8 @@ export default async function StoreDetailPage({
   const sourceStopped = isWebsiteSource && data.store.active === false
   const sourceVerification = data.sourceVerification
   const sourceVerified = isDemoMode || sourceVerification.state === "verified"
+  const verificationPending = sourceVerification.state === "pending"
+  const sourceDomainHint = data.storeDisplayDomain ?? data.store.domain ?? null
   const entitlements = data.entitlements
   const canViewFullEvidence = isDemoMode || entitlements.canViewFullEvidence
   const canRunManualScan = isDemoMode || entitlements.canRunManualScan
@@ -405,14 +411,14 @@ export default async function StoreDetailPage({
             <div>
               <p className="data-mono text-amber-200">Ownership not verified</p>
               <h2 className="mt-2 text-lg font-semibold tracking-tight">
-                Verify this source to unlock evidence, monitoring, and action briefs.
+                Verify ownership to unlock full evidence
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-                SilentLeak can keep a limited public-surface preview for this source. Full screenshots, issue detail, fix plans, scan history, monitoring, and alert emails require verification.
+                Use an email address on this domain or request manual verification for private beta access.
               </p>
             </div>
             <span className="rounded-md border border-amber-300/35 bg-amber-300/[0.08] px-2.5 py-1 font-mono text-[0.65rem] uppercase text-amber-200">
-              {sourceVerification.state}
+              {verificationPending ? "pending" : "unverified"}
             </span>
           </div>
 
@@ -420,13 +426,7 @@ export default async function StoreDetailPage({
             <div className="rounded-lg border border-border/60 bg-background/30 p-3">
               <dt className="data-mono text-muted-foreground">Source domain</dt>
               <dd className="mt-1 break-all text-foreground">
-                {data.storeDisplayDomain ?? data.store.domain ?? "Unknown"}
-              </dd>
-            </div>
-            <div className="rounded-lg border border-border/60 bg-background/30 p-3">
-              <dt className="data-mono text-muted-foreground">Verification</dt>
-              <dd className="mt-1 text-foreground">
-                {formatVerificationReason(sourceVerification.reason)}
+                {sourceDomainHint ?? "Unknown"}
               </dd>
             </div>
             <div className="rounded-lg border border-border/60 bg-background/30 p-3">
@@ -435,16 +435,10 @@ export default async function StoreDetailPage({
                 {urlSourceAnalysis ? sourceTypeLabel : "Pending analysis"}
               </dd>
             </div>
-            <div className="rounded-lg border border-border/60 bg-background/30 p-3">
-              <dt className="data-mono text-muted-foreground">Latest attempted scan</dt>
-              <dd className="mt-1 text-foreground">
-                {data.latestScan ? formatRelativeTimestamp(data.latestScan.scannedAt) : "Pending"}
-              </dd>
-            </div>
           </dl>
 
           {urlSourceAnalysis ? (
-            <div className="mt-5 rounded-lg border border-border/60 bg-background/30 p-4">
+            <div className="mt-4 rounded-lg border border-border/60 bg-background/30 p-4">
               <p className="data-mono text-muted-foreground">Surface preview</p>
               <p className="mt-2 text-sm leading-6 text-foreground">
                 {getSurfaceSummary({
@@ -454,6 +448,57 @@ export default async function StoreDetailPage({
               </p>
             </div>
           ) : null}
+
+          {/* Verification path panel */}
+          <div className="mt-5 rounded-xl border border-border/70 bg-background/25 p-4 sm:p-5">
+            <p className="text-sm font-medium">Verification options</p>
+            <ul className="mt-4 space-y-3">
+              <li className="flex items-start gap-3 text-sm">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border/60 text-[10px] font-mono text-muted-foreground">1</span>
+                <div>
+                  <p className="text-foreground">Sign in with a domain email</p>
+                  {sourceDomainHint ? (
+                    <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                      e.g. name@{sourceDomainHint}
+                    </p>
+                  ) : null}
+                </div>
+              </li>
+              <li className="flex items-start gap-3 text-sm">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border/60 text-[10px] font-mono text-muted-foreground">2</span>
+                <div className="flex-1">
+                  <p className="text-foreground">Request manual verification</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    The SilentLeak team will verify and enable your source within 1 business day.
+                  </p>
+                  {verifyStatus === "requested" || verifyStatus === "already_requested" || verificationPending ? (
+                    <p className="mt-2 text-xs text-emerald-400">
+                      Request submitted. The team will review and enable your source shortly.
+                    </p>
+                  ) : verifyStatus === "already_verified" ? (
+                    <p className="mt-2 text-xs text-emerald-400">
+                      This source is already verified.
+                    </p>
+                  ) : (
+                    <form action={requestVerificationAction} className="mt-3">
+                      <SubmitButton
+                        label="Request manual verification"
+                        pendingLabel="Sending request..."
+                        className="rounded-lg border border-border/70 px-4 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                      />
+                    </form>
+                  )}
+                </div>
+              </li>
+              <li className="flex items-start gap-3 text-sm text-muted-foreground/60">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border/40 text-[10px] font-mono">3</span>
+                <div>
+                  <p>DNS verification</p>
+                  <p className="mt-0.5 text-xs">Coming soon.</p>
+                </div>
+              </li>
+            </ul>
+          </div>
 
           <div className="mt-5 flex flex-wrap gap-3">
             <Link
