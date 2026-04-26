@@ -21,6 +21,7 @@ import { SubmitButton } from "@/components/ui/submit-button"
 import { EvidenceScreenshots } from "@/components/evidence/evidence-screenshots"
 import { ScanStatePill, SeverityPill } from "@/components/dashboard/vault-primitives"
 import { normalizeLiveSourceUrl } from "@/lib/live-source"
+import { normalizeScanState } from "@/lib/scan-state"
 import { cn } from "@/lib/utils"
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
 import { getDirectionalOpportunityEstimate } from "@/lib/opportunity-estimate"
@@ -398,8 +399,9 @@ export default async function SourcesPage({
   const urlSourceStoreId = connectData.urlSourceStoreId ?? urlSourceAnalysis?.storeId ?? null
   const latestUrlSourceScan = connectData.latestUrlSourceScan
   const urlSourceTopIssue = connectData.urlSourceTopIssue
-  const latestUrlSourceScanIsActive =
-    latestUrlSourceScan?.status === "queued" || latestUrlSourceScan?.status === "running"
+  const latestUrlSourceState = normalizeScanState(latestUrlSourceScan)
+  const latestUrlSourceScanIsActive = latestUrlSourceState.isPending
+  const latestUrlSourceScanIsStale = latestUrlSourceState.isStale
   const latestAnalysisAt = urlSourceAnalysis?.completedAt ?? latestStoreScanAt
   const businessType = urlSourceAnalysis?.businessType ?? null
   const sourceTypeLabel = getBusinessTypeLabel(businessType)
@@ -518,12 +520,8 @@ export default async function SourcesPage({
         : 2
   const sourceScanStateLabel = !primarySourceSaved
     ? "Not set"
-    : latestUrlSourceScan?.status === "failed"
-      ? "Analysis failed"
-    : latestUrlSourceScan?.status === "queued"
-      ? "Analysis queued"
-    : latestUrlSourceScan?.status === "running"
-      ? "Analysis running"
+    : latestUrlSourceScan
+      ? latestUrlSourceState.label
     : urlSourceAnalysis?.status === "completed"
       ? "Analyzed"
     : connectedSystemsCount === 0
@@ -535,8 +533,10 @@ export default async function SourcesPage({
           : "Saved | waiting for first scan"
   const sourceScanStateTone = !primarySourceSaved
     ? "text-muted-foreground"
-    : latestUrlSourceScan?.status === "failed"
+    : latestUrlSourceState.tone === "danger"
       ? "text-destructive"
+    : latestUrlSourceState.tone === "warning"
+      ? "text-amber-300"
     : latestUrlSourceScanIsActive
       ? "text-primary"
     : urlSourceAnalysis?.status === "completed"
@@ -548,12 +548,8 @@ export default async function SourcesPage({
         : "text-amber-300"
   const sourceScanStateDetail = !primarySourceSaved
     ? "Set a primary URL or domain to create the canonical source context."
-    : latestUrlSourceScan?.status === "failed"
-      ? "The latest analysis failed before completion. Queue another run when ready."
-    : latestUrlSourceScan?.status === "queued"
-      ? "Analysis is queued. Results will appear in the source detail."
-    : latestUrlSourceScan?.status === "running"
-      ? "Analysis is running in the background. Findings and evidence will update when it completes."
+    : latestUrlSourceScan
+      ? latestUrlSourceState.message
     : urlSourceAnalysis?.status === "completed"
       ? "Surface analysis completed. Revenue path and checkout signals are now in evidence."
     : connectedSystemsCount === 0
@@ -613,6 +609,16 @@ export default async function SourcesPage({
       : sourceUsage.isAtLimit
         ? `Your current plan includes ${sourceUsage.maxSources} monitored source${sourceUsage.maxSources === 1 ? "" : "s"}. Upgrade to monitor more sources.`
         : `${sourceUsage.remainingSources} monitored source${sourceUsage.remainingSources === 1 ? "" : "s"} remaining on this plan.`
+  const canAddMonitoredSource =
+    entitlements.isActive &&
+    (sourceUsage.maxSources === null || (sourceUsage.remainingSources ?? 0) > 0)
+  const enrichmentBlocker = !primarySourceSaved
+    ? "source_missing"
+    : !urlSourceAnalysis
+      ? "analysis_required"
+      : !primarySourceVerified
+        ? "verification_required"
+        : null
 
   return (
     <div className="space-y-5 pb-24 lg:pb-4">
@@ -781,8 +787,8 @@ export default async function SourcesPage({
             <div className="rounded-lg border border-border/60 bg-background/30 p-3">
               <dt className="data-mono text-muted-foreground">Latest analysis</dt>
               <dd className="mt-1 text-foreground">
-                {latestUrlSourceScanIsActive
-                  ? latestUrlSourceScan.status
+                {latestUrlSourceScan
+                  ? latestUrlSourceState.label
                   : latestAnalysisAt
                     ? formatRelativeTimestamp(latestAnalysisAt)
                     : "Not run yet"}
@@ -937,7 +943,9 @@ export default async function SourcesPage({
                   ? ` | ${latestUrlSourceScan.detectedIssuesCount} findings`
                   : latestUrlSourceScan.status === "failed"
                     ? ` | ${latestUrlSourceScan.errorMessage ?? "analysis failed"}`
-                    : " | results pending"}
+                    : latestUrlSourceScanIsStale
+                      ? ` | ${latestUrlSourceState.label}`
+                      : " | results pending"}
               </span>
             </div>
           ) : null}
@@ -960,35 +968,40 @@ export default async function SourcesPage({
           </span>
         </div>
 
-        <form action={addMonitoredSource} className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
-          <input
-            name="monitored_source_url"
-            placeholder="https://example.com"
-            className="vault-input w-full rounded-lg px-3.5 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/40"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            inputMode="url"
-            disabled={sourceUsage.isAtLimit || !entitlements.isActive}
-          />
-          <SubmitButton
-            label="Add monitored source"
-            pendingLabel="Adding source..."
-            className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-          />
-        </form>
+        {canAddMonitoredSource ? (
+          <form action={addMonitoredSource} className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
+            <input
+              name="monitored_source_url"
+              placeholder="https://example.com"
+              className="vault-input w-full rounded-lg px-3.5 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/40"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              inputMode="url"
+            />
+            <SubmitButton
+              label="Add monitored source"
+              pendingLabel="Adding source..."
+              className="rounded-lg border border-border/70 px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            />
+          </form>
+        ) : (
+          <div className="mt-5 rounded-lg border border-border/60 bg-background/30 p-4 text-sm leading-6 text-muted-foreground">
+            Starter includes one monitored source. Stop monitoring a source or upgrade to add more.
+            <Link href="/app/billing" className="vault-link ml-2 inline-flex items-center gap-1">
+              View plans <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        )}
 
         {additionalWebsiteSources.length ? (
           <div className="mt-5 divide-y divide-border/60">
             {additionalWebsiteSources.map((source) => {
               const verified = source.verification.state === "verified"
               const latestScan = source.latestScan
+              const latestScanState = normalizeScanState(latestScan)
               const latestScanLabel = latestScan
-                ? latestScan.status === "completed"
-                  ? `${formatRelativeTimestamp(latestScan.scannedAt)} | ${latestScan.detectedIssuesCount} findings`
-                  : latestScan.status === "failed"
-                    ? `Failed | ${latestScan.errorMessage ?? "analysis failed"}`
-                    : `${latestScan.status} | results pending`
+                ? `${latestScanState.label} | ${formatRelativeTimestamp(latestScan.scannedAt)}`
                 : "No scans yet"
               return (
                 <article
@@ -1044,11 +1057,11 @@ export default async function SourcesPage({
               )
             })}
           </div>
-        ) : (
+        ) : canAddMonitoredSource ? (
           <p className="mt-5 rounded-xl border border-dashed border-border/70 p-5 text-sm text-muted-foreground">
             No additional monitored sources yet.
           </p>
-        )}
+        ) : null}
       </section>
 
       <section className="surface-card p-5 sm:p-6 lg:p-7">
@@ -1102,7 +1115,15 @@ export default async function SourcesPage({
                   : "No strong commerce signal yet. Keep this optional unless Shopify is part of the revenue path."}
             </p>
             <div className="my-5 h-px bg-border/40" />
-            {!entitlements.canUseShopifyEnrichment ? (
+            {enrichmentBlocker ? (
+              <div className="rounded-lg border border-border/60 bg-background/30 p-4 text-sm leading-6 text-muted-foreground">
+                {enrichmentBlocker === "analysis_required"
+                  ? `${latestUrlSourceScanIsStale ? "Retry analysis first" : "Run analysis first"} before connecting Shopify evidence.`
+                  : enrichmentBlocker === "verification_required"
+                    ? "Verify source ownership before connecting evidence systems."
+                    : "Set a primary source before connecting evidence systems."}
+              </div>
+            ) : !entitlements.canUseShopifyEnrichment ? (
               <div className="rounded-lg border border-amber-300/25 bg-amber-300/[0.06] p-4 text-sm leading-6 text-amber-100">
                 Upgrade to connect Shopify evidence for checkout and activation signals.
               </div>
@@ -1220,7 +1241,15 @@ export default async function SourcesPage({
                     : "Optional until the revenue path shows billing or payment recovery risk."}
             </p>
             <div className="my-5 h-px bg-border/40" />
-            {!entitlements.canUseStripeEnrichment ? (
+            {enrichmentBlocker ? (
+              <div className="rounded-lg border border-border/60 bg-background/30 p-4 text-sm leading-6 text-muted-foreground">
+                {enrichmentBlocker === "analysis_required"
+                  ? `${latestUrlSourceScanIsStale ? "Retry analysis first" : "Run analysis first"} before connecting billing recovery signals.`
+                  : enrichmentBlocker === "verification_required"
+                    ? "Verify source ownership before connecting billing recovery signals."
+                    : "Set a primary source before connecting billing recovery signals."}
+              </div>
+            ) : !entitlements.canUseStripeEnrichment ? (
               <div className="rounded-lg border border-amber-300/25 bg-amber-300/[0.06] p-4 text-sm leading-6 text-amber-100">
                 Upgrade to connect billing recovery signals.
               </div>
@@ -1276,93 +1305,8 @@ export default async function SourcesPage({
             </div>
             <p className="mt-2 text-sm text-muted-foreground">{storesData.stagingSource.message}</p>
           </article>
-        ) : storesData.stores.length || primarySourceSaved ? (
+        ) : storesData.stores.length ? (
           <div className="divide-y divide-border/60">
-            {primarySourceSaved ? (
-              <article className="grid gap-3 py-4 sm:gap-4 sm:py-5 sm:grid-cols-[1.3fr_1fr_auto] sm:items-center">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-base font-semibold tracking-tight sm:text-lg">
-                      URL surface summary
-                    </h2>
-                    <span className="rounded-md border border-border/70 px-2 py-0.5 text-[11px] uppercase text-muted-foreground">
-                      website
-                    </span>
-                    <span className={`text-xs ${sourceScanStateTone}`}>{sourceScanStateLabel}</span>
-                    {liveSourceVerification ? (
-                      <span
-                        className={cn(
-                          "rounded-md border px-2 py-0.5 text-[11px] uppercase",
-                          liveSourceVerification.state === "verified"
-                            ? "border-emerald-400/30 bg-emerald-400/[0.08] text-emerald-300"
-                            : "border-amber-300/40 bg-amber-300/[0.08] text-amber-200"
-                        )}
-                      >
-                        {liveSourceVerification.state}
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {normalizedLiveSource?.hostname ?? "No URL saved"} | canonical source context
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {urlSourceTopIssue && primarySourceVerified
-                      ? `Top finding: ${urlSourceTopIssue.title}`
-                      : urlSourceAnalysis
-                        ? getSurfaceSummary({
-                            businessType,
-                            surfaceClassification: urlSourceAnalysis.surfaceClassification,
-                            revenuePathClarity: urlSourceAnalysis.revenuePathClarity,
-                          })
-                        : sourceScanStateDetail}
-                  </p>
-                  {liveSourceVerification ? (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {formatVerificationReason(liveSourceVerification.reason)}
-                      {liveSourceVerification.matchedDomain
-                        ? ` (${liveSourceVerification.matchedDomain})`
-                        : ""}
-                    </p>
-                  ) : null}
-                </div>
-
-                <div className="grid gap-1 text-sm">
-                  <p className="text-muted-foreground">
-                    Latest analysis:{" "}
-                    {latestUrlSourceScanIsActive
-                      ? latestUrlSourceScan.status
-                      : latestAnalysisAt
-                        ? formatRelativeTimestamp(latestAnalysisAt)
-                        : "Not run yet"}
-                  </p>
-                  <p className="font-semibold text-primary">
-                    {opportunitySignal.detail}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {connectedSystemsCount > 0
-                      ? `${connectedSystemsCount} evidence enrichment${connectedSystemsCount !== 1 ? "s" : ""}`
-                      : urlSourceAnalysis
-                        ? "URL-only analysis"
-                        : "No enrichments connected"}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                  <Link href="#source-setup" className="vault-link inline-flex items-center gap-1 text-sm">
-                    Edit source <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                  {urlSourceStoreId &&
-                  (storesData.onboardingState !== "empty" || Boolean(urlSourceAnalysis)) ? (
-                    <Link
-                      href={`/app/stores/${urlSourceStoreId}`}
-                      className="vault-link inline-flex items-center gap-1 text-sm"
-                    >
-                      Open surface detail <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  ) : null}
-                </div>
-              </article>
-            ) : null}
             {storesData.stores.map((store) => (
               <article
                 key={store.id}

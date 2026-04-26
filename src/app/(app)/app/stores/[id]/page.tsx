@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 import { MetaPill, RankedQueueRow, ScanStatePill, SeverityPill, VaultPanel } from "@/components/dashboard/vault-primitives"
 import { PendingScanLiveRefresh } from "@/components/dashboard/pending-scan-live-refresh"
-import { classifyScanState, getScanStateMessage, scanStateIsActive, scanStateIsStale } from "@/lib/scan-state"
+import { normalizeScanState } from "@/lib/scan-state"
 import { EvidenceScreenshots } from "@/components/evidence/evidence-screenshots"
 import { formatCompactCurrency, formatRelativeTimestamp } from "@/lib/format"
 import { getDirectionalOpportunityEstimate } from "@/lib/opportunity-estimate"
@@ -304,15 +304,11 @@ export default async function StoreDetailPage({
         hasSubscriptionLanguage: urlSourceAnalysis.hasSubscriptionLanguage,
       })
     : []
-  const latestScanState = classifyScanState(
-    data.latestScan
-      ? { status: data.latestScan.status, scannedAt: data.latestScan.scannedAt }
-      : null
-  )
-  const latestScanIsActive = scanStateIsActive(latestScanState)
-  const latestScanIsStale = scanStateIsStale(latestScanState)
+  const latestScanState = normalizeScanState(data.latestScan)
+  const latestScanIsActive = latestScanState.isPending
+  const latestScanIsStale = latestScanState.isStale
   const latestScanFailed = data.latestScan?.status === "failed"
-  const latestScanStateMessage = getScanStateMessage(latestScanState)
+  const latestScanStateMessage = latestScanState.message
   const showingPreviousFindings =
     latestScanFailed && data.latestSuccessfulScan !== null && data.issues.length > 0
   const liveSourceSurface = data.integration?.liveSourceSurface ?? null

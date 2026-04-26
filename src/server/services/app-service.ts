@@ -1772,6 +1772,7 @@ async function getJourneyContext() {
 
 export async function getAppShellData() {
   const journey = await getJourneyContext()
+  const sourceUsage = await getSourceUsageForOrganization(journey.organizationId)
   const primarySourceStatus = getPrimarySourceStatus({
     onboardingState: journey.state,
     shopifySourceState: journey.shopifySourceState,
@@ -1820,7 +1821,15 @@ export async function getAppShellData() {
       ),
     ]
   } else if (journey.state === "empty") {
-    liveMonitors = []
+    liveMonitors = sourceUsage.sources.map((source) => ({
+      storeId: source.storeId,
+      name: source.domain ?? source.name,
+      href: `/app/stores/${source.storeId}`,
+      statusLabel: source.isPrimary ? "Primary" : "Active",
+      statusTone: "text-primary",
+      activeIssues: 0,
+      latestScanLabel: "Awaiting analysis",
+    }))
   } else if (isConnectingState(journey.state)) {
     liveMonitors = [buildConnectingMonitor(journey.state)]
   } else if (isPendingScanState(journey.state)) {
@@ -1851,6 +1860,7 @@ export async function getAppShellData() {
 export async function getDashboardJourneyData() {
   const journey = await getJourneyContext()
   const shopifyDomainViews = await loadShopifyDomainViews(journey.organizationId)
+  const sourceUsage = await getSourceUsageForOrganization(journey.organizationId)
   const setupAttentionView = Array.from(shopifyDomainViews.values()).find((view) =>
     isShopifySetupAttention(view)
   )
@@ -1947,6 +1957,42 @@ export async function getDashboardJourneyData() {
       organization: journey.baseSnapshot.organization,
       sourceLabel: getSourceLabel(journey.state),
       snapshot: journey.snapshot,
+    }
+  }
+
+  const primaryWebsiteSource =
+    sourceUsage.sources.find((source) => source.isPrimary) ??
+    sourceUsage.sources[0] ??
+    null
+
+  if (primaryWebsiteSource && journey.state === "empty") {
+    const admin = createSupabaseAdminClient()
+    const [scanResult, verification] = await Promise.all([
+      admin
+        .from("scans")
+        .select("id, organization_id, store_id, status, scanned_at, completed_at, detected_issues_count, estimated_monthly_leakage, error_message")
+        .eq("organization_id", journey.organizationId)
+        .eq("store_id", primaryWebsiteSource.storeId)
+        .order("scanned_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      resolveStoreSourceVerification({
+        admin,
+        organizationId: journey.organizationId,
+        storeId: primaryWebsiteSource.storeId,
+        operatorEmail: journey.shellUser.email,
+      }),
+    ])
+
+    return {
+      mode: "source_workspace" as const,
+      onboardingState: journey.state,
+      organization: journey.baseSnapshot.organization,
+      sourceUsage,
+      primarySource: primaryWebsiteSource,
+      latestScan:
+        !scanResult.error && scanResult.data ? mapScanView(scanResult.data) : null,
+      sourceVerification: verification,
     }
   }
 

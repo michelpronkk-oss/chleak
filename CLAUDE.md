@@ -45,11 +45,21 @@ Legacy name: CheckoutLeak. Internal DB tables, provider IDs, route paths, and in
 - failed: Trigger.dev could not start OR processing failed
 - queued_stale: queued > 2 minutes (shown as warning, retry encouraged)
 - running_stale: running > 10 minutes (shown as warning)
+- Queued and running scans must never appear pending forever. Use `src/lib/scan-state.ts` for stale UI labels and retry guidance.
 
 **Demo workspace:**
 - Available in development only (NODE_ENV !== "production")
 - Hidden in production: isDemoMode is forced false in app-shell.tsx
 - No demo CTA visible to real beta users
+
+**Overview and Sources coherence:**
+- Overview and Sources must share the DB-backed active website source state.
+- DB source/integration state beats the live source cookie. Cookie fallback is only for no DB source.
+- Source usage is active-source based. Stopped, archived, disconnected, and demoted URL sources do not count.
+- Primary source replacement updates the primary URL source and must not consume an additional source slot.
+- Additional monitored sources are plan-limited and only active sources count toward the plan.
+- Unverified sources show protected preview. Full evidence, detailed findings, monitoring, alerts, and action briefs require verification and plan entitlement.
+- Do not render the primary URL source twice. The primary source card is the canonical display; monitored source lists should show additional sources only.
 
 ---
 
